@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a platform, plugin, device, or host feature.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What should OpenQuake Mac make possible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Describe the feature, API, integration, or workflow.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - HID / device protocol
+        - Runtime core
+        - Plugin API
+        - macOS panel host
+        - Editor / settings
+        - Integration
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+    validations:
+      required: false
