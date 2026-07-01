@@ -1,0 +1,96 @@
+# OpenQuake Mac
+
+Swift-native platform work for the DK-Quake / ARIS-68 touch display and control center.
+
+This repository is being built as a modular device/runtime platform first. The DK-Quake macOS host is the first implementation, not the only long-term target.
+
+## Status
+
+Early hardware/platform bring-up. This is not ready as an end-user replacement for DK-Suite yet.
+
+Confirmed:
+
+- HID control input works.
+- HID touch input works.
+- Knob-ring output works.
+- The plugin manifest/API skeleton builds and validates sample manifests.
+- The AppKit panel UI renders correctly in screenshots and on the main display.
+
+Known open issue:
+
+- The DK physical glass may remain black even when macOS screenshots of the DK display show the AppKit panel UI. This appears to be a remaining display/backlight/firmware presentation issue, not a general HID failure.
+
+## First Tangible Target
+
+Build:
+
+```bash
+swift build
+```
+
+Enumerate supported DK-Quake HID interfaces:
+
+```bash
+swift run quake-probe
+```
+
+Dump all related HID collections, including the standard touch descriptor macOS exposes:
+
+```bash
+.build/debug/quake-probe --all-hid
+```
+
+Run protocol checks without hardware:
+
+```bash
+swift run quake-probe --self-test
+```
+
+Test confirmed HID output to the knob ring:
+
+```bash
+.build/debug/quake-probe --led-on
+.build/debug/quake-probe --led-off
+```
+
+Validate the sample plugin manifest:
+
+```bash
+swift run quake-probe --validate-plugin Examples/Plugins/echo-plugin.json
+```
+
+With hardware connected, run the safe live probe:
+
+```bash
+swift run quake-probe --listen --wake
+```
+
+Launch the first native panel host:
+
+```bash
+.build/debug/quake-panel
+```
+
+The live probe only sends safe wake, keep-alive, firmware, mic, and brightness query commands. It does not expose or send DFU.
+
+## Current Milestone
+
+- `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
+- `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
+- `QuakePluginAPI`: Codable plugin manifests, permissions, capabilities, and host/plugin message types.
+- `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
+- `quake-panel`: first AppKit panel host with a native 8x2 grid wired to HID knob/touch events.
+
+## Current Hardware Notes
+
+- macOS reports the DK touch interface as standard digitizer HID: usagePage `0x000D`, usage `0x0004`.
+- The probe confirms control input, touch input, and knob-ring output.
+- macOS screenshots of the DK display show the AppKit panel UI correctly, but the physical DK glass may remain black while the compositor has valid pixels. That points to a remaining display/backlight/firmware presentation issue, not a general HID failure.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the platform plan.
+
+## License
+
+OpenQuake Mac original project code is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+
+Important caveat: the DK-Quake / ARIS-68 HID protocol behavior is based on community reverse-engineering work that carries a non-commercial protocol caveat. Treat this project as open-source, non-commercial unless that protocol licensing boundary is clarified.

@@ -1,0 +1,46 @@
+{
+  "id": "echo",
+  "name": "Echo Plugin",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "stdioJSONRPC",
+    "command": "echo-plugin",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "eventPublisher"
+  ],
+  "permissions": [],
+  "actions": [
+    {
+      "id": "echo.say",
+      "title": "Echo Message",
+      "argumentSchema": [
+        {
+          "id": "message",
+          "title": "Message",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "echo.lastMessage",
+      "title": "Last Message",
+      "valueSchema": [
+        {
+          "id": "message",
+          "title": "Message",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": []
+}
