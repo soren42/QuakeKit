@@ -38,7 +38,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var device: QuakeDevice?
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
-    private lazy var pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages)
+    private lazy var pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
@@ -88,7 +88,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             panelContentView = view
             testView = view
         } else {
-            let view = PanelView(frame: contentFrame, pages: pages, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
+            let view = PanelView(frame: contentFrame, pages: pages, themePackages: themePackages, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
             panelContentView = view
             panelView = view
         }
@@ -262,6 +262,8 @@ struct ShellTile: Equatable {
 enum ShellAction: Equatable {
     case openPage(Int)
     case setStatus(String)
+    case selectTheme(Int)
+    case cycleAccent
 }
 
 struct ShellPage: Equatable {
@@ -287,8 +289,106 @@ struct RuntimeSnapshot: Equatable {
     var eventCount = 0
 }
 
+struct PanelTheme: Equatable {
+    var name: String
+    var background: NSColor
+    var surface: NSColor
+    var surfaceRaised: NSColor
+    var border: NSColor
+    var textPrimary: NSColor
+    var textSecondary: NSColor
+    var accent: NSColor
+    var success: NSColor
+    var warning: NSColor
+    var danger: NSColor
+    var cornerRadius: CGFloat
+    var borderWidth: CGFloat
+    var spacing: CGFloat
+
+    static let fallback = PanelTheme(
+        name: "Fallback",
+        background: NSColor(calibratedRed: 0.02, green: 0.05, blue: 0.07, alpha: 1),
+        surface: NSColor(calibratedRed: 0.075, green: 0.095, blue: 0.125, alpha: 1),
+        surfaceRaised: NSColor(calibratedRed: 0.12, green: 0.24, blue: 0.28, alpha: 1),
+        border: NSColor(calibratedRed: 0.20, green: 0.25, blue: 0.31, alpha: 1),
+        textPrimary: .white,
+        textSecondary: NSColor(calibratedRed: 0.68, green: 0.77, blue: 0.86, alpha: 1),
+        accent: NSColor(calibratedRed: 0.49, green: 1.0, blue: 0.70, alpha: 1),
+        success: NSColor(calibratedRed: 0.42, green: 1.0, blue: 0.56, alpha: 1),
+        warning: NSColor(calibratedRed: 1.0, green: 0.82, blue: 0.40, alpha: 1),
+        danger: NSColor(calibratedRed: 1.0, green: 0.36, blue: 0.48, alpha: 1),
+        cornerRadius: 8,
+        borderWidth: 1,
+        spacing: 10
+    )
+
+    static func from(_ manifest: ThemeManifest) -> PanelTheme {
+        let palette = manifest.palette
+        let semantic = palette.semanticColors
+        let fallback = PanelTheme.fallback
+
+        func color(_ reference: String?, _ fallbackColor: NSColor) -> NSColor {
+            guard let reference else { return fallbackColor }
+            if let direct = NSColor(hex: reference) {
+                return direct
+            }
+            if let token = palette.colors[reference], let tokenColor = NSColor(hex: token.value) {
+                return tokenColor
+            }
+            return fallbackColor
+        }
+
+        return PanelTheme(
+            name: manifest.name,
+            background: color(semantic?.background, fallback.background),
+            surface: color(semantic?.surface, fallback.surface),
+            surfaceRaised: color(semantic?.surfaceRaised, fallback.surfaceRaised),
+            border: color(semantic?.border, fallback.border),
+            textPrimary: color(semantic?.textPrimary, fallback.textPrimary),
+            textSecondary: color(semantic?.textSecondary, fallback.textSecondary),
+            accent: color(semantic?.accent, fallback.accent),
+            success: color(semantic?.success, fallback.success),
+            warning: color(semantic?.warning, fallback.warning),
+            danger: color(semantic?.danger, fallback.danger),
+            cornerRadius: CGFloat(manifest.metrics?.cornerRadius ?? Double(fallback.cornerRadius)),
+            borderWidth: CGFloat(manifest.metrics?.borderWidth ?? Double(fallback.borderWidth)),
+            spacing: CGFloat(manifest.metrics?.spacing ?? Double(fallback.spacing))
+        )
+    }
+
+    func withAccent(_ accent: NSColor) -> PanelTheme {
+        var copy = self
+        copy.accent = accent
+        return copy
+    }
+}
+
+extension NSColor {
+    convenience init?(hex: String) {
+        guard hex.hasPrefix("#") else { return nil }
+        let body = String(hex.dropFirst())
+        guard body.count == 6 || body.count == 8, let value = UInt64(body, radix: 16) else { return nil }
+        let red: CGFloat
+        let green: CGFloat
+        let blue: CGFloat
+        let alpha: CGFloat
+        if body.count == 8 {
+            red = CGFloat((value & 0xFF00_0000) >> 24) / 255
+            green = CGFloat((value & 0x00FF_0000) >> 16) / 255
+            blue = CGFloat((value & 0x0000_FF00) >> 8) / 255
+            alpha = CGFloat(value & 0x0000_00FF) / 255
+        } else {
+            red = CGFloat((value & 0xFF0000) >> 16) / 255
+            green = CGFloat((value & 0x00FF00) >> 8) / 255
+            blue = CGFloat(value & 0x0000FF) / 255
+            alpha = 1
+        }
+        self.init(calibratedRed: red, green: green, blue: blue, alpha: alpha)
+    }
+}
+
 enum ShellCatalog {
-    static func defaultPages(pluginPackages: [PluginPackage]) -> [ShellPage] {
+    static func defaultPages(pluginPackages: [PluginPackage], themePackages: [ThemePackage]) -> [ShellPage] {
         let widgetTiles = pluginTiles(
             from: pluginPackages,
             presentationFilter: { $0 == .widget || $0 == .pageAndWidget },
@@ -301,13 +401,15 @@ enum ShellCatalog {
             emptyTitle: "No Apps",
             emptySubtitle: "Add full-page views"
         )
+        let themeTiles = themeTiles(from: themePackages)
 
         return [
             ShellPage(title: "Home", kind: .grid, tiles: [
-            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(3)),
+            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(4)),
             ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
             ShellTile(title: "Apps", subtitle: "\(appTiles.count) full pages", action: .openPage(2)),
-            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(3)),
+            ShellTile(title: "Themes", subtitle: "\(themePackages.count) installed", action: .openPage(3)),
+            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(4)),
             ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
             ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
             ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
@@ -324,6 +426,7 @@ enum ShellCatalog {
             ]),
             ShellPage(title: "Widgets", kind: .grid, tiles: widgetTiles),
             ShellPage(title: "Apps", kind: .grid, tiles: appTiles),
+            ShellPage(title: "Themes", kind: .grid, tiles: themeTiles),
             ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
         ]
     }
@@ -355,6 +458,26 @@ enum ShellCatalog {
             ShellTile(title: emptyTitle, subtitle: emptySubtitle, action: .setStatus(emptySubtitle))
         ]
     }
+
+    private static func themeTiles(from packages: [ThemePackage]) -> [ShellTile] {
+        var tiles = packages.enumerated().map { index, package in
+            ShellTile(
+                title: package.manifest.name,
+                subtitle: package.manifest.description ?? package.manifest.id,
+                action: .selectTheme(index)
+            )
+        }
+
+        tiles.append(ShellTile(
+            title: "Accent",
+            subtitle: "Cycle test colors",
+            action: .cycleAccent
+        ))
+
+        return tiles.isEmpty
+            ? [ShellTile(title: "No Themes", subtitle: "Add .quakekittheme packages", action: .setStatus("No themes installed"))]
+            : tiles
+    }
 }
 
 final class PanelView: NSView {
@@ -365,10 +488,14 @@ final class PanelView: NSView {
         didSet { updateStatus() }
     }
     private let pages: [ShellPage]
+    private let themePackages: [ThemePackage]
     private let columns = 8
     private let rows = 2
     private let portraitMode: Bool
     private var currentPageIndex = 0
+    private var activeThemeIndex = 0
+    private var activeTheme: PanelTheme
+    private var accentCycleIndex = 0
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
@@ -376,13 +503,15 @@ final class PanelView: NSView {
     private let statusLabel = NSTextField(labelWithString: "")
     private let titleLabel = NSTextField(labelWithString: "")
 
-    init(frame frameRect: NSRect, pages: [ShellPage], portraitMode: Bool) {
+    init(frame frameRect: NSRect, pages: [ShellPage], themePackages: [ThemePackage], portraitMode: Bool) {
         self.pages = pages
+        self.themePackages = themePackages
         self.portraitMode = portraitMode
+        self.activeTheme = themePackages.first.map { PanelTheme.from($0.manifest) } ?? .fallback
         super.init(frame: frameRect)
         wantsLayer = true
         autoresizingMask = [.width, .height]
-        layer?.backgroundColor = NSColor(calibratedRed: 0.02, green: 0.05, blue: 0.07, alpha: 1).cgColor
+        layer?.backgroundColor = activeTheme.background.cgColor
         log("PanelView init frame=\(format(frameRect)) portraitMode=\(portraitMode)")
         setupSubviews()
     }
@@ -417,6 +546,10 @@ final class PanelView: NSView {
             openPage(index)
         case .setStatus(let message):
             status = message
+        case .selectTheme(let index):
+            selectTheme(index)
+        case .cycleAccent:
+            cycleAccent()
         }
     }
 
@@ -543,14 +676,14 @@ final class PanelView: NSView {
         switch currentPage.kind {
         case .grid:
             tileViews = currentPage.tiles.map { tile in
-                let view = TileCellView(tile: tile)
+                let view = TileCellView(tile: tile, theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 return view
             }
         case .runtimeStatus:
             runtimeRows = RuntimeStatusModel.rows(from: runtime).map { row in
-                let view = StatusRowView(title: row.title, value: row.value)
+                let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 return view
@@ -574,7 +707,7 @@ final class PanelView: NSView {
     }
 
     private func layoutContent() {
-        let gap: CGFloat = 10
+        let gap = activeTheme.spacing
         let inset: CGFloat = 16
         let topChrome: CGFloat = 62
         let bottomChrome: CGFloat = 38
@@ -598,7 +731,7 @@ final class PanelView: NSView {
     }
 
     private func layoutRuntimeRows(in rect: NSRect) {
-        let gap: CGFloat = 10
+        let gap = activeTheme.spacing
         let columns = 4
         let rowHeight = (rect.height - gap * 1) / 2
         let columnWidth = (rect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
@@ -622,16 +755,22 @@ final class PanelView: NSView {
 
     private func updateChrome() {
         titleLabel.stringValue = "QuakeKit"
+        titleLabel.textColor = activeTheme.textPrimary
+        layer?.backgroundColor = activeTheme.background.cgColor
         for (index, label) in pageLabels.enumerated() {
             let active = index == currentPageIndex
             label.layer?.backgroundColor = (active
-                ? NSColor(calibratedRed: 0.12, green: 0.25, blue: 0.29, alpha: 1)
-                : NSColor(calibratedRed: 0.06, green: 0.075, blue: 0.095, alpha: 1)).cgColor
-            label.layer?.borderWidth = active ? 2 : 1
+                ? activeTheme.surfaceRaised
+                : activeTheme.surface).cgColor
+            label.textColor = active ? activeTheme.textPrimary : activeTheme.textSecondary
+            label.layer?.borderWidth = active ? max(2, activeTheme.borderWidth) : activeTheme.borderWidth
             label.layer?.borderColor = (active
-                ? NSColor(calibratedRed: 0.49, green: 1.0, blue: 0.70, alpha: 1)
-                : NSColor(calibratedRed: 0.18, green: 0.22, blue: 0.28, alpha: 1)).cgColor
+                ? activeTheme.accent
+                : activeTheme.border).cgColor
         }
+        statusLabel.textColor = activeTheme.accent
+        tileViews.forEach { $0.theme = activeTheme }
+        runtimeRows.forEach { $0.theme = activeTheme }
     }
 
     private func updateStatus() {
@@ -645,6 +784,31 @@ final class PanelView: NSView {
         for index in runtimeRows.indices where rows.indices.contains(index) {
             runtimeRows[index].value = rows[index].value
         }
+    }
+
+    private func selectTheme(_ index: Int) {
+        guard themePackages.indices.contains(index) else { return }
+        activeThemeIndex = index
+        activeTheme = PanelTheme.from(themePackages[index].manifest)
+        status = "Theme \(activeTheme.name)"
+        log("theme selected \(themePackages[index].manifest.id)")
+        updateChrome()
+        rebuildPageContent()
+    }
+
+    private func cycleAccent() {
+        let accents = [
+            activeTheme.accent,
+            activeTheme.success,
+            activeTheme.warning,
+            activeTheme.danger,
+            NSColor(calibratedRed: 0.36, green: 0.78, blue: 1.0, alpha: 1),
+            NSColor(calibratedRed: 1.0, green: 0.42, blue: 0.86, alpha: 1)
+        ]
+        accentCycleIndex = (accentCycleIndex + 1) % accents.count
+        activeTheme = activeTheme.withAccent(accents[accentCycleIndex])
+        status = "Accent override \(accentCycleIndex + 1)"
+        updateChrome()
     }
 }
 
@@ -746,32 +910,31 @@ final class StatusRowView: NSView {
             valueLabel.stringValue = value
         }
     }
+    var theme: PanelTheme {
+        didSet { applyTheme() }
+    }
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let valueLabel = NSTextField(labelWithString: "")
 
-    init(title: String, value: String) {
+    init(title: String, value: String, theme: PanelTheme) {
         self.value = value
+        self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor(calibratedRed: 0.20, green: 0.25, blue: 0.31, alpha: 1).cgColor
-        layer?.backgroundColor = NSColor(calibratedRed: 0.065, green: 0.085, blue: 0.105, alpha: 1).cgColor
 
         titleLabel.stringValue = title
         titleLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
-        titleLabel.textColor = NSColor(calibratedRed: 0.68, green: 0.77, blue: 0.86, alpha: 1)
         titleLabel.backgroundColor = .clear
 
         valueLabel.stringValue = value
         valueLabel.font = NSFont.monospacedSystemFont(ofSize: 24, weight: .semibold)
-        valueLabel.textColor = .white
         valueLabel.backgroundColor = .clear
         valueLabel.lineBreakMode = .byTruncatingTail
 
         addSubview(titleLabel)
         addSubview(valueLabel)
+        applyTheme()
     }
 
     required init?(coder: NSCoder) {
@@ -783,31 +946,40 @@ final class StatusRowView: NSView {
         titleLabel.frame = NSRect(x: 16, y: bounds.height - 40, width: bounds.width - 32, height: 22)
         valueLabel.frame = NSRect(x: 16, y: 24, width: bounds.width - 32, height: 34)
     }
+
+    private func applyTheme() {
+        layer?.cornerRadius = theme.cornerRadius
+        layer?.borderWidth = theme.borderWidth
+        layer?.borderColor = theme.border.cgColor
+        layer?.backgroundColor = theme.surface.cgColor
+        titleLabel.textColor = theme.textSecondary
+        valueLabel.textColor = theme.textPrimary
+    }
 }
 
 final class TileCellView: NSView {
     var isSelected: Bool = false {
         didSet { applyStyle() }
     }
+    var theme: PanelTheme {
+        didSet { applyStyle() }
+    }
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let subtitleLabel = NSTextField(labelWithString: "")
 
-    init(tile: ShellTile) {
+    init(tile: ShellTile, theme: PanelTheme) {
+        self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.borderWidth = 1
 
         titleLabel.stringValue = tile.title
         titleLabel.font = NSFont.systemFont(ofSize: 25, weight: .semibold)
-        titleLabel.textColor = .white
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.backgroundColor = .clear
 
         subtitleLabel.stringValue = tile.subtitle
         subtitleLabel.font = NSFont.systemFont(ofSize: 16, weight: .regular)
-        subtitleLabel.textColor = NSColor(calibratedRed: 0.68, green: 0.77, blue: 0.86, alpha: 1)
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.backgroundColor = .clear
 
@@ -827,12 +999,15 @@ final class TileCellView: NSView {
     }
 
     private func applyStyle() {
+        layer?.cornerRadius = theme.cornerRadius
         layer?.backgroundColor = (isSelected
-            ? NSColor(calibratedRed: 0.12, green: 0.24, blue: 0.28, alpha: 1)
-            : NSColor(calibratedRed: 0.075, green: 0.095, blue: 0.125, alpha: 1)).cgColor
+            ? theme.surfaceRaised
+            : theme.surface).cgColor
         layer?.borderColor = (isSelected
-            ? NSColor(calibratedRed: 0.49, green: 1.0, blue: 0.70, alpha: 1)
-            : NSColor(calibratedRed: 0.20, green: 0.25, blue: 0.31, alpha: 1)).cgColor
-        layer?.borderWidth = isSelected ? 3 : 1
+            ? theme.accent
+            : theme.border).cgColor
+        layer?.borderWidth = isSelected ? max(3, theme.borderWidth) : theme.borderWidth
+        titleLabel.textColor = theme.textPrimary
+        subtitleLabel.textColor = theme.textSecondary
     }
 }

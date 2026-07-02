@@ -165,6 +165,11 @@ The first host UI should expose:
 - toggle for `boolean`
 - segmented control or menu for `choice`
 
+The current panel shell exposes a first-pass `Themes` page. It can select
+installed themes and cycle an accent override. This is intentionally smaller
+than the final settings editor; it exists to prove package discovery, theme
+application, and on-device theme switching.
+
 ## Functional Plugin Parity
 
 Functional plugins will receive a congruent JSON Schema for their manifests.

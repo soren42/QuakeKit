@@ -18,7 +18,7 @@ Confirmed:
 - Knob-ring output works.
 - The plugin manifest/API skeleton builds and validates sample manifests.
 - The AppKit panel UI renders on the DK physical display.
-- The native shell supports Home, Widgets, Apps, and Runtime pages.
+- The native shell supports Home, Widgets, Apps, Themes, and Runtime pages.
 
 ## First Tangible Target
 
@@ -95,13 +95,14 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 - `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
 - `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, capabilities, package loading, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
-- `quake-panel`: first AppKit panel host with native shell pages wired to HID knob/touch events.
+- `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
 
 ## Current Hardware Notes
 
 - macOS reports the DK touch interface as standard digitizer HID: usagePage `0x000D`, usage `0x0004`.
 - The probe confirms control input, touch input, and knob-ring output.
 - The physical DK display renders the native panel when the host uses a full-frame borderless window on the DK screen.
+- The host can visually own the DK screen with a borderless full-frame window, even though macOS still exposes it as an external display.
 - `quake-panel --display-test --no-hid` runs a high-contrast display diagnostic.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the platform plan.

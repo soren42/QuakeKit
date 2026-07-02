@@ -24,6 +24,27 @@ QuakeKit is structured as a platform, not a single-purpose dashboard app.
    - Owns OS-specific windowing, secrets, audio, HID access, media keys, and app launching.
    - Future hosts can implement the same runtime/plugin contracts on Windows or Linux.
 
+## DK Display Ownership
+
+The DK-Quake panel is exposed to macOS as a normal external display. QuakeKit
+does not push display frames through HID. It renders native windows onto that
+display.
+
+For the end-user experience, the macOS host should still behave like it owns the
+DK screen:
+
+- place a borderless window at the exact DK display frame
+- avoid `visibleFrame` so menu-bar/dock safe areas do not shrink the panel UI
+- use a high window level for diagnostics and a floating/managed level for the
+normal host shell
+- join all Spaces and remain stationary where appropriate
+- avoid normal resizable app chrome on the DK display
+- optionally hide the host from the Dock/menu-bar once the app bundle lifecycle
+is mature
+
+This gives QuakeKit the same practical presentation model as a dedicated
+control surface while staying inside the standard macOS display compositor.
+
 ## Milestone 1
 
 - Build and test the DK-Quake HID probe.
@@ -37,4 +58,4 @@ QuakeKit is structured as a platform, not a single-purpose dashboard app.
 - Full editor UI.
 - Arbitrary third-party executable plugin installation.
 - Rich bundled apps such as music, Home Assistant, or system monitor.
-- HID display-frame pushing. The DK-Quake screen is treated as a normal external display.
+- HID display-frame pushing. The DK-Quake screen is treated as a normal external display with a host-owned presentation layer.
