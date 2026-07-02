@@ -1,5 +1,8 @@
 # OpenQuake Mac
 
+![Static Badge](https://img.shields.io/badge/-macOS-grey?style=flat&logo=apple)  ![Static Badge](https://img.shields.io/badge/version-6.3.2-orange?style=flat&logo=Swift)  ![Static Badge](https://img.shields.io/badge/status-ALPHA_Development_and_Test_ONLY-red?style=flat)
+
+
 Swift-native platform work for the DK-Quake / ARIS-68 touch display and control center.
 
 This repository is being built as a modular device/runtime platform first. The DK-Quake macOS host is the first implementation, not the only long-term target.
