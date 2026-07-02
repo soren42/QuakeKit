@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import QuakeHID
+import QuakePluginAPI
 import QuakeRuntime
 
 func log(_ message: String) {
@@ -35,7 +36,8 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var panelView: PanelView?
     private var testView: DisplayTestView?
     private var device: QuakeDevice?
-    private let pages = ShellCatalog.defaultPages
+    private let pluginPackages = PanelPluginLoader.loadSamplePackages()
+    private lazy var pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
@@ -202,6 +204,30 @@ enum DisplayLocator {
     }
 }
 
+enum PanelPluginLoader {
+    static func loadSamplePackages() -> [PluginPackage] {
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let directory = root.appendingPathComponent("Examples/Plugins", isDirectory: true)
+        let results = PluginPackageLoader.loadPackages(from: directory)
+        var packages: [PluginPackage] = []
+
+        for result in results {
+            switch result {
+            case .success(let package, let warnings):
+                packages.append(package)
+                log("plugin loaded \(package.manifest.id) views=\(package.manifest.views.count)")
+                for warning in warnings {
+                    log("plugin warning \(package.manifest.id): \(warning)")
+                }
+            case .failure(let url, let errors):
+                log("plugin failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
+            }
+        }
+
+        return packages
+    }
+}
+
 struct ShellTile: Equatable {
     var title: String
     var subtitle: String
@@ -237,11 +263,26 @@ struct RuntimeSnapshot: Equatable {
 }
 
 enum ShellCatalog {
-    static let defaultPages: [ShellPage] = [
-        ShellPage(title: "Home", kind: .grid, tiles: [
-            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(1)),
-            ShellTile(title: "Plugins", subtitle: "Manifest API", action: .setStatus("Plugin host shell coming next")),
-            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(1)),
+    static func defaultPages(pluginPackages: [PluginPackage]) -> [ShellPage] {
+        let widgetTiles = pluginTiles(
+            from: pluginPackages,
+            presentationFilter: { $0 == .widget || $0 == .pageAndWidget },
+            emptyTitle: "No Widgets",
+            emptySubtitle: "Add plugin views"
+        )
+        let appTiles = pluginTiles(
+            from: pluginPackages,
+            presentationFilter: { $0 == .page || $0 == .pageAndWidget },
+            emptyTitle: "No Apps",
+            emptySubtitle: "Add full-page views"
+        )
+
+        return [
+            ShellPage(title: "Home", kind: .grid, tiles: [
+            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(3)),
+            ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
+            ShellTile(title: "Apps", subtitle: "\(appTiles.count) full pages", action: .openPage(2)),
+            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(3)),
             ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
             ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
             ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
@@ -255,9 +296,40 @@ enum ShellCatalog {
             ShellTile(title: "Music", subtitle: "Widget idea", action: .setStatus("Music widget slot")),
             ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
             ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
-        ]),
-        ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
-    ]
+            ]),
+            ShellPage(title: "Widgets", kind: .grid, tiles: widgetTiles),
+            ShellPage(title: "Apps", kind: .grid, tiles: appTiles),
+            ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
+        ]
+    }
+
+    private static func pluginTiles(
+        from packages: [PluginPackage],
+        presentationFilter: (PluginView.Presentation) -> Bool,
+        emptyTitle: String,
+        emptySubtitle: String
+    ) -> [ShellTile] {
+        let tiles = packages.flatMap { package in
+            package.manifest.views.compactMap { view -> ShellTile? in
+                let presentation = view.presentation ?? .page
+                guard presentationFilter(presentation) else { return nil }
+                let type = view.type?.rawValue ?? package.manifest.entry.transport.rawValue
+                return ShellTile(
+                    title: view.title,
+                    subtitle: "\(package.manifest.name) · \(type)",
+                    action: .setStatus("\(package.manifest.name): \(view.title)")
+                )
+            }
+        }
+
+        if !tiles.isEmpty {
+            return tiles
+        }
+
+        return [
+            ShellTile(title: emptyTitle, subtitle: emptySubtitle, action: .setStatus(emptySubtitle))
+        ]
+    }
 }
 
 final class PanelView: NSView {

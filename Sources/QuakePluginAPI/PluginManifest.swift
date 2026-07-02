@@ -42,6 +42,9 @@ public struct PluginEntry: Codable, Equatable, Sendable {
         case stdioJSONRPC
         case websocket
         case nativeSwift
+        case webView
+        case shell
+        case php
     }
 
     public var transport: Transport
@@ -102,14 +105,51 @@ public struct PluginDataStream: Codable, Equatable, Identifiable, Sendable {
 }
 
 public struct PluginView: Codable, Equatable, Identifiable, Sendable {
+    public enum ViewType: String, Codable, Sendable {
+        case native
+        case webCanvas
+        case webDocument
+        case text
+        case dataDriven
+    }
+
+    public enum Presentation: String, Codable, Sendable {
+        case page
+        case widget
+        case pageAndWidget
+    }
+
     public var id: String
     public var title: String
+    public var type: ViewType?
+    public var presentation: Presentation?
+    public var entryPath: String?
+    public var dataStreamID: String?
+    public var columnSpan: Int?
+    public var rowSpan: Int?
     public var preferredWidth: Int?
     public var preferredHeight: Int?
 
-    public init(id: String, title: String, preferredWidth: Int? = nil, preferredHeight: Int? = nil) {
+    public init(
+        id: String,
+        title: String,
+        type: ViewType? = nil,
+        presentation: Presentation? = nil,
+        entryPath: String? = nil,
+        dataStreamID: String? = nil,
+        columnSpan: Int? = nil,
+        rowSpan: Int? = nil,
+        preferredWidth: Int? = nil,
+        preferredHeight: Int? = nil
+    ) {
         self.id = id
         self.title = title
+        self.type = type
+        self.presentation = presentation
+        self.entryPath = entryPath
+        self.dataStreamID = dataStreamID
+        self.columnSpan = columnSpan
+        self.rowSpan = rowSpan
         self.preferredWidth = preferredWidth
         self.preferredHeight = preferredHeight
     }

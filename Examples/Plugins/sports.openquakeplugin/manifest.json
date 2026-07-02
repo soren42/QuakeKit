@@ -1,0 +1,45 @@
+{
+  "id": "sports_scores",
+  "name": "Sports Scores",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "stdioJSONRPC",
+    "command": "sports-scores",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "viewProvider"
+  ],
+  "permissions": [
+    {
+      "network": {
+        "hosts": [
+          "site.api.espn.com"
+        ]
+      }
+    }
+  ],
+  "actions": [],
+  "dataStreams": [
+    {
+      "id": "sports.favoriteTeams",
+      "title": "Favorite Teams",
+      "valueSchema": []
+    }
+  ],
+  "views": [
+    {
+      "id": "sports.scoreboard",
+      "title": "Scoreboard",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "sports.favoriteTeams",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 480,
+      "preferredHeight": 200
+    }
+  ]
+}

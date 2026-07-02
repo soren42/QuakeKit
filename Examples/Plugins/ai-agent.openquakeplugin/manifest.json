@@ -1,0 +1,61 @@
+{
+  "id": "ai_agent",
+  "name": "AI Agent",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "stdioJSONRPC",
+    "command": "ai-agent-adapter",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "viewProvider",
+    "eventSubscriber"
+  ],
+  "permissions": [
+    {
+      "audioCapture": {}
+    },
+    {
+      "network": {
+        "hosts": [
+          "api.openai.com",
+          "api.anthropic.com"
+        ]
+      }
+    },
+    {
+      "secrets": {
+        "keys": [
+          "OPENAI_API_KEY",
+          "ANTHROPIC_API_KEY"
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "agent.listen",
+      "title": "Start Listening",
+      "argumentSchema": []
+    },
+    {
+      "id": "agent.stop",
+      "title": "Stop Listening",
+      "argumentSchema": []
+    }
+  ],
+  "dataStreams": [],
+  "views": [
+    {
+      "id": "agent.conversation",
+      "title": "Agent Console",
+      "type": "webDocument",
+      "presentation": "page",
+      "entryPath": "index.html",
+      "preferredWidth": 1920,
+      "preferredHeight": 480
+    }
+  ]
+}

@@ -14,11 +14,8 @@ Confirmed:
 - HID touch input works.
 - Knob-ring output works.
 - The plugin manifest/API skeleton builds and validates sample manifests.
-- The AppKit panel UI renders correctly in screenshots and on the main display.
-
-Known open issue:
-
-- The DK physical glass may remain black even when macOS screenshots of the DK display show the AppKit panel UI. This appears to be a remaining display/backlight/firmware presentation issue, not a general HID failure.
+- The AppKit panel UI renders on the DK physical display.
+- The native shell supports Home, Widgets, Apps, and Runtime pages.
 
 ## First Tangible Target
 
@@ -53,10 +50,18 @@ Test confirmed HID output to the knob ring:
 .build/debug/quake-probe --led-off
 ```
 
-Validate the sample plugin manifest:
+Validate a sample plugin manifest:
 
 ```bash
 swift run quake-probe --validate-plugin Examples/Plugins/echo-plugin.json
+```
+
+Validate all bundled example manifests:
+
+```bash
+for f in Examples/Plugins/*.json Examples/Plugins/*.openquakeplugin/manifest.json; do
+  swift run quake-probe --validate-plugin "$f"
+done
 ```
 
 With hardware connected, run the safe live probe:
@@ -77,17 +82,19 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 
 - `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
 - `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
-- `QuakePluginAPI`: Codable plugin manifests, permissions, capabilities, and host/plugin message types.
+- `QuakePluginAPI`: Codable plugin manifests, permissions, capabilities, package loading, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
-- `quake-panel`: first AppKit panel host with a native 8x2 grid wired to HID knob/touch events.
+- `quake-panel`: first AppKit panel host with native shell pages wired to HID knob/touch events.
 
 ## Current Hardware Notes
 
 - macOS reports the DK touch interface as standard digitizer HID: usagePage `0x000D`, usage `0x0004`.
 - The probe confirms control input, touch input, and knob-ring output.
-- macOS screenshots of the DK display show the AppKit panel UI correctly, but the physical DK glass may remain black while the compositor has valid pixels. That points to a remaining display/backlight/firmware presentation issue, not a general HID failure.
+- The physical DK display renders the native panel when the host uses a full-frame borderless window on the DK screen.
+- `quake-panel --display-test --no-hid` runs a high-contrast display diagnostic.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the platform plan.
+See [docs/PLUGIN_ARCHITECTURE.md](docs/PLUGIN_ARCHITECTURE.md) for the plugin model.
 
 ## License
 
