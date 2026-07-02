@@ -102,7 +102,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             defer: false,
             screen: targetScreen
         )
-        panelWindow.title = "OpenQuake Panel"
+        panelWindow.title = "QuakeKit Panel"
         panelWindow.backgroundColor = .black
         panelWindow.isOpaque = true
         panelWindow.contentView = panelContentView
@@ -596,7 +596,7 @@ final class PanelView: NSView {
     }
 
     private func updateChrome() {
-        titleLabel.stringValue = "OpenQuake"
+        titleLabel.stringValue = "QuakeKit"
         for (index, label) in pageLabels.enumerated() {
             let active = index == currentPageIndex
             label.layer?.backgroundColor = (active
@@ -681,7 +681,7 @@ final class DisplayTestView: NSView {
     }
 
     private func drawLabel() {
-        let text = "OPENQUAKE DISPLAY TEST \(phase)"
+        let text = "QUAKEKIT DISPLAY TEST \(phase)"
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 54, weight: .black),
             .foregroundColor: NSColor.white,

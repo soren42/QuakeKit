@@ -1,4 +1,4 @@
-# OpenQuake Mac
+# QuakeKit
 
 ![Static Badge](https://img.shields.io/badge/-macOS-grey?style=flat&logo=apple)  ![Static Badge](https://img.shields.io/badge/version-6.3.2-orange?style=flat&logo=Swift)  ![Static Badge](https://img.shields.io/badge/status-ALPHA_Development_and_Test_ONLY-red?style=flat)
 
@@ -62,7 +62,7 @@ swift run quake-probe --validate-plugin Examples/Plugins/echo-plugin.json
 Validate all bundled example manifests:
 
 ```bash
-for f in Examples/Plugins/*.json Examples/Plugins/*.openquakeplugin/manifest.json; do
+for f in Examples/Plugins/*.json Examples/Plugins/*.quakekitplugin/manifest.json; do
   swift run quake-probe --validate-plugin "$f"
 done
 ```
@@ -101,6 +101,6 @@ See [docs/PLUGIN_ARCHITECTURE.md](docs/PLUGIN_ARCHITECTURE.md) for the plugin mo
 
 ## License
 
-OpenQuake Mac original project code is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+QuakeKit original project code is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
 
 Important caveat: the DK-Quake / ARIS-68 HID protocol behavior is based on community reverse-engineering work that carries a non-commercial protocol caveat. Treat this project as open-source, non-commercial unless that protocol licensing boundary is clarified.

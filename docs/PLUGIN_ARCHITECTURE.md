@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-OpenQuake plugins should support two presentation shapes:
+QuakeKit plugins should support two presentation shapes:
 
 - **Applet pages**: full-panel or multi-page experiences, such as weather, an AI agent console, or a system dashboard.
 - **Widgets**: compact grid tiles that can be arranged alongside other widgets.

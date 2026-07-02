@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "OpenQuakeMac",
+    name: "QuakeKit",
     platforms: [
         .macOS(.v14)
     ],

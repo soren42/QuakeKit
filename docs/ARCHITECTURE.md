@@ -1,6 +1,6 @@
 # Architecture
 
-OpenQuake Mac is structured as a platform, not a single-purpose dashboard app.
+QuakeKit is structured as a platform, not a single-purpose dashboard app.
 
 ## Layers
 

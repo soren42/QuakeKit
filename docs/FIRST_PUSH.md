@@ -38,7 +38,7 @@ Optional hardware checks:
 ## Initial Commit Message
 
 ```text
-Initial Swift-native OpenQuake platform skeleton
+Initial Swift-native QuakeKit platform skeleton
 ```
 
 ## Suggested Repo Description

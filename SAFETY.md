@@ -1,6 +1,6 @@
 # Safety Notes
 
-OpenQuake Mac talks directly to DK-Quake / ARIS-68 HID interfaces. Treat device output commands with care.
+QuakeKit talks directly to DK-Quake / ARIS-68 HID interfaces. Treat device output commands with care.
 
 ## Do Not Send DFU
 

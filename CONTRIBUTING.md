@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping with OpenQuake Mac. This project is still early, so the most useful contributions right now are careful hardware reports, small focused fixes, and documentation of DK-Quake behavior across different Macs and macOS versions.
+Thanks for helping with QuakeKit. This project is still early, so the most useful contributions right now are careful hardware reports, small focused fixes, and documentation of DK-Quake behavior across different Macs and macOS versions.
 
 ## Development Setup
 
@@ -73,7 +73,7 @@ Do not contribute code copied from DK-Suite, vendor binaries, private SDKs, or p
 
 ## Current Architecture Direction
 
-OpenQuake Mac is a platform first:
+QuakeKit is a platform first:
 
 - `QuakeHID`: device transport and DK-Quake protocol handling.
 - `QuakeRuntime`: runtime events, pages, tiles, actions, and state.
