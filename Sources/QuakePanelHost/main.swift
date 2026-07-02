@@ -36,6 +36,9 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var panelView: PanelView?
     private var testView: DisplayTestView?
     private var device: QuakeDevice?
+    private var ringCoordinator = KnobRingCoordinator()
+    private var ringTimer: Timer?
+    private var lastRingOutput: KnobRingResolvedOutput?
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
@@ -52,6 +55,8 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        ringTimer?.invalidate()
+        ringTimer = nil
         device?.stop()
     }
 
@@ -149,6 +154,8 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             }
             device = quake
             panelView?.status = "HID connected"
+            requestKnobRing(state: .success, priority: .focus, ttl: 1.2, source: "hid")
+            startRingTimer()
         } catch {
             log("hid unavailable: \(error)")
             panelView?.status = "HID unavailable: \(error)"
@@ -163,10 +170,12 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         case .touch(let points):
             guard let point = points.first(where: { $0.phase == .down }) ?? points.first else { return }
             log("event touch x=\(point.x) y=\(point.y)")
+            requestKnobRing(state: .focus, priority: .focus, ttl: 0.8, source: "touch")
             panelView?.recordTouch(point)
             panelView?.touch(logicalX: CGFloat(point.x), logicalY: CGFloat(point.y))
         case .knob(let event):
             panelView?.recordKnob(event)
+            requestKnobRing(state: .focus, priority: .focus, ttl: 0.8, source: "knob")
             switch event {
             case .rotate(let direction):
                 log("event knob rotate \(direction)")
@@ -191,6 +200,43 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         default:
             break
         }
+    }
+
+    private func startRingTimer() {
+        ringTimer?.invalidate()
+        ringTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.applyKnobRing()
+            }
+        }
+        applyKnobRing()
+    }
+
+    private func requestKnobRing(
+        state: KnobRingSemanticState,
+        priority: KnobRingPriority,
+        ttl: TimeInterval?,
+        source: String
+    ) {
+        ringCoordinator.submit(KnobRingRequest(source: source, state: state, priority: priority, ttl: ttl))
+        applyKnobRing()
+    }
+
+    private func applyKnobRing() {
+        guard let device else { return }
+        guard let output = panelView?.resolvedKnobRingOutput(using: &ringCoordinator) else {
+            if lastRingOutput != nil {
+                _ = device.turnKnobRingOff()
+                lastRingOutput = nil
+                log("knob ring off")
+            }
+            return
+        }
+
+        guard output != lastRingOutput else { return }
+        let ok = device.applyKnobRing(output)
+        lastRingOutput = output
+        log("knob ring \(output.state.rawValue) source=\(output.source) color=\(output.color) intensity=\(String(format: "%.2f", output.intensity)) animation=\(output.animation.rawValue) ok=\(ok)")
     }
 }
 
@@ -980,6 +1026,27 @@ final class PanelView: NSView {
     private var activeThemeManifest: ThemeManifest? {
         guard themePackages.indices.contains(activeThemeIndex) else { return nil }
         return themePackages[activeThemeIndex].manifest
+    }
+
+    func resolvedKnobRingOutput(using coordinator: inout KnobRingCoordinator) -> KnobRingResolvedOutput? {
+        guard var output = coordinator.resolve(theme: activeThemeManifest?.hardware?.knobRing) else {
+            return nil
+        }
+        output.color = resolvedColorReference(output.color)
+        return output
+    }
+
+    private func resolvedColorReference(_ reference: String) -> String {
+        if NSColor(hex: reference) != nil {
+            return reference
+        }
+        if let override = themeConfiguration.overrides["palette.colors.\(reference).value"]?.stringValue {
+            return override
+        }
+        if let color = activeThemeManifest?.palette.colors[reference]?.value {
+            return color
+        }
+        return activeThemeManifest?.palette.colors["accent"]?.value ?? "#7CFFD1"
     }
 
     private func rebuildPages() {

@@ -171,6 +171,18 @@ func runSelfTest() {
     precondition(QuakeProtocol.decodeControlReport([0xA3, 0x03, 0x03, 0x02, 0xFF]) == [.knob(.holdEnd)])
     let touch = QuakeProtocol.decodeTouchReport([0xA3, 0x1C, 0x03, 0x1A, 0x01, 0x01, 0xE0, 0x01, 0x80, 0x07])
     precondition(touch == [.touch([TouchPoint(phase: .down, x: 1920, y: 480)])])
+    var ring = KnobRingCoordinator()
+    let now = Date(timeIntervalSince1970: 1_000)
+    let themedRing = ThemeKnobRing(
+        idle: ThemeKnobRingState(color: "#111111", intensity: 0.2, animation: .solid),
+        focus: ThemeKnobRingState(color: "#222222", intensity: 0.6, animation: .pulse),
+        danger: ThemeKnobRingState(color: "#FF0000", intensity: 1, animation: .flash)
+    )
+    precondition(ring.resolve(theme: themedRing, now: now)?.state == .idle)
+    ring.submit(KnobRingRequest(source: "focus", state: .focus, priority: .focus, ttl: 1, createdAt: now))
+    ring.submit(KnobRingRequest(source: "critical", state: .danger, priority: .systemCritical, ttl: 5, createdAt: now))
+    precondition(ring.resolve(theme: themedRing, now: now.addingTimeInterval(0.5))?.state == .danger)
+    precondition(ring.resolve(theme: themedRing, now: now.addingTimeInterval(6))?.state == .idle)
     print("Protocol self-test passed.")
 }
 

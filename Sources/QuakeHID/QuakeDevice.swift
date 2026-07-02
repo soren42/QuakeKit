@@ -156,6 +156,25 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     @discardableResult
+    public func applyKnobRing(_ output: KnobRingResolvedOutput) -> Bool {
+        guard output.animation != .off, output.intensity > 0 else {
+            return turnKnobRingOff()
+        }
+
+        let color = KnobRingHSL(hex: output.color) ?? KnobRingHSL(hue: 96, saturation: 255)
+        let brightness = UInt8(max(1, min(255, Int((output.intensity * 255).rounded()))))
+        let speed = UInt8(output.animation == .solid ? 0 : 160)
+        let effect = output.animation.viaEffectIndex
+
+        var ok = sendControlFrame(QuakeProtocol.setKnobLEDPower(true))
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x02, values: [effect])) && ok
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x01, values: [brightness])) && ok
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x03, values: [speed])) && ok
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x04, values: [color.hue, color.saturation])) && ok
+        return ok
+    }
+
+    @discardableResult
     public func turnKnobRingOff() -> Bool {
         var ok = sendControlFrame(QuakeProtocol.setKnobLEDPower(false))
         let variants: [(IOHIDReportType, Bool)] = [
@@ -239,6 +258,72 @@ public final class QuakeDevice: @unchecked Sendable {
     fileprivate func handleTouch(bytes: [UInt8]) {
         for event in QuakeProtocol.decodeTouchReport(bytes) {
             eventHandler(RuntimeEvent(source: "dk-quake", event: event))
+        }
+    }
+}
+
+private struct KnobRingHSL {
+    var hue: UInt8
+    var saturation: UInt8
+
+    init(hue: UInt8, saturation: UInt8) {
+        self.hue = hue
+        self.saturation = saturation
+    }
+
+    init?(hex: String) {
+        guard hex.hasPrefix("#") else { return nil }
+        let body = String(hex.dropFirst())
+        guard body.count == 6 || body.count == 8, let value = UInt64(body, radix: 16) else { return nil }
+
+        let red: Double
+        let green: Double
+        let blue: Double
+        if body.count == 8 {
+            red = Double((value & 0xFF00_0000) >> 24) / 255
+            green = Double((value & 0x00FF_0000) >> 16) / 255
+            blue = Double((value & 0x0000_FF00) >> 8) / 255
+        } else {
+            red = Double((value & 0xFF0000) >> 16) / 255
+            green = Double((value & 0x00FF00) >> 8) / 255
+            blue = Double(value & 0x0000FF) / 255
+        }
+
+        let maxValue = max(red, green, blue)
+        let minValue = min(red, green, blue)
+        let delta = maxValue - minValue
+        let saturation = maxValue == 0 ? 0 : delta / maxValue
+        let hueDegrees: Double
+        if delta == 0 {
+            hueDegrees = 0
+        } else if maxValue == red {
+            hueDegrees = 60 * (((green - blue) / delta).truncatingRemainder(dividingBy: 6))
+        } else if maxValue == green {
+            hueDegrees = 60 * (((blue - red) / delta) + 2)
+        } else {
+            hueDegrees = 60 * (((red - green) / delta) + 4)
+        }
+        let normalizedHue = hueDegrees < 0 ? hueDegrees + 360 : hueDegrees
+        self.hue = UInt8(max(0, min(255, Int((normalizedHue / 360 * 255).rounded()))))
+        self.saturation = UInt8(max(0, min(255, Int((saturation * 255).rounded()))))
+    }
+}
+
+private extension KnobRingAnimation {
+    var viaEffectIndex: UInt8 {
+        switch self {
+        case .solid:
+            return 1
+        case .pulse:
+            return 8
+        case .flash:
+            return 32
+        case .strobe:
+            return 30
+        case .progress:
+            return 2
+        case .off:
+            return 0
         }
     }
 }
