@@ -134,6 +134,45 @@
       "defaultValue": "#7CFFD1"
     },
     {
+      "id": "successColor",
+      "title": "Success color",
+      "type": "color",
+      "target": "palette.colors.success.value",
+      "defaultValue": "#6CFF8F"
+    },
+    {
+      "id": "warningColor",
+      "title": "Warning color",
+      "type": "color",
+      "target": "palette.colors.warning.value",
+      "defaultValue": "#FFD166"
+    },
+    {
+      "id": "dangerColor",
+      "title": "Danger color",
+      "type": "color",
+      "target": "palette.colors.danger.value",
+      "defaultValue": "#FF5C7A"
+    },
+    {
+      "id": "cornerRadius",
+      "title": "Corner radius",
+      "type": "number",
+      "target": "metrics.cornerRadius",
+      "defaultValue": 8,
+      "minimum": 2,
+      "maximum": 16
+    },
+    {
+      "id": "spacing",
+      "title": "Spacing",
+      "type": "number",
+      "target": "metrics.spacing",
+      "defaultValue": 10,
+      "minimum": 6,
+      "maximum": 16
+    },
+    {
       "id": "density",
       "title": "Density",
       "type": "choice",

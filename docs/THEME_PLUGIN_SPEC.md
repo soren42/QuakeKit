@@ -173,10 +173,7 @@ application, and on-device theme switching.
 The current native shell persists the active theme and option overrides to the
 user's Application Support directory. The implemented option targets are:
 
-- `palette.colors.accent.value`
-- `palette.colors.success.value`
-- `palette.colors.warning.value`
-- `palette.colors.danger.value`
+- `palette.colors.<token>.value`
 - `metrics.cornerRadius`
 - `metrics.spacing`
 - `metrics.density`

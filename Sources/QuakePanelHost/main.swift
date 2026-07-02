@@ -381,26 +381,19 @@ struct PanelTheme: Equatable {
             if let direct = NSColor(hex: reference) {
                 return direct
             }
+            if let override = overrides["palette.colors.\(reference).value"]?.stringValue, let overrideColor = NSColor(hex: override) {
+                return overrideColor
+            }
             if let token = palette.colors[reference], let tokenColor = NSColor(hex: token.value) {
                 return tokenColor
             }
             return fallbackColor
         }
 
-        func overrideColor(_ path: String, _ base: NSColor) -> NSColor {
-            guard let value = overrides[path]?.stringValue else { return base }
-            return NSColor(hex: value) ?? base
-        }
-
         func overrideMetric(_ path: String, _ base: CGFloat) -> CGFloat {
             guard let value = overrides[path]?.doubleValue else { return base }
             return CGFloat(max(0, value))
         }
-
-        let baseAccent = color(semantic?.accent, fallback.accent)
-        let baseSuccess = color(semantic?.success, fallback.success)
-        let baseWarning = color(semantic?.warning, fallback.warning)
-        let baseDanger = color(semantic?.danger, fallback.danger)
 
         let baseSpacing = overrideMetric("metrics.spacing", CGFloat(manifest.metrics?.spacing ?? Double(fallback.spacing)))
         let densitySpacing: CGFloat
@@ -421,10 +414,10 @@ struct PanelTheme: Equatable {
             border: color(semantic?.border, fallback.border),
             textPrimary: color(semantic?.textPrimary, fallback.textPrimary),
             textSecondary: color(semantic?.textSecondary, fallback.textSecondary),
-            accent: overrideColor("palette.colors.accent.value", baseAccent),
-            success: overrideColor("palette.colors.success.value", baseSuccess),
-            warning: overrideColor("palette.colors.warning.value", baseWarning),
-            danger: overrideColor("palette.colors.danger.value", baseDanger),
+            accent: color(semantic?.accent, fallback.accent),
+            success: color(semantic?.success, fallback.success),
+            warning: color(semantic?.warning, fallback.warning),
+            danger: color(semantic?.danger, fallback.danger),
             cornerRadius: overrideMetric("metrics.cornerRadius", CGFloat(manifest.metrics?.cornerRadius ?? Double(fallback.cornerRadius))),
             borderWidth: CGFloat(manifest.metrics?.borderWidth ?? Double(fallback.borderWidth)),
             spacing: densitySpacing
@@ -486,7 +479,12 @@ extension NSColor {
 }
 
 enum ShellCatalog {
-    static func defaultPages(pluginPackages: [PluginPackage], themePackages: [ThemePackage], activeThemeIndex: Int) -> [ShellPage] {
+    static func defaultPages(
+        pluginPackages: [PluginPackage],
+        themePackages: [ThemePackage],
+        activeThemeIndex: Int,
+        overrides: [String: JSONValue]
+    ) -> [ShellPage] {
         let widgetTiles = pluginTiles(
             from: pluginPackages,
             presentationFilter: { $0 == .widget || $0 == .pageAndWidget },
@@ -499,7 +497,7 @@ enum ShellCatalog {
             emptyTitle: "No Apps",
             emptySubtitle: "Add full-page views"
         )
-        let themeTiles = themeTiles(from: themePackages, activeThemeIndex: activeThemeIndex)
+        let themeTiles = themeTiles(from: themePackages, activeThemeIndex: activeThemeIndex, overrides: overrides)
 
         return [
             ShellPage(title: "Home", kind: .grid, tiles: [
@@ -557,7 +555,7 @@ enum ShellCatalog {
         ]
     }
 
-    private static func themeTiles(from packages: [ThemePackage], activeThemeIndex: Int) -> [ShellTile] {
+    private static func themeTiles(from packages: [ThemePackage], activeThemeIndex: Int, overrides: [String: JSONValue]) -> [ShellTile] {
         var tiles = packages.enumerated().map { index, package in
             ShellTile(
                 title: index == activeThemeIndex ? "\(package.manifest.name) *" : package.manifest.name,
@@ -570,7 +568,7 @@ enum ShellCatalog {
             tiles.append(contentsOf: packages[activeThemeIndex].manifest.options.map { option in
                 ShellTile(
                     title: option.title,
-                    subtitle: optionSubtitle(option),
+                    subtitle: optionSubtitle(option, overrides: overrides),
                     action: .editThemeOption(option.id)
                 )
             })
@@ -583,17 +581,33 @@ enum ShellCatalog {
             : tiles
     }
 
-    private static func optionSubtitle(_ option: ThemeOption) -> String {
+    private static func optionSubtitle(_ option: ThemeOption, overrides: [String: JSONValue]) -> String {
+        let current = overrides[option.target] ?? option.defaultValue
         switch option.type {
         case .color:
-            return "Color option"
+            return "Color \(display(current))"
         case .number:
             let range = [option.minimum, option.maximum].compactMap { $0.map { String($0) } }.joined(separator: "...")
-            return range.isEmpty ? "Numeric option" : "Range \(range)"
+            return range.isEmpty ? "Value \(display(current))" : "\(display(current)) · range \(range)"
         case .boolean:
-            return "Toggle option"
+            return display(current)
         case .choice:
-            return "\(option.choices.count) choices"
+            return "\(display(current)) · \(option.choices.count) choices"
+        }
+    }
+
+    private static func display(_ value: JSONValue) -> String {
+        switch value {
+        case .string(let value):
+            return value
+        case .integer(let value):
+            return "\(value)"
+        case .double(let value):
+            return String(format: "%.1f", value)
+        case .bool(let value):
+            return value ? "on" : "off"
+        default:
+            return "set"
         }
     }
 }
@@ -615,7 +629,6 @@ final class PanelView: NSView {
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
     private var themeConfiguration: ThemeUserConfiguration
-    private var optionCycleIndexes: [String: Int] = [:]
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
@@ -632,7 +645,12 @@ final class PanelView: NSView {
            let index = themePackages.firstIndex(where: { $0.manifest.id == activeThemeID }) {
             self.activeThemeIndex = index
         }
-        self.pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages, activeThemeIndex: activeThemeIndex)
+        self.pages = ShellCatalog.defaultPages(
+            pluginPackages: pluginPackages,
+            themePackages: themePackages,
+            activeThemeIndex: activeThemeIndex,
+            overrides: themeConfiguration.overrides
+        )
         self.activeTheme = themePackages.indices.contains(activeThemeIndex)
             ? PanelTheme.from(themePackages[activeThemeIndex].manifest, overrides: themeConfiguration.overrides)
             : .fallback
@@ -922,7 +940,7 @@ final class PanelView: NSView {
         themeConfiguration.activeThemeID = themePackages[index].manifest.id
         themeConfiguration.overrides.removeAll()
         ThemeConfigurationStore.save(themeConfiguration)
-        pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages, activeThemeIndex: activeThemeIndex)
+        rebuildPages()
         activeTheme = PanelTheme.from(themePackages[index].manifest)
         status = "Theme \(activeTheme.name)"
         log("theme selected \(themePackages[index].manifest.id)")
@@ -941,6 +959,7 @@ final class PanelView: NSView {
         themeConfiguration.overrides[option.target] = value
         ThemeConfigurationStore.save(themeConfiguration)
         activeTheme = activeThemeManifest.map { PanelTheme.from($0, overrides: themeConfiguration.overrides) } ?? .fallback
+        rebuildPages()
         status = "\(option.title): \(display(value))"
         log("theme option \(option.id)=\(display(value))")
         updateChrome()
@@ -952,6 +971,7 @@ final class PanelView: NSView {
         themeConfiguration.overrides.removeAll()
         ThemeConfigurationStore.save(themeConfiguration)
         activeTheme = activeThemeManifest.map { PanelTheme.from($0) } ?? .fallback
+        rebuildPages()
         status = "Theme overrides reset"
         updateChrome()
         rebuildPageContent()
@@ -962,25 +982,40 @@ final class PanelView: NSView {
         return themePackages[activeThemeIndex].manifest
     }
 
+    private func rebuildPages() {
+        pages = ShellCatalog.defaultPages(
+            pluginPackages: pluginPackages,
+            themePackages: themePackages,
+            activeThemeIndex: activeThemeIndex,
+            overrides: themeConfiguration.overrides
+        )
+        for (index, label) in pageLabels.enumerated() where pages.indices.contains(index) {
+            label.stringValue = "\(index + 1) \(pages[index].title)"
+        }
+    }
+
     private func nextValue(for option: ThemeOption) -> JSONValue {
-        let key = option.id
         switch option.type {
         case .color:
             let swatches = colorSwatches(for: option)
-            let index = ((optionCycleIndexes[key] ?? 0) + 1) % swatches.count
-            optionCycleIndexes[key] = index
+            let current = themeConfiguration.overrides[option.target]?.stringValue ?? option.defaultValue.stringValue
+            let currentIndex = current.flatMap { swatches.firstIndex(of: $0) } ?? 0
+            let index = (currentIndex + 1) % swatches.count
             return .string(swatches[index])
         case .choice:
             guard !option.choices.isEmpty else { return option.defaultValue }
-            let index = ((optionCycleIndexes[key] ?? 0) + 1) % option.choices.count
-            optionCycleIndexes[key] = index
+            let current = themeConfiguration.overrides[option.target] ?? option.defaultValue
+            let currentIndex = option.choices.firstIndex(of: current) ?? 0
+            let index = (currentIndex + 1) % option.choices.count
             return option.choices[index]
         case .number:
             let minimum = option.minimum ?? 0
             let maximum = option.maximum ?? max(minimum + 1, 10)
             let steps = 5
-            let index = ((optionCycleIndexes[key] ?? -1) + 1) % steps
-            optionCycleIndexes[key] = index
+            let current = themeConfiguration.overrides[option.target]?.doubleValue ?? option.defaultValue.doubleValue ?? minimum
+            let normalized = maximum == minimum ? 0 : (current - minimum) / (maximum - minimum)
+            let currentIndex = min(steps - 1, max(0, Int((normalized * Double(steps - 1)).rounded())))
+            let index = (currentIndex + 1) % steps
             let value = minimum + (maximum - minimum) * Double(index) / Double(steps - 1)
             return .double(value)
         case .boolean:

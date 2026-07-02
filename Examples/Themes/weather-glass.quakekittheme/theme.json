@@ -128,6 +128,20 @@
       "defaultValue": "#5CE1FF"
     },
     {
+      "id": "surfaceColor",
+      "title": "Glass surface",
+      "type": "color",
+      "target": "palette.colors.surface.value",
+      "defaultValue": "#112638D9"
+    },
+    {
+      "id": "borderColor",
+      "title": "Glass border",
+      "type": "color",
+      "target": "palette.colors.border.value",
+      "defaultValue": "#5CC8FF66"
+    },
+    {
       "id": "cornerRadius",
       "title": "Corner radius",
       "type": "number",
@@ -135,6 +149,27 @@
       "defaultValue": 8,
       "minimum": 2,
       "maximum": 16
+    },
+    {
+      "id": "spacing",
+      "title": "Spacing",
+      "type": "number",
+      "target": "metrics.spacing",
+      "defaultValue": 12,
+      "minimum": 8,
+      "maximum": 18
+    },
+    {
+      "id": "density",
+      "title": "Density",
+      "type": "choice",
+      "target": "metrics.density",
+      "defaultValue": "comfortable",
+      "choices": [
+        "compact",
+        "standard",
+        "comfortable"
+      ]
     }
   ]
 }
