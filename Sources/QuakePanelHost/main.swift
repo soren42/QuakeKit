@@ -38,7 +38,6 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var device: QuakeDevice?
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
-    private lazy var pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
@@ -88,7 +87,12 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             panelContentView = view
             testView = view
         } else {
-            let view = PanelView(frame: contentFrame, pages: pages, themePackages: themePackages, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
+            let view = PanelView(
+                frame: contentFrame,
+                pluginPackages: pluginPackages,
+                themePackages: themePackages,
+                portraitMode: !launchOptions.debugWindow && frame.height > frame.width
+            )
             panelContentView = view
             panelView = view
         }
@@ -263,7 +267,8 @@ enum ShellAction: Equatable {
     case openPage(Int)
     case setStatus(String)
     case selectTheme(Int)
-    case cycleAccent
+    case editThemeOption(String)
+    case resetThemeOverrides
 }
 
 struct ShellPage: Equatable {
@@ -287,6 +292,49 @@ struct RuntimeSnapshot: Equatable {
     var lastKnob = "-"
     var lastPong: Date?
     var eventCount = 0
+}
+
+struct ThemeUserConfiguration: Codable, Equatable {
+    var activeThemeID: String?
+    var overrides: [String: JSONValue]
+
+    init(activeThemeID: String? = nil, overrides: [String: JSONValue] = [:]) {
+        self.activeThemeID = activeThemeID
+        self.overrides = overrides
+    }
+}
+
+enum ThemeConfigurationStore {
+    static func load() -> ThemeUserConfiguration {
+        guard let url = configURL(), let data = try? Data(contentsOf: url) else {
+            return ThemeUserConfiguration()
+        }
+        do {
+            return try JSONDecoder().decode(ThemeUserConfiguration.self, from: data)
+        } catch {
+            log("theme config load failed: \(error)")
+            return ThemeUserConfiguration()
+        }
+    }
+
+    static func save(_ configuration: ThemeUserConfiguration) {
+        guard let url = configURL() else { return }
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(configuration).write(to: url, options: .atomic)
+        } catch {
+            log("theme config save failed: \(error)")
+        }
+    }
+
+    private static func configURL() -> URL? {
+        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        return directory?
+            .appendingPathComponent("QuakeKit", isDirectory: true)
+            .appendingPathComponent("theme-config.json")
+    }
 }
 
 struct PanelTheme: Equatable {
@@ -322,7 +370,7 @@ struct PanelTheme: Equatable {
         spacing: 10
     )
 
-    static func from(_ manifest: ThemeManifest) -> PanelTheme {
+    static func from(_ manifest: ThemeManifest, overrides: [String: JSONValue] = [:]) -> PanelTheme {
         let palette = manifest.palette
         let semantic = palette.semanticColors
         let fallback = PanelTheme.fallback
@@ -338,6 +386,32 @@ struct PanelTheme: Equatable {
             return fallbackColor
         }
 
+        func overrideColor(_ path: String, _ base: NSColor) -> NSColor {
+            guard let value = overrides[path]?.stringValue else { return base }
+            return NSColor(hex: value) ?? base
+        }
+
+        func overrideMetric(_ path: String, _ base: CGFloat) -> CGFloat {
+            guard let value = overrides[path]?.doubleValue else { return base }
+            return CGFloat(max(0, value))
+        }
+
+        let baseAccent = color(semantic?.accent, fallback.accent)
+        let baseSuccess = color(semantic?.success, fallback.success)
+        let baseWarning = color(semantic?.warning, fallback.warning)
+        let baseDanger = color(semantic?.danger, fallback.danger)
+
+        let baseSpacing = overrideMetric("metrics.spacing", CGFloat(manifest.metrics?.spacing ?? Double(fallback.spacing)))
+        let densitySpacing: CGFloat
+        switch overrides["metrics.density"]?.stringValue ?? manifest.metrics?.density?.rawValue {
+        case "compact":
+            densitySpacing = min(baseSpacing, 8)
+        case "comfortable":
+            densitySpacing = max(baseSpacing, 12)
+        default:
+            densitySpacing = baseSpacing
+        }
+
         return PanelTheme(
             name: manifest.name,
             background: color(semantic?.background, fallback.background),
@@ -346,13 +420,13 @@ struct PanelTheme: Equatable {
             border: color(semantic?.border, fallback.border),
             textPrimary: color(semantic?.textPrimary, fallback.textPrimary),
             textSecondary: color(semantic?.textSecondary, fallback.textSecondary),
-            accent: color(semantic?.accent, fallback.accent),
-            success: color(semantic?.success, fallback.success),
-            warning: color(semantic?.warning, fallback.warning),
-            danger: color(semantic?.danger, fallback.danger),
-            cornerRadius: CGFloat(manifest.metrics?.cornerRadius ?? Double(fallback.cornerRadius)),
+            accent: overrideColor("palette.colors.accent.value", baseAccent),
+            success: overrideColor("palette.colors.success.value", baseSuccess),
+            warning: overrideColor("palette.colors.warning.value", baseWarning),
+            danger: overrideColor("palette.colors.danger.value", baseDanger),
+            cornerRadius: overrideMetric("metrics.cornerRadius", CGFloat(manifest.metrics?.cornerRadius ?? Double(fallback.cornerRadius))),
             borderWidth: CGFloat(manifest.metrics?.borderWidth ?? Double(fallback.borderWidth)),
-            spacing: CGFloat(manifest.metrics?.spacing ?? Double(fallback.spacing))
+            spacing: densitySpacing
         )
     }
 
@@ -360,6 +434,29 @@ struct PanelTheme: Equatable {
         var copy = self
         copy.accent = accent
         return copy
+    }
+}
+
+extension JSONValue {
+    var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    var doubleValue: Double? {
+        switch self {
+        case .double(let value):
+            return value
+        case .integer(let value):
+            return Double(value)
+        default:
+            return nil
+        }
+    }
+
+    var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
     }
 }
 
@@ -388,7 +485,7 @@ extension NSColor {
 }
 
 enum ShellCatalog {
-    static func defaultPages(pluginPackages: [PluginPackage], themePackages: [ThemePackage]) -> [ShellPage] {
+    static func defaultPages(pluginPackages: [PluginPackage], themePackages: [ThemePackage], activeThemeIndex: Int) -> [ShellPage] {
         let widgetTiles = pluginTiles(
             from: pluginPackages,
             presentationFilter: { $0 == .widget || $0 == .pageAndWidget },
@@ -401,7 +498,7 @@ enum ShellCatalog {
             emptyTitle: "No Apps",
             emptySubtitle: "Add full-page views"
         )
-        let themeTiles = themeTiles(from: themePackages)
+        let themeTiles = themeTiles(from: themePackages, activeThemeIndex: activeThemeIndex)
 
         return [
             ShellPage(title: "Home", kind: .grid, tiles: [
@@ -459,24 +556,44 @@ enum ShellCatalog {
         ]
     }
 
-    private static func themeTiles(from packages: [ThemePackage]) -> [ShellTile] {
+    private static func themeTiles(from packages: [ThemePackage], activeThemeIndex: Int) -> [ShellTile] {
         var tiles = packages.enumerated().map { index, package in
             ShellTile(
-                title: package.manifest.name,
+                title: index == activeThemeIndex ? "\(package.manifest.name) *" : package.manifest.name,
                 subtitle: package.manifest.description ?? package.manifest.id,
                 action: .selectTheme(index)
             )
         }
 
-        tiles.append(ShellTile(
-            title: "Accent",
-            subtitle: "Cycle test colors",
-            action: .cycleAccent
-        ))
+        if packages.indices.contains(activeThemeIndex) {
+            tiles.append(contentsOf: packages[activeThemeIndex].manifest.options.map { option in
+                ShellTile(
+                    title: option.title,
+                    subtitle: optionSubtitle(option),
+                    action: .editThemeOption(option.id)
+                )
+            })
+        }
+
+        tiles.append(ShellTile(title: "Reset", subtitle: "Clear overrides", action: .resetThemeOverrides))
 
         return tiles.isEmpty
             ? [ShellTile(title: "No Themes", subtitle: "Add .quakekittheme packages", action: .setStatus("No themes installed"))]
             : tiles
+    }
+
+    private static func optionSubtitle(_ option: ThemeOption) -> String {
+        switch option.type {
+        case .color:
+            return "Color option"
+        case .number:
+            let range = [option.minimum, option.maximum].compactMap { $0.map { String($0) } }.joined(separator: "...")
+            return range.isEmpty ? "Numeric option" : "Range \(range)"
+        case .boolean:
+            return "Toggle option"
+        case .choice:
+            return "\(option.choices.count) choices"
+        }
     }
 }
 
@@ -487,15 +604,17 @@ final class PanelView: NSView {
     var status: String = "Starting" {
         didSet { updateStatus() }
     }
-    private let pages: [ShellPage]
+    private let pluginPackages: [PluginPackage]
     private let themePackages: [ThemePackage]
+    private var pages: [ShellPage]
     private let columns = 8
     private let rows = 2
     private let portraitMode: Bool
     private var currentPageIndex = 0
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
-    private var accentCycleIndex = 0
+    private var themeConfiguration: ThemeUserConfiguration
+    private var optionCycleIndexes: [String: Int] = [:]
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
@@ -503,11 +622,19 @@ final class PanelView: NSView {
     private let statusLabel = NSTextField(labelWithString: "")
     private let titleLabel = NSTextField(labelWithString: "")
 
-    init(frame frameRect: NSRect, pages: [ShellPage], themePackages: [ThemePackage], portraitMode: Bool) {
-        self.pages = pages
+    init(frame frameRect: NSRect, pluginPackages: [PluginPackage], themePackages: [ThemePackage], portraitMode: Bool) {
+        self.pluginPackages = pluginPackages
         self.themePackages = themePackages
         self.portraitMode = portraitMode
-        self.activeTheme = themePackages.first.map { PanelTheme.from($0.manifest) } ?? .fallback
+        self.themeConfiguration = ThemeConfigurationStore.load()
+        if let activeThemeID = themeConfiguration.activeThemeID,
+           let index = themePackages.firstIndex(where: { $0.manifest.id == activeThemeID }) {
+            self.activeThemeIndex = index
+        }
+        self.pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages, activeThemeIndex: activeThemeIndex)
+        self.activeTheme = themePackages.indices.contains(activeThemeIndex)
+            ? PanelTheme.from(themePackages[activeThemeIndex].manifest, overrides: themeConfiguration.overrides)
+            : .fallback
         super.init(frame: frameRect)
         wantsLayer = true
         autoresizingMask = [.width, .height]
@@ -548,8 +675,10 @@ final class PanelView: NSView {
             status = message
         case .selectTheme(let index):
             selectTheme(index)
-        case .cycleAccent:
-            cycleAccent()
+        case .editThemeOption(let id):
+            editThemeOption(id)
+        case .resetThemeOverrides:
+            resetThemeOverrides()
         }
     }
 
@@ -789,6 +918,10 @@ final class PanelView: NSView {
     private func selectTheme(_ index: Int) {
         guard themePackages.indices.contains(index) else { return }
         activeThemeIndex = index
+        themeConfiguration.activeThemeID = themePackages[index].manifest.id
+        themeConfiguration.overrides.removeAll()
+        ThemeConfigurationStore.save(themeConfiguration)
+        pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages, themePackages: themePackages, activeThemeIndex: activeThemeIndex)
         activeTheme = PanelTheme.from(themePackages[index].manifest)
         status = "Theme \(activeTheme.name)"
         log("theme selected \(themePackages[index].manifest.id)")
@@ -796,19 +929,90 @@ final class PanelView: NSView {
         rebuildPageContent()
     }
 
-    private func cycleAccent() {
-        let accents = [
-            activeTheme.accent,
-            activeTheme.success,
-            activeTheme.warning,
-            activeTheme.danger,
-            NSColor(calibratedRed: 0.36, green: 0.78, blue: 1.0, alpha: 1),
-            NSColor(calibratedRed: 1.0, green: 0.42, blue: 0.86, alpha: 1)
-        ]
-        accentCycleIndex = (accentCycleIndex + 1) % accents.count
-        activeTheme = activeTheme.withAccent(accents[accentCycleIndex])
-        status = "Accent override \(accentCycleIndex + 1)"
+    private func editThemeOption(_ id: String) {
+        guard let option = activeThemeManifest?.options.first(where: { $0.id == id }) else {
+            status = "Missing option \(id)"
+            return
+        }
+
+        let value = nextValue(for: option)
+        themeConfiguration.activeThemeID = activeThemeManifest?.id
+        themeConfiguration.overrides[option.target] = value
+        ThemeConfigurationStore.save(themeConfiguration)
+        activeTheme = activeThemeManifest.map { PanelTheme.from($0, overrides: themeConfiguration.overrides) } ?? .fallback
+        status = "\(option.title): \(display(value))"
+        log("theme option \(option.id)=\(display(value))")
         updateChrome()
+        rebuildPageContent()
+    }
+
+    private func resetThemeOverrides() {
+        themeConfiguration.activeThemeID = activeThemeManifest?.id
+        themeConfiguration.overrides.removeAll()
+        ThemeConfigurationStore.save(themeConfiguration)
+        activeTheme = activeThemeManifest.map { PanelTheme.from($0) } ?? .fallback
+        status = "Theme overrides reset"
+        updateChrome()
+        rebuildPageContent()
+    }
+
+    private var activeThemeManifest: ThemeManifest? {
+        guard themePackages.indices.contains(activeThemeIndex) else { return nil }
+        return themePackages[activeThemeIndex].manifest
+    }
+
+    private func nextValue(for option: ThemeOption) -> JSONValue {
+        let key = option.id
+        switch option.type {
+        case .color:
+            let swatches = colorSwatches(for: option)
+            let index = ((optionCycleIndexes[key] ?? 0) + 1) % swatches.count
+            optionCycleIndexes[key] = index
+            return .string(swatches[index])
+        case .choice:
+            guard !option.choices.isEmpty else { return option.defaultValue }
+            let index = ((optionCycleIndexes[key] ?? 0) + 1) % option.choices.count
+            optionCycleIndexes[key] = index
+            return option.choices[index]
+        case .number:
+            let minimum = option.minimum ?? 0
+            let maximum = option.maximum ?? max(minimum + 1, 10)
+            let steps = 5
+            let index = ((optionCycleIndexes[key] ?? -1) + 1) % steps
+            optionCycleIndexes[key] = index
+            let value = minimum + (maximum - minimum) * Double(index) / Double(steps - 1)
+            return .double(value)
+        case .boolean:
+            let next = !(themeConfiguration.overrides[option.target]?.boolValue ?? option.defaultValue.boolValue ?? false)
+            return .bool(next)
+        }
+    }
+
+    private func colorSwatches(for option: ThemeOption) -> [String] {
+        let defaultColor = option.defaultValue.stringValue ?? activeThemeManifest?.palette.colors["accent"]?.value ?? "#7CFFD1"
+        return [
+            defaultColor,
+            activeThemeManifest?.palette.colors["success"]?.value ?? "#6CFF8F",
+            activeThemeManifest?.palette.colors["warning"]?.value ?? "#FFD166",
+            activeThemeManifest?.palette.colors["danger"]?.value ?? "#FF5C7A",
+            "#5CC8FF",
+            "#FF6BDA"
+        ]
+    }
+
+    private func display(_ value: JSONValue) -> String {
+        switch value {
+        case .string(let value):
+            return value
+        case .integer(let value):
+            return "\(value)"
+        case .double(let value):
+            return String(format: "%.2f", value)
+        case .bool(let value):
+            return value ? "on" : "off"
+        default:
+            return "updated"
+        }
     }
 }
 

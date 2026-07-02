@@ -170,6 +170,20 @@ installed themes and cycle an accent override. This is intentionally smaller
 than the final settings editor; it exists to prove package discovery, theme
 application, and on-device theme switching.
 
+The current native shell persists the active theme and option overrides to the
+user's Application Support directory. The implemented option targets are:
+
+- `palette.colors.accent.value`
+- `palette.colors.success.value`
+- `palette.colors.warning.value`
+- `palette.colors.danger.value`
+- `metrics.cornerRadius`
+- `metrics.spacing`
+- `metrics.density`
+
+Other valid targets may be stored by the host but will not necessarily affect
+the current native shell until the renderer supports them.
+
 ## Functional Plugin Parity
 
 Functional plugins will receive a congruent JSON Schema for their manifests.

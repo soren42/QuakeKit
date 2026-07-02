@@ -128,13 +128,13 @@
       "defaultValue": "#5CE1FF"
     },
     {
-      "id": "glassOpacity",
-      "title": "Glass opacity",
+      "id": "cornerRadius",
+      "title": "Corner radius",
       "type": "number",
-      "target": "palette.colors.surface.value",
-      "defaultValue": 0.85,
-      "minimum": 0.4,
-      "maximum": 1
+      "target": "metrics.cornerRadius",
+      "defaultValue": 8,
+      "minimum": 2,
+      "maximum": 16
     }
   ]
 }
