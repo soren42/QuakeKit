@@ -29,6 +29,15 @@ if let validateIndex = rawArguments.firstIndex(of: "--validate-plugin") {
     exit(0)
 }
 
+if let validateIndex = rawArguments.firstIndex(of: "--validate-theme") {
+    guard rawArguments.indices.contains(validateIndex + 1) else {
+        fputs("--validate-theme requires a theme manifest path\n", stderr)
+        exit(64)
+    }
+    validateThemeManifest(at: rawArguments[validateIndex + 1])
+    exit(0)
+}
+
 if ledOn || ledOff || ledTest || brightnessValue != nil {
     let quake = QuakeDevice { event in
         print(format(event))
@@ -85,6 +94,7 @@ guard listen else {
     print("")
     print("Run with --self-test to verify protocol encoding/decoding without hardware.")
     print("Run with --validate-plugin <path> to decode and validate a plugin manifest.")
+    print("Run with --validate-theme <path> to decode and validate a theme manifest.")
     print("Run with --all-hid to dump every related HID collection without usage-page filtering.")
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
     print("Run with --brightness <0-255> to set and query screen luminance.")
@@ -196,6 +206,31 @@ func validatePluginManifest(at path: String) {
         }
     } catch {
         fputs("Could not validate plugin manifest: \(error)\n", stderr)
+        exit(65)
+    }
+}
+
+func validateThemeManifest(at path: String) {
+    do {
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let manifest = try JSONDecoder().decode(ThemeManifest.self, from: data)
+        let result = ThemeManifestValidator.validate(manifest)
+        if result.isValid {
+            print("Theme manifest valid: \(manifest.id) (\(manifest.name))")
+        } else {
+            print("Theme manifest invalid: \(manifest.id)")
+            for error in result.errors {
+                print("error: \(error)")
+            }
+        }
+        for warning in result.warnings {
+            print("warning: \(warning)")
+        }
+        if !result.isValid {
+            exit(65)
+        }
+    } catch {
+        fputs("Could not validate theme manifest: \(error)\n", stderr)
         exit(65)
     }
 }

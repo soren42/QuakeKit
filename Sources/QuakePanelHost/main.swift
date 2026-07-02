@@ -37,6 +37,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var testView: DisplayTestView?
     private var device: QuakeDevice?
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
+    private let themePackages = PanelThemeLoader.loadSamplePackages()
     private lazy var pages = ShellCatalog.defaultPages(pluginPackages: pluginPackages)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -221,6 +222,30 @@ enum PanelPluginLoader {
                 }
             case .failure(let url, let errors):
                 log("plugin failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
+            }
+        }
+
+        return packages
+    }
+}
+
+enum PanelThemeLoader {
+    static func loadSamplePackages() -> [ThemePackage] {
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let directory = root.appendingPathComponent("Examples/Themes", isDirectory: true)
+        let results = ThemePackageLoader.loadPackages(from: directory)
+        var packages: [ThemePackage] = []
+
+        for result in results {
+            switch result {
+            case .success(let package, let warnings):
+                packages.append(package)
+                log("theme loaded \(package.manifest.id) colors=\(package.manifest.palette.colors.count)")
+                for warning in warnings {
+                    log("theme warning \(package.manifest.id): \(warning)")
+                }
+            case .failure(let url, let errors):
+                log("theme failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
             }
         }
 

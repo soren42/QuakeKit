@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/soren42/QuakeKit/schemas/theme-plugin.schema.json",
+  "title": "QuakeKit Theme Plugin Manifest",
+  "description": "Manifest schema for QuakeKit presentation/theme plugins.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "apiVersion",
+    "kind",
+    "palette"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Stable package id. Use lowercase letters, numbers, underscores, and hyphens."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "apiVersion": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "theme"
+    },
+    "author": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "palette": {
+      "$ref": "#/$defs/palette"
+    },
+    "typography": {
+      "$ref": "#/$defs/typography"
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "components": {
+      "$ref": "#/$defs/components"
+    },
+    "assets": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "options": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/option"
+      }
+    }
+  },
+  "$defs": {
+    "colorValue": {
+      "type": "string",
+      "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+      "description": "Literal hex color in #RRGGBB or #RRGGBBAA format."
+    },
+    "colorReference": {
+      "type": "string",
+      "pattern": "^(#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})|[a-zA-Z][a-zA-Z0-9_.-]*)$",
+      "description": "Palette key or literal hex color."
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "colors"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "dark",
+            "light",
+            "adaptive"
+          ]
+        },
+        "colors": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/colorToken"
+          }
+        },
+        "semanticColors": {
+          "$ref": "#/$defs/semanticColors"
+        }
+      }
+    },
+    "colorToken": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "role": {
+          "type": "string"
+        },
+        "configurable": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "semanticColors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "background",
+        "surface",
+        "surfaceRaised",
+        "border",
+        "textPrimary",
+        "textSecondary",
+        "accent",
+        "success",
+        "warning",
+        "danger"
+      ],
+      "properties": {
+        "background": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "surface": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "surfaceRaised": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "border": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "textPrimary": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "textSecondary": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "accent": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "success": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "warning": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "danger": {
+          "$ref": "#/$defs/colorReference"
+        }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "displayFont": {
+          "type": "string"
+        },
+        "bodyFont": {
+          "type": "string"
+        },
+        "monoFont": {
+          "type": "string"
+        },
+        "scale": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cornerRadius": {
+          "type": "number",
+          "minimum": 0
+        },
+        "borderWidth": {
+          "type": "number",
+          "minimum": 0
+        },
+        "spacing": {
+          "type": "number",
+          "minimum": 0
+        },
+        "density": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "standard",
+            "comfortable"
+          ]
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tile": {
+          "$ref": "#/$defs/componentStyle"
+        },
+        "tab": {
+          "$ref": "#/$defs/componentStyle"
+        },
+        "statusRow": {
+          "$ref": "#/$defs/componentStyle"
+        },
+        "gauge": {
+          "$ref": "#/$defs/componentStyle"
+        },
+        "chart": {
+          "$ref": "#/$defs/componentStyle"
+        }
+      }
+    },
+    "componentStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "foreground": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "border": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "accent": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "selectedBackground": {
+          "$ref": "#/$defs/colorReference"
+        },
+        "selectedBorder": {
+          "$ref": "#/$defs/colorReference"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "path"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "font",
+            "sound",
+            "css",
+            "script"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "type",
+        "target",
+        "defaultValue"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "color",
+            "number",
+            "boolean",
+            "choice"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dot path into this manifest, for example palette.colors.accent.value."
+        },
+        "defaultValue": {},
+        "choices": {
+          "type": "array",
+          "default": []
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

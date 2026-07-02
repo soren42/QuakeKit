@@ -1,12 +1,38 @@
 # Plugin Architecture
 
-QuakeKit plugins should support two presentation shapes:
+QuakeKit separates extension points into two families:
+
+- **Theme plugins** own presentation: colors, typography, metrics, standard
+  component styles, design assets, and limited user-facing visual settings.
+- **Functional plugins** own behavior: actions, data streams, views, process
+  execution, and external integrations.
+
+Functional plugins should support two presentation shapes:
 
 - **Applet pages**: full-panel or multi-page experiences, such as weather, an AI agent console, or a system dashboard.
 - **Widgets**: compact grid tiles that can be arranged alongside other widgets.
 
-The same manifest model describes both shapes. A plugin can expose any mix of
-actions, data streams, and views.
+The functional plugin manifest describes both shapes. A functional plugin can
+expose any mix of actions, data streams, and views. Theme plugins use a separate
+manifest and package suffix so presentation and behavior can evolve
+independently.
+
+## Theme Plugins
+
+Theme plugin packages use the `.quakekittheme` suffix and contain a required
+`theme.json` manifest. They are validated by
+[`schemas/theme-plugin.schema.json`](../schemas/theme-plugin.schema.json).
+
+Theme plugins define:
+
+- palette tokens and semantic colors
+- typography scale and preferred font families
+- spacing, density, border, and corner metrics
+- standard component styles for tiles, tabs, rows, gauges, and charts
+- optional assets such as images, fonts, CSS, or sounds
+- user-configurable visual options, primarily color and density controls
+
+See [THEME_PLUGIN_SPEC.md](THEME_PLUGIN_SPEC.md) for the complete theme contract.
 
 ## Plugin Lanes
 

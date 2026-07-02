@@ -67,6 +67,14 @@ for f in Examples/Plugins/*.json Examples/Plugins/*.quakekitplugin/manifest.json
 done
 ```
 
+Validate all bundled theme manifests:
+
+```bash
+for f in Examples/Themes/*.quakekittheme/theme.json; do
+  swift run quake-probe --validate-theme "$f"
+done
+```
+
 With hardware connected, run the safe live probe:
 
 ```bash
@@ -85,7 +93,7 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 
 - `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
 - `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
-- `QuakePluginAPI`: Codable plugin manifests, permissions, capabilities, package loading, and host/plugin message types.
+- `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, capabilities, package loading, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
 - `quake-panel`: first AppKit panel host with native shell pages wired to HID knob/touch events.
 
@@ -98,6 +106,7 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the platform plan.
 See [docs/PLUGIN_ARCHITECTURE.md](docs/PLUGIN_ARCHITECTURE.md) for the plugin model.
+See [docs/THEME_PLUGIN_SPEC.md](docs/THEME_PLUGIN_SPEC.md) for the theme plugin contract.
 
 ## License
 

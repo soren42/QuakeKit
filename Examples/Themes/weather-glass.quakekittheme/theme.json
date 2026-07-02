@@ -1,0 +1,140 @@
+{
+  "$schema": "../../schemas/theme-plugin.schema.json",
+  "id": "weather_glass",
+  "name": "Weather Glass",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "kind": "theme",
+  "author": "QuakeKit",
+  "description": "Cool translucent palette intended for weather and ambient dashboards.",
+  "palette": {
+    "mode": "dark",
+    "colors": {
+      "background": {
+        "value": "#071016",
+        "role": "Night sky background",
+        "configurable": false
+      },
+      "surface": {
+        "value": "#112638D9",
+        "role": "Translucent glass surface",
+        "configurable": true
+      },
+      "surfaceRaised": {
+        "value": "#1A3C54E6",
+        "role": "Raised glass surface",
+        "configurable": true
+      },
+      "border": {
+        "value": "#5CC8FF66",
+        "role": "Glass rim",
+        "configurable": true
+      },
+      "textPrimary": {
+        "value": "#F7FCFF",
+        "role": "Primary text",
+        "configurable": false
+      },
+      "textSecondary": {
+        "value": "#B7D8E8",
+        "role": "Secondary text",
+        "configurable": false
+      },
+      "accent": {
+        "value": "#5CE1FF",
+        "role": "Weather highlight",
+        "configurable": true
+      },
+      "success": {
+        "value": "#8DFFB1",
+        "role": "Favorable state",
+        "configurable": true
+      },
+      "warning": {
+        "value": "#FFE082",
+        "role": "Watch state",
+        "configurable": true
+      },
+      "danger": {
+        "value": "#FF708D",
+        "role": "Alert state",
+        "configurable": true
+      }
+    },
+    "semanticColors": {
+      "background": "background",
+      "surface": "surface",
+      "surfaceRaised": "surfaceRaised",
+      "border": "border",
+      "textPrimary": "textPrimary",
+      "textSecondary": "textSecondary",
+      "accent": "accent",
+      "success": "success",
+      "warning": "warning",
+      "danger": "danger"
+    }
+  },
+  "typography": {
+    "displayFont": "SF Pro Rounded",
+    "bodyFont": "SF Pro",
+    "monoFont": "SF Mono",
+    "scale": {
+      "caption": 13,
+      "body": 16,
+      "title": 26,
+      "value": 42
+    }
+  },
+  "metrics": {
+    "cornerRadius": 8,
+    "borderWidth": 1,
+    "spacing": 12,
+    "density": "comfortable"
+  },
+  "components": {
+    "tile": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "accent",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "accent"
+    },
+    "gauge": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "accent"
+    },
+    "chart": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "accent"
+    }
+  },
+  "assets": [
+    {
+      "id": "weatherBackdrop",
+      "kind": "image",
+      "path": "assets/backdrop.png",
+      "scale": 2
+    }
+  ],
+  "options": [
+    {
+      "id": "accentColor",
+      "title": "Accent color",
+      "type": "color",
+      "target": "palette.colors.accent.value",
+      "defaultValue": "#5CE1FF"
+    },
+    {
+      "id": "glassOpacity",
+      "title": "Glass opacity",
+      "type": "number",
+      "target": "palette.colors.surface.value",
+      "defaultValue": 0.85,
+      "minimum": 0.4,
+      "maximum": 1
+    }
+  ]
+}

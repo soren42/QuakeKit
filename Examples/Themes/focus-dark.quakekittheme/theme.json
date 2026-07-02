@@ -1,0 +1,149 @@
+{
+  "$schema": "../../schemas/theme-plugin.schema.json",
+  "id": "focus_dark",
+  "name": "Focus Dark",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "kind": "theme",
+  "author": "QuakeKit",
+  "description": "Restrained dark theme for dense operational dashboards.",
+  "palette": {
+    "mode": "dark",
+    "colors": {
+      "background": {
+        "value": "#05090D",
+        "role": "Base panel background",
+        "configurable": false
+      },
+      "surface": {
+        "value": "#101821",
+        "role": "Tile and row background",
+        "configurable": false
+      },
+      "surfaceRaised": {
+        "value": "#172330",
+        "role": "Selected and raised surfaces",
+        "configurable": false
+      },
+      "border": {
+        "value": "#344253",
+        "role": "Subtle separators",
+        "configurable": false
+      },
+      "textPrimary": {
+        "value": "#F4F8FC",
+        "role": "Primary text",
+        "configurable": false
+      },
+      "textSecondary": {
+        "value": "#9FB1C3",
+        "role": "Secondary text",
+        "configurable": false
+      },
+      "accent": {
+        "value": "#7CFFD1",
+        "role": "Focus and positive highlight",
+        "configurable": true
+      },
+      "success": {
+        "value": "#6CFF8F",
+        "role": "Healthy state",
+        "configurable": true
+      },
+      "warning": {
+        "value": "#FFD166",
+        "role": "Attention state",
+        "configurable": true
+      },
+      "danger": {
+        "value": "#FF5C7A",
+        "role": "Error state",
+        "configurable": true
+      }
+    },
+    "semanticColors": {
+      "background": "background",
+      "surface": "surface",
+      "surfaceRaised": "surfaceRaised",
+      "border": "border",
+      "textPrimary": "textPrimary",
+      "textSecondary": "textSecondary",
+      "accent": "accent",
+      "success": "success",
+      "warning": "warning",
+      "danger": "danger"
+    }
+  },
+  "typography": {
+    "displayFont": "SF Pro",
+    "bodyFont": "SF Pro",
+    "monoFont": "SF Mono",
+    "scale": {
+      "caption": 13,
+      "body": 16,
+      "title": 24,
+      "value": 32
+    }
+  },
+  "metrics": {
+    "cornerRadius": 8,
+    "borderWidth": 1,
+    "spacing": 10,
+    "density": "standard"
+  },
+  "components": {
+    "tile": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "accent",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "accent"
+    },
+    "tab": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "accent"
+    },
+    "statusRow": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "accent"
+    },
+    "gauge": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "accent"
+    },
+    "chart": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "accent"
+    }
+  },
+  "assets": [],
+  "options": [
+    {
+      "id": "accentColor",
+      "title": "Accent color",
+      "type": "color",
+      "target": "palette.colors.accent.value",
+      "defaultValue": "#7CFFD1"
+    },
+    {
+      "id": "density",
+      "title": "Density",
+      "type": "choice",
+      "target": "metrics.density",
+      "defaultValue": "standard",
+      "choices": [
+        "compact",
+        "standard",
+        "comfortable"
+      ]
+    }
+  ]
+}
