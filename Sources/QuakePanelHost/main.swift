@@ -35,7 +35,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var panelView: PanelView?
     private var testView: DisplayTestView?
     private var device: QuakeDevice?
-    private let tiles = DemoTiles.defaultTiles
+    private let pages = ShellCatalog.defaultPages
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
@@ -85,7 +85,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             panelContentView = view
             testView = view
         } else {
-            let view = PanelView(frame: contentFrame, tiles: tiles, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
+            let view = PanelView(frame: contentFrame, pages: pages, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
             panelContentView = view
             panelView = view
         }
@@ -151,12 +151,14 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         switch runtimeEvent.event {
         case .connected(let interface):
             log("event connected \(interface)")
-            panelView?.status = "\(interface) connected"
+            panelView?.recordConnection(interface)
         case .touch(let points):
             guard let point = points.first(where: { $0.phase == .down }) ?? points.first else { return }
             log("event touch x=\(point.x) y=\(point.y)")
-            panelView?.touch(logicalX: CGFloat(point.x), logicalY: CGFloat(480 - point.y))
+            panelView?.recordTouch(point)
+            panelView?.touch(logicalX: CGFloat(point.x), logicalY: CGFloat(point.y))
         case .knob(let event):
+            panelView?.recordKnob(event)
             switch event {
             case .rotate(let direction):
                 log("event knob rotate \(direction)")
@@ -164,7 +166,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             case .press(let index):
                 log("event knob press \(index)")
                 if index == 2 {
-                    panelView?.status = "Page selector will live here"
+                    panelView?.nextPage()
                 } else {
                     panelView?.activateSelection()
                 }
@@ -177,9 +179,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             }
         case .state(let state):
             log("event state \(state)")
-            if case .pong = state {
-                panelView?.lastPong = Date()
-            }
+            panelView?.recordState(state)
         default:
             break
         }
@@ -202,29 +202,61 @@ enum DisplayLocator {
     }
 }
 
-struct DemoTile: Equatable {
+struct ShellTile: Equatable {
     var title: String
     var subtitle: String
+    var action: ShellAction
 }
 
-enum DemoTiles {
-    static let defaultTiles: [DemoTile] = [
-        DemoTile(title: "Runtime", subtitle: "Event bus"),
-        DemoTile(title: "Plugins", subtitle: "Manifest API"),
-        DemoTile(title: "HID", subtitle: "Control online"),
-        DemoTile(title: "Touch", subtitle: "Awaiting input"),
-        DemoTile(title: "Knob", subtitle: "Rotate/press"),
-        DemoTile(title: "Pages", subtitle: "Native grid"),
-        DemoTile(title: "Data", subtitle: "Providers"),
-        DemoTile(title: "Settings", subtitle: "Soon"),
-        DemoTile(title: "Actions", subtitle: "Host routed"),
-        DemoTile(title: "Views", subtitle: "Swift/AppKit"),
-        DemoTile(title: "Dashboards", subtitle: "WKWebView later"),
-        DemoTile(title: "Secrets", subtitle: "Keychain later"),
-        DemoTile(title: "Metrics", subtitle: "Plugin later"),
-        DemoTile(title: "Music", subtitle: "Plugin later"),
-        DemoTile(title: "HA", subtitle: "Plugin later"),
-        DemoTile(title: "Editor", subtitle: "Next phase")
+enum ShellAction: Equatable {
+    case openPage(Int)
+    case setStatus(String)
+}
+
+struct ShellPage: Equatable {
+    var title: String
+    var kind: Kind
+    var tiles: [ShellTile]
+
+    enum Kind: Equatable {
+        case grid
+        case runtimeStatus
+    }
+}
+
+struct RuntimeSnapshot: Equatable {
+    var controlConnected = false
+    var touchConnected = false
+    var firmware = "-"
+    var mic = "-"
+    var luminance = "-"
+    var lastTouch = "-"
+    var lastKnob = "-"
+    var lastPong: Date?
+    var eventCount = 0
+}
+
+enum ShellCatalog {
+    static let defaultPages: [ShellPage] = [
+        ShellPage(title: "Home", kind: .grid, tiles: [
+            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(1)),
+            ShellTile(title: "Plugins", subtitle: "Manifest API", action: .setStatus("Plugin host shell coming next")),
+            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(1)),
+            ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
+            ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
+            ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
+            ShellTile(title: "Data", subtitle: "Provider slots", action: .setStatus("Data providers will feed widgets")),
+            ShellTile(title: "Settings", subtitle: "Host config", action: .setStatus("Settings page stub")),
+            ShellTile(title: "Actions", subtitle: "Host routed", action: .setStatus("Action router is local for now")),
+            ShellTile(title: "Views", subtitle: "Swift/AppKit", action: .setStatus("Native view surface")),
+            ShellTile(title: "Dashboards", subtitle: "Future web view", action: .setStatus("Dashboard embedding later")),
+            ShellTile(title: "Secrets", subtitle: "Keychain later", action: .setStatus("Secrets belong in Keychain")),
+            ShellTile(title: "Metrics", subtitle: "Widget idea", action: .setStatus("Metrics widget slot")),
+            ShellTile(title: "Music", subtitle: "Widget idea", action: .setStatus("Music widget slot")),
+            ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
+            ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
+        ]),
+        ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
     ]
 }
 
@@ -235,19 +267,20 @@ final class PanelView: NSView {
     var status: String = "Starting" {
         didSet { updateStatus() }
     }
-    var lastPong: Date? {
-        didSet { updateStatus() }
-    }
-
-    private let tiles: [DemoTile]
+    private let pages: [ShellPage]
     private let columns = 8
     private let rows = 2
     private let portraitMode: Bool
+    private var currentPageIndex = 0
+    private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
+    private var runtimeRows: [StatusRowView] = []
+    private var pageLabels: [NSTextField] = []
     private let statusLabel = NSTextField(labelWithString: "")
+    private let titleLabel = NSTextField(labelWithString: "")
 
-    init(frame frameRect: NSRect, tiles: [DemoTile], portraitMode: Bool) {
-        self.tiles = tiles
+    init(frame frameRect: NSRect, pages: [ShellPage], portraitMode: Bool) {
+        self.pages = pages
         self.portraitMode = portraitMode
         super.init(frame: frameRect)
         wantsLayer = true
@@ -265,36 +298,121 @@ final class PanelView: NSView {
 
     override func layout() {
         super.layout()
-        layoutTiles()
+        layoutChrome()
+        layoutContent()
     }
 
     func moveSelection(_ delta: Int) {
-        selectedIndex = (selectedIndex + delta + tiles.count) % tiles.count
-        status = "Selected \(tiles[selectedIndex].title)"
+        let count = currentPage.tiles.count
+        guard count > 0 else { return }
+        selectedIndex = (selectedIndex + delta + count) % count
+        status = "Selected \(currentPage.tiles[selectedIndex].title)"
     }
 
     func activateSelection() {
-        status = "Activated \(tiles[selectedIndex].title)"
+        guard currentPage.tiles.indices.contains(selectedIndex) else {
+            status = "Runtime page active"
+            return
+        }
+        let tile = currentPage.tiles[selectedIndex]
+        switch tile.action {
+        case .openPage(let index):
+            openPage(index)
+        case .setStatus(let message):
+            status = message
+        }
     }
 
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
-        let clampedX = max(0, min(1919, logicalX))
-        let clampedY = max(0, min(479, logicalY))
-        let column = min(columns - 1, max(0, Int(clampedX / (1920 / CGFloat(columns)))))
-        let row = min(rows - 1, max(0, Int(clampedY / (480 / CGFloat(rows)))))
-        let index = row * columns + column
-        if tiles.indices.contains(index) {
+        let point = NSPoint(x: logicalX, y: logicalY)
+        if let pageIndex = pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) {
+            openPage(pageIndex)
+            return
+        }
+        if logicalY > bounds.height - 92, logicalX >= 300 {
+            let pageIndex = Int((logicalX - 300) / 140)
+            if pages.indices.contains(pageIndex) {
+                openPage(pageIndex)
+                return
+            }
+        }
+
+        guard currentPage.kind == .grid else { return }
+        if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), currentPage.tiles.indices.contains(index) {
             selectedIndex = index
             activateSelection()
         }
     }
 
+    func nextPage() {
+        openPage((currentPageIndex + 1) % pages.count)
+    }
+
+    func recordConnection(_ interface: String) {
+        runtime.eventCount += 1
+        if interface == "control" { runtime.controlConnected = true }
+        if interface == "touch" { runtime.touchConnected = true }
+        status = "\(interface) connected"
+        updateRuntimeRows()
+    }
+
+    func recordTouch(_ point: TouchPoint) {
+        runtime.eventCount += 1
+        runtime.lastTouch = "\(point.phase.rawValue) x:\(point.x) y:\(point.y)"
+        updateRuntimeRows()
+    }
+
+    func recordKnob(_ event: KnobEvent) {
+        runtime.eventCount += 1
+        switch event {
+        case .rotate(let direction):
+            runtime.lastKnob = "rotate \(direction)"
+        case .press(let index):
+            runtime.lastKnob = "press \(index)"
+        case .holdStart:
+            runtime.lastKnob = "hold start"
+        case .holdEnd:
+            runtime.lastKnob = "hold end"
+        }
+        updateRuntimeRows()
+    }
+
+    func recordState(_ state: DeviceStateEvent) {
+        runtime.eventCount += 1
+        switch state {
+        case .firmware(let name, let version):
+            runtime.firmware = "\(name) / \(version)"
+        case .mic(let enabled):
+            runtime.mic = enabled ? "on" : "off"
+        case .luminance(let value):
+            runtime.luminance = "\(value)"
+        case .pong:
+            runtime.lastPong = Date()
+        case .stateSync(let busy):
+            status = "State sync \(busy ? "busy" : "ready")"
+        case .raw(let command, let payload):
+            status = "Raw state \(command) (\(payload.count)b)"
+        }
+        updateStatus()
+        updateRuntimeRows()
+    }
+
     private func setupSubviews() {
-        tileViews = tiles.enumerated().map { index, tile in
-            let view = TileCellView(tile: tile)
-            view.translatesAutoresizingMaskIntoConstraints = true
-            addSubview(view)
-            return view
+        titleLabel.font = NSFont.systemFont(ofSize: 24, weight: .bold)
+        titleLabel.textColor = .white
+        titleLabel.backgroundColor = .clear
+        addSubview(titleLabel)
+
+        pageLabels = pages.enumerated().map { index, page in
+            let label = NSTextField(labelWithString: "\(index + 1) \(page.title)")
+            label.font = NSFont.monospacedSystemFont(ofSize: 15, weight: .semibold)
+            label.textColor = .white
+            label.alignment = .center
+            label.backgroundColor = .clear
+            label.wantsLayer = true
+            label.layer?.cornerRadius = 6
+            addSubview(label)
+            return label
         }
 
         statusLabel.font = NSFont.monospacedSystemFont(ofSize: 15, weight: .medium)
@@ -302,16 +420,74 @@ final class PanelView: NSView {
         statusLabel.backgroundColor = .clear
         statusLabel.lineBreakMode = .byTruncatingTail
         addSubview(statusLabel)
-        updateSelection()
-        updateStatus()
+        rebuildPageContent()
     }
 
-    private func layoutTiles() {
+    private var currentPage: ShellPage {
+        pages[currentPageIndex]
+    }
+
+    private func openPage(_ index: Int) {
+        guard pages.indices.contains(index) else { return }
+        guard currentPageIndex != index else { return }
+        currentPageIndex = index
+        selectedIndex = 0
+        status = "Page \(pages[index].title)"
+        log("shell page \(index): \(pages[index].title)")
+        rebuildPageContent()
+    }
+
+    private func rebuildPageContent() {
+        tileViews.forEach { $0.removeFromSuperview() }
+        runtimeRows.forEach { $0.removeFromSuperview() }
+        tileViews.removeAll()
+        runtimeRows.removeAll()
+
+        switch currentPage.kind {
+        case .grid:
+            tileViews = currentPage.tiles.map { tile in
+                let view = TileCellView(tile: tile)
+                view.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(view)
+                return view
+            }
+        case .runtimeStatus:
+            runtimeRows = RuntimeStatusModel.rows(from: runtime).map { row in
+                let view = StatusRowView(title: row.title, value: row.value)
+                view.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(view)
+                return view
+            }
+        }
+
+        updateSelection()
+        updateChrome()
+        updateStatus()
+        needsLayout = true
+    }
+
+    private func layoutChrome() {
+        let inset: CGFloat = 16
+        titleLabel.frame = NSRect(x: inset, y: bounds.height - 46, width: 280, height: 30)
+        let tabY = bounds.height - 48
+        for (index, label) in pageLabels.enumerated() {
+            label.frame = NSRect(x: 320 + CGFloat(index) * 120, y: tabY, width: 104, height: 28)
+        }
+        statusLabel.frame = NSRect(x: inset + 4, y: 8, width: bounds.width - (inset + 4) * 2, height: 24)
+    }
+
+    private func layoutContent() {
         let gap: CGFloat = 10
-        let inset: CGFloat = 14
-        let statusHeight: CGFloat = 30
-        let gridRect = bounds.insetBy(dx: inset, dy: inset).offsetBy(dx: 0, dy: statusHeight / 2)
-        let usableHeight = gridRect.height - statusHeight
+        let inset: CGFloat = 16
+        let topChrome: CGFloat = 62
+        let bottomChrome: CGFloat = 38
+        let contentRect = NSRect(x: inset, y: bottomChrome, width: bounds.width - inset * 2, height: bounds.height - topChrome - bottomChrome)
+        if currentPage.kind == .runtimeStatus {
+            layoutRuntimeRows(in: contentRect)
+            return
+        }
+        let gridRect = contentRect
+        let usableHeight = gridRect.height
         let tileWidth = (gridRect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
         let tileHeight = (usableHeight - gap * CGFloat(rows - 1)) / CGFloat(rows)
 
@@ -322,7 +498,23 @@ final class PanelView: NSView {
             let y = gridRect.maxY - CGFloat(row + 1) * tileHeight - CGFloat(row) * gap
             tileViews[index].frame = NSRect(x: x, y: y, width: tileWidth, height: tileHeight)
         }
-        statusLabel.frame = NSRect(x: inset + 4, y: 6, width: bounds.width - (inset + 4) * 2, height: 24)
+    }
+
+    private func layoutRuntimeRows(in rect: NSRect) {
+        let gap: CGFloat = 10
+        let columns = 4
+        let rowHeight = (rect.height - gap * 1) / 2
+        let columnWidth = (rect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+        for index in runtimeRows.indices {
+            let column = index % columns
+            let row = index / columns
+            runtimeRows[index].frame = NSRect(
+                x: rect.minX + CGFloat(column) * (columnWidth + gap),
+                y: rect.maxY - CGFloat(row + 1) * rowHeight - CGFloat(row) * gap,
+                width: columnWidth,
+                height: rowHeight
+            )
+        }
     }
 
     private func updateSelection() {
@@ -331,9 +523,31 @@ final class PanelView: NSView {
         }
     }
 
+    private func updateChrome() {
+        titleLabel.stringValue = "OpenQuake"
+        for (index, label) in pageLabels.enumerated() {
+            let active = index == currentPageIndex
+            label.layer?.backgroundColor = (active
+                ? NSColor(calibratedRed: 0.12, green: 0.25, blue: 0.29, alpha: 1)
+                : NSColor(calibratedRed: 0.06, green: 0.075, blue: 0.095, alpha: 1)).cgColor
+            label.layer?.borderWidth = active ? 2 : 1
+            label.layer?.borderColor = (active
+                ? NSColor(calibratedRed: 0.49, green: 1.0, blue: 0.70, alpha: 1)
+                : NSColor(calibratedRed: 0.18, green: 0.22, blue: 0.28, alpha: 1)).cgColor
+        }
+    }
+
     private func updateStatus() {
-        let pong = lastPong.map { " · pong \(Int(Date().timeIntervalSince($0)))s ago" } ?? ""
-        statusLabel.stringValue = "OpenQuake Native · \(status)\(pong)"
+        let pong = runtime.lastPong.map { " · pong \(Int(Date().timeIntervalSince($0)))s ago" } ?? ""
+        statusLabel.stringValue = "\(currentPage.title) · \(status)\(pong)"
+    }
+
+    private func updateRuntimeRows() {
+        guard currentPage.kind == .runtimeStatus else { return }
+        let rows = RuntimeStatusModel.rows(from: runtime)
+        for index in runtimeRows.indices where rows.indices.contains(index) {
+            runtimeRows[index].value = rows[index].value
+        }
     }
 }
 
@@ -414,6 +628,66 @@ final class DisplayTestView: NSView {
     }
 }
 
+enum RuntimeStatusModel {
+    static func rows(from snapshot: RuntimeSnapshot) -> [(title: String, value: String)] {
+        [
+            ("Control", snapshot.controlConnected ? "connected" : "offline"),
+            ("Touch", snapshot.touchConnected ? "connected" : "offline"),
+            ("Firmware", snapshot.firmware),
+            ("Mic", snapshot.mic),
+            ("Luminance", snapshot.luminance),
+            ("Last touch", snapshot.lastTouch),
+            ("Last knob", snapshot.lastKnob),
+            ("Events", "\(snapshot.eventCount)")
+        ]
+    }
+}
+
+final class StatusRowView: NSView {
+    var value: String {
+        didSet {
+            valueLabel.stringValue = value
+        }
+    }
+
+    private let titleLabel = NSTextField(labelWithString: "")
+    private let valueLabel = NSTextField(labelWithString: "")
+
+    init(title: String, value: String) {
+        self.value = value
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor(calibratedRed: 0.20, green: 0.25, blue: 0.31, alpha: 1).cgColor
+        layer?.backgroundColor = NSColor(calibratedRed: 0.065, green: 0.085, blue: 0.105, alpha: 1).cgColor
+
+        titleLabel.stringValue = title
+        titleLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        titleLabel.textColor = NSColor(calibratedRed: 0.68, green: 0.77, blue: 0.86, alpha: 1)
+        titleLabel.backgroundColor = .clear
+
+        valueLabel.stringValue = value
+        valueLabel.font = NSFont.monospacedSystemFont(ofSize: 24, weight: .semibold)
+        valueLabel.textColor = .white
+        valueLabel.backgroundColor = .clear
+        valueLabel.lineBreakMode = .byTruncatingTail
+
+        addSubview(titleLabel)
+        addSubview(valueLabel)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        titleLabel.frame = NSRect(x: 16, y: bounds.height - 40, width: bounds.width - 32, height: 22)
+        valueLabel.frame = NSRect(x: 16, y: 24, width: bounds.width - 32, height: 34)
+    }
+}
+
 final class TileCellView: NSView {
     var isSelected: Bool = false {
         didSet { applyStyle() }
@@ -422,7 +696,7 @@ final class TileCellView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let subtitleLabel = NSTextField(labelWithString: "")
 
-    init(tile: DemoTile) {
+    init(tile: ShellTile) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 8
