@@ -44,7 +44,8 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         openPanelWindow()
         if launchOptions.noHID {
-            panelView?.status = "Display debug, HID disabled"
+            log("HID disabled by --no-hid; touch and knob input will not be available")
+            panelView?.status = "Display only, HID disabled"
         } else {
             startDevice()
         }

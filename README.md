@@ -87,6 +87,19 @@ Launch the first native panel host:
 .build/debug/quake-panel
 ```
 
+Launch modes:
+
+```bash
+# Normal hardware mode: display plus HID touch, knob, control, and heartbeat events.
+.build/debug/quake-panel
+
+# Display-only diagnostic mode: renders UI but intentionally disables all HID input.
+.build/debug/quake-panel --no-hid
+
+# High-contrast display diagnostic, also display-only.
+.build/debug/quake-panel --display-test --no-hid
+```
+
 The live probe only sends safe wake, keep-alive, firmware, mic, and brightness query commands. It does not expose or send DFU.
 
 ## Current Milestone
