@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "weather",
   "name": "Weather",
   "version": "0.1.0",

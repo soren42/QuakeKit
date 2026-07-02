@@ -1,0 +1,414 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/soren42/QuakeKit/schemas/functional-plugin.schema.json",
+  "title": "QuakeKit Functional Plugin Manifest",
+  "description": "Manifest schema for QuakeKit functional plugins: actions, data streams, applet pages, widgets, and process/web/native entrypoints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "apiVersion",
+    "entry"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Stable package id. Use lowercase letters, numbers, underscores, and hyphens."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "apiVersion": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "entry": {
+      "$ref": "#/$defs/entry"
+    },
+    "capabilities": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "uniqueItems": true
+    },
+    "permissions": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/permission"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "dataStreams": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/dataStream"
+      }
+    },
+    "views": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/view"
+      }
+    }
+  },
+  "$defs": {
+    "manifestID": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]*$"
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transport"
+      ],
+      "properties": {
+        "transport": {
+          "type": "string",
+          "enum": [
+            "stdioJSONRPC",
+            "websocket",
+            "nativeSwift",
+            "webView",
+            "shell",
+            "php"
+          ]
+        },
+        "command": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Executable, script, native symbol, or adapter command used by process-style transports."
+        },
+        "arguments": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "Local package path or URL for web-style transports."
+        }
+      }
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "settings",
+        "eventPublisher",
+        "eventSubscriber",
+        "dataProvider",
+        "actionProvider",
+        "viewProvider",
+        "deviceProvider",
+        "backgroundWorker"
+      ]
+    },
+    "permission": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "network"
+          ],
+          "properties": {
+            "network": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "hosts"
+              ],
+              "properties": {
+                "hosts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "secrets"
+          ],
+          "properties": {
+            "secrets": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "keys"
+              ],
+              "properties": {
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "filesystem"
+          ],
+          "properties": {
+            "filesystem": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "paths",
+                "write"
+              ],
+              "properties": {
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "write": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/emptyPermission/inputSynthesis"
+        },
+        {
+          "$ref": "#/$defs/emptyPermission/audioCapture"
+        },
+        {
+          "$ref": "#/$defs/emptyPermission/localProcess"
+        }
+      ]
+    },
+    "emptyPermission": {
+      "inputSynthesis": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inputSynthesis"
+        ],
+        "properties": {
+          "inputSynthesis": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "audioCapture": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "audioCapture"
+        ],
+        "properties": {
+          "audioCapture": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "localProcess": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "localProcess"
+        ],
+        "properties": {
+          "localProcess": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argumentSchema": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/schemaField"
+          }
+        }
+      }
+    },
+    "dataStream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "valueSchema": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/schemaField"
+          }
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "native",
+            "webCanvas",
+            "webDocument",
+            "text",
+            "dataDriven"
+          ]
+        },
+        "presentation": {
+          "type": "string",
+          "enum": [
+            "page",
+            "widget",
+            "pageAndWidget"
+          ]
+        },
+        "entryPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataStreamID": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "columnSpan": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rowSpan": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "preferredWidth": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "preferredHeight": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "schemaField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "boolean",
+            "url",
+            "secret"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "defaultValue": {}
+      }
+    }
+  }
+}

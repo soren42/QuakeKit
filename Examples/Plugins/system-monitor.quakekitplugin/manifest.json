@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "system_monitor",
   "name": "System Monitor",
   "version": "0.1.0",

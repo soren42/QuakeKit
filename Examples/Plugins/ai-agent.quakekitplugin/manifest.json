@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "ai_agent",
   "name": "AI Agent",
   "version": "0.1.0",

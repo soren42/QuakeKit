@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "sports_scores",
   "name": "Sports Scores",
   "version": "0.1.0",

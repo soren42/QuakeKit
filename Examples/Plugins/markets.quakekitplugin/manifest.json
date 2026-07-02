@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "markets",
   "name": "Markets",
   "version": "0.1.0",

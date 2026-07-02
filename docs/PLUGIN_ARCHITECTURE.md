@@ -17,6 +17,11 @@ expose any mix of actions, data streams, and views. Theme plugins use a separate
 manifest and package suffix so presentation and behavior can evolve
 independently.
 
+Functional plugins are validated by
+[`schemas/functional-plugin.schema.json`](../schemas/functional-plugin.schema.json).
+See [FUNCTIONAL_PLUGIN_SPEC.md](FUNCTIONAL_PLUGIN_SPEC.md) for the complete
+functional plugin contract.
+
 ## Theme Plugins
 
 Theme plugin packages use the `.quakekittheme` suffix and contain a required
