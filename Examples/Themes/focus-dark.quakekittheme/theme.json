@@ -124,6 +124,41 @@
       "accent": "accent"
     }
   },
+  "hardware": {
+    "knobRing": {
+      "enabled": true,
+      "idle": {
+        "color": "accent",
+        "intensity": 0.2,
+        "animation": "solid"
+      },
+      "focus": {
+        "color": "accent",
+        "intensity": 0.7,
+        "animation": "pulse"
+      },
+      "success": {
+        "color": "success",
+        "intensity": 0.8,
+        "animation": "solid"
+      },
+      "warning": {
+        "color": "warning",
+        "intensity": 0.85,
+        "animation": "pulse"
+      },
+      "danger": {
+        "color": "danger",
+        "intensity": 1,
+        "animation": "flash"
+      },
+      "progress": {
+        "color": "accent",
+        "intensity": 0.75,
+        "animation": "progress"
+      }
+    }
+  },
   "assets": [],
   "options": [
     {

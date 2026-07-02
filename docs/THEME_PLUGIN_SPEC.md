@@ -41,6 +41,7 @@ from the `assets` array.
 | `typography` | object | no | Font names and type scale. |
 | `metrics` | object | no | Shared dimensions such as radius, spacing, density. |
 | `components` | object | no | Standard component style tokens. |
+| `hardware` | object | no | Physical-device presentation defaults such as the knob LED ring. |
 | `assets` | array | no | Images, fonts, CSS, scripts, or sounds bundled with the theme. |
 | `options` | array | no | User-configurable visual controls exposed by the host UI. |
 
@@ -126,6 +127,53 @@ Each component may define:
 - `selectedBorder`
 
 The host should apply component values first, then fall back to semantic colors.
+
+## Hardware Presentation
+
+Themes may define presentation defaults for physical hardware surfaces. These
+values describe visual language only; themes do not send HID commands and do not
+own device state.
+
+### Knob Ring
+
+`hardware.knobRing` defines semantic LED ring states for the DK-QUAKE knob.
+Functional plugins request semantic states such as `success`, `warning`, or
+`progress`; the runtime arbitrates those requests, applies priority and timeout
+rules, then maps the winning state through the active theme.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `enabled` | boolean | Whether the theme provides knob ring defaults. Defaults to `true`. |
+| `idle` | object | Resting state when no plugin or system status is active. |
+| `focus` | object | State for focused controls, active navigation, or user interaction. |
+| `success` | object | Positive or healthy status. |
+| `warning` | object | Attention state that should not interrupt the user. |
+| `danger` | object | Urgent error or critical condition. |
+| `progress` | object | Ongoing work, loading, or bounded progress indication. |
+
+Each state object supports:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `color` | string | yes | Palette token name or literal hex color. |
+| `intensity` | number | no | Brightness from `0` to `1`. |
+| `animation` | string | no | `solid`, `pulse`, `flash`, `strobe`, `progress`, or `off`. |
+
+The recommended runtime priority model is:
+
+| Source | Priority |
+| --- | --- |
+| Idle theme default | `0` |
+| Focus / active UI | `20` |
+| Plugin status | `40` |
+| Warning | `60` |
+| Danger | `80` |
+| System critical | `100` |
+
+Plugins should request a semantic state with an optional priority and TTL. They
+should not request raw LED colors unless they are a trusted device plugin. This
+keeps user theming coherent while still letting applets use the ring for
+at-a-glance status.
 
 ## Assets
 

@@ -12,6 +12,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
     public var typography: ThemeTypography?
     public var metrics: ThemeMetrics?
     public var components: ThemeComponents?
+    public var hardware: ThemeHardware?
     public var assets: [ThemeAsset]
     public var options: [ThemeOption]
 
@@ -27,6 +28,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
         typography: ThemeTypography? = nil,
         metrics: ThemeMetrics? = nil,
         components: ThemeComponents? = nil,
+        hardware: ThemeHardware? = nil,
         assets: [ThemeAsset] = [],
         options: [ThemeOption] = []
     ) {
@@ -41,6 +43,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
         self.typography = typography
         self.metrics = metrics
         self.components = components
+        self.hardware = hardware
         self.assets = assets
         self.options = options
     }
@@ -198,6 +201,63 @@ public struct ThemeComponentStyle: Codable, Equatable, Sendable {
     }
 }
 
+public struct ThemeHardware: Codable, Equatable, Sendable {
+    public var knobRing: ThemeKnobRing?
+
+    public init(knobRing: ThemeKnobRing? = nil) {
+        self.knobRing = knobRing
+    }
+}
+
+public struct ThemeKnobRing: Codable, Equatable, Sendable {
+    public var enabled: Bool
+    public var idle: ThemeKnobRingState?
+    public var focus: ThemeKnobRingState?
+    public var success: ThemeKnobRingState?
+    public var warning: ThemeKnobRingState?
+    public var danger: ThemeKnobRingState?
+    public var progress: ThemeKnobRingState?
+
+    public init(
+        enabled: Bool = true,
+        idle: ThemeKnobRingState? = nil,
+        focus: ThemeKnobRingState? = nil,
+        success: ThemeKnobRingState? = nil,
+        warning: ThemeKnobRingState? = nil,
+        danger: ThemeKnobRingState? = nil,
+        progress: ThemeKnobRingState? = nil
+    ) {
+        self.enabled = enabled
+        self.idle = idle
+        self.focus = focus
+        self.success = success
+        self.warning = warning
+        self.danger = danger
+        self.progress = progress
+    }
+}
+
+public struct ThemeKnobRingState: Codable, Equatable, Sendable {
+    public var color: String
+    public var intensity: Double
+    public var animation: ThemeKnobRingAnimation
+
+    public init(color: String, intensity: Double = 1, animation: ThemeKnobRingAnimation = .solid) {
+        self.color = color
+        self.intensity = intensity
+        self.animation = animation
+    }
+}
+
+public enum ThemeKnobRingAnimation: String, Codable, Equatable, Sendable {
+    case solid
+    case pulse
+    case flash
+    case strobe
+    case progress
+    case off
+}
+
 public struct ThemeAsset: Codable, Equatable, Identifiable, Sendable {
     public enum AssetKind: String, Codable, Sendable {
         case image
@@ -336,6 +396,26 @@ public enum ThemeManifestValidator {
             ]
             for reference in references where !isColorReference(reference, colors: manifest.palette.colors) {
                 errors.append("Semantic color reference \(reference) must be a palette key or literal color.")
+            }
+        }
+
+        if let knobRing = manifest.hardware?.knobRing {
+            let states = [
+                knobRing.idle,
+                knobRing.focus,
+                knobRing.success,
+                knobRing.warning,
+                knobRing.danger,
+                knobRing.progress
+            ].compactMap { $0 }
+
+            for state in states {
+                if !(0...1).contains(state.intensity) {
+                    errors.append("Knob ring intensity must be between 0 and 1.")
+                }
+                if !isColorReference(state.color, colors: manifest.palette.colors) {
+                    errors.append("Knob ring color reference \(state.color) must be a palette key or literal color.")
+                }
             }
         }
 

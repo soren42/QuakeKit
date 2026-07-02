@@ -111,6 +111,41 @@
       "accent": "accent"
     }
   },
+  "hardware": {
+    "knobRing": {
+      "enabled": true,
+      "idle": {
+        "color": "border",
+        "intensity": 0.18,
+        "animation": "solid"
+      },
+      "focus": {
+        "color": "accent",
+        "intensity": 0.65,
+        "animation": "pulse"
+      },
+      "success": {
+        "color": "success",
+        "intensity": 0.75,
+        "animation": "solid"
+      },
+      "warning": {
+        "color": "warning",
+        "intensity": 0.85,
+        "animation": "pulse"
+      },
+      "danger": {
+        "color": "danger",
+        "intensity": 1,
+        "animation": "flash"
+      },
+      "progress": {
+        "color": "accent",
+        "intensity": 0.7,
+        "animation": "progress"
+      }
+    }
+  },
   "assets": [
     {
       "id": "weatherBackdrop",

@@ -56,6 +56,9 @@
     "components": {
       "$ref": "#/$defs/components"
     },
+    "hardware": {
+      "$ref": "#/$defs/hardware"
+    },
     "assets": {
       "type": "array",
       "default": [],
@@ -267,6 +270,75 @@
         },
         "selectedBorder": {
           "$ref": "#/$defs/colorReference"
+        }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "knobRing": {
+          "$ref": "#/$defs/knobRing"
+        }
+      }
+    },
+    "knobRing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this theme provides presentation defaults for the physical knob LED ring."
+        },
+        "idle": {
+          "$ref": "#/$defs/knobRingState"
+        },
+        "focus": {
+          "$ref": "#/$defs/knobRingState"
+        },
+        "success": {
+          "$ref": "#/$defs/knobRingState"
+        },
+        "warning": {
+          "$ref": "#/$defs/knobRingState"
+        },
+        "danger": {
+          "$ref": "#/$defs/knobRingState"
+        },
+        "progress": {
+          "$ref": "#/$defs/knobRingState"
+        }
+      }
+    },
+    "knobRingState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "color"
+      ],
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/colorReference",
+          "description": "Palette token or literal hex color used for this semantic ring state."
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "animation": {
+          "type": "string",
+          "enum": [
+            "solid",
+            "pulse",
+            "flash",
+            "strobe",
+            "progress",
+            "off"
+          ],
+          "default": "solid"
         }
       }
     },
