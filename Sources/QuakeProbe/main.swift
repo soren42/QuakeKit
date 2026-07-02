@@ -13,6 +13,7 @@ let allHID = arguments.contains("--all-hid")
 let ledOn = arguments.contains("--led-on")
 let ledOff = arguments.contains("--led-off")
 let ledTest = arguments.contains("--led-test")
+let brightnessValue = parseBrightness(from: rawArguments)
 
 if selfTest {
     runSelfTest()
@@ -28,7 +29,7 @@ if let validateIndex = rawArguments.firstIndex(of: "--validate-plugin") {
     exit(0)
 }
 
-if ledOn || ledOff || ledTest {
+if ledOn || ledOff || ledTest || brightnessValue != nil {
     let quake = QuakeDevice { event in
         print(format(event))
     }
@@ -36,6 +37,14 @@ if ledOn || ledOff || ledTest {
         try quake.start(wake: false)
         for diagnostic in quake.diagnostics {
             print("diag \(diagnostic)")
+        }
+        if let brightnessValue {
+            let ok = quake.setBrightness(brightnessValue)
+            print("brightness \(brightnessValue): \(ok)")
+            _ = quake.sendControlFrame(QuakeProtocol.queryLuminance)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            quake.stop()
+            exit(ok ? 0 : 2)
         }
         if ledTest {
             runLEDTransportTest(quake)
@@ -78,6 +87,7 @@ guard listen else {
     print("Run with --validate-plugin <path> to decode and validate a plugin manifest.")
     print("Run with --all-hid to dump every related HID collection without usage-page filtering.")
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
+    print("Run with --brightness <0-255> to set and query screen luminance.")
     print("Run with --listen to open the device and print decoded events.")
     print("Add --wake to send safe screen wake, keep-alive, and state query commands.")
     exit(devices.isEmpty ? 1 : 0)
@@ -142,6 +152,7 @@ func format(_ event: RuntimeEvent) -> String {
 
 func runSelfTest() {
     precondition(QuakeProtocol.screenOn == [0xA3, 0x03, 0x01, 0x04, 0x01, 0x06])
+    precondition(QuakeProtocol.setBrightness(255) == [0xA3, 0x03, 0x01, 0x05, 0xFF, 0x06])
     precondition(QuakeProtocol.ping == [0xA3, 0x02, 0x02, 0xEF, 0xF1])
     precondition(QuakeProtocol.decodeControlReport([0xA3, 0x03, 0x03, 0x01, 0x01]) == [.knob(.rotate(direction: 1))])
     precondition(QuakeProtocol.decodeControlReport([0xA3, 0x03, 0x03, 0x01, 0x02]) == [.knob(.rotate(direction: -1))])
@@ -151,6 +162,17 @@ func runSelfTest() {
     let touch = QuakeProtocol.decodeTouchReport([0xA3, 0x1C, 0x03, 0x1A, 0x01, 0x01, 0xE0, 0x01, 0x80, 0x07])
     precondition(touch == [.touch([TouchPoint(phase: .down, x: 1920, y: 480)])])
     print("Protocol self-test passed.")
+}
+
+func parseBrightness(from arguments: [String]) -> UInt8? {
+    guard let index = arguments.firstIndex(of: "--brightness") else {
+        return nil
+    }
+    guard arguments.indices.contains(index + 1), let value = Int(arguments[index + 1]), (0...255).contains(value) else {
+        fputs("--brightness requires a value from 0 to 255\n", stderr)
+        exit(64)
+    }
+    return UInt8(value)
 }
 
 func validatePluginManifest(at path: String) {

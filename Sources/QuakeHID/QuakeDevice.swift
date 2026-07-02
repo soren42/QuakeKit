@@ -91,9 +91,11 @@ public final class QuakeDevice: @unchecked Sendable {
         [0.0, 0.3, 0.8, 1.5].forEach { delay in
             Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
                 _ = self?.sendControlFrame(QuakeProtocol.screenOn)
+                _ = self?.setBrightness(255)
             }
         }
         _ = sendControlFrame(QuakeProtocol.screenOn)
+        _ = setBrightness(255)
         _ = sendControlFrame(QuakeProtocol.queryFirmware)
         _ = sendControlFrame(QuakeProtocol.queryMic)
         _ = sendControlFrame(QuakeProtocol.queryLuminance)
@@ -133,6 +135,11 @@ public final class QuakeDevice: @unchecked Sendable {
             )
             return result == kIOReturnSuccess
         }
+    }
+
+    @discardableResult
+    public func setBrightness(_ value: UInt8) -> Bool {
+        sendControlFrame(QuakeProtocol.setBrightness(value))
     }
 
     @discardableResult

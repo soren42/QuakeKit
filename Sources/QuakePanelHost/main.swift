@@ -16,12 +16,14 @@ app.run()
 
 struct PanelLaunchOptions {
     var debugWindow: Bool
+    var displayTest: Bool
     var mainScreen: Bool
     var noHID: Bool
 
     init(arguments: ArraySlice<String>) {
         let values = Set(arguments)
         self.debugWindow = values.contains("--debug-window")
+        self.displayTest = values.contains("--display-test")
         self.mainScreen = values.contains("--main-screen")
         self.noHID = values.contains("--no-hid")
     }
@@ -31,11 +33,12 @@ struct PanelLaunchOptions {
 final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var panelView: PanelView?
+    private var testView: DisplayTestView?
     private var device: QuakeDevice?
     private let tiles = DemoTiles.defaultTiles
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
         NSApp.activate(ignoringOtherApps: true)
         openPanelWindow()
         if launchOptions.noHID {
@@ -57,13 +60,17 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         let frame = targetScreen?.frame ?? NSRect(x: 80, y: 80, width: 960, height: 240)
         let quakeLike = !launchOptions.mainScreen && DisplayLocator.isQuakeLike(frame.size)
         let logicalSize: NSSize
-        if launchOptions.debugWindow {
+        if launchOptions.displayTest {
+            logicalSize = frame.size
+        } else if launchOptions.debugWindow {
             logicalSize = NSSize(width: min(1280, max(640, frame.width - 80)), height: min(360, max(240, frame.height - 80)))
         } else {
             logicalSize = quakeLike ? frame.size : NSSize(width: 960, height: 240)
         }
         let origin: NSPoint
-        if launchOptions.debugWindow {
+        if launchOptions.displayTest {
+            origin = frame.origin
+        } else if launchOptions.debugWindow {
             origin = NSPoint(x: frame.minX + 40, y: frame.minY + max(20, (frame.height - logicalSize.height) / 2))
         } else {
             origin = quakeLike ? frame.origin : NSPoint(x: frame.midX - logicalSize.width / 2, y: frame.midY - logicalSize.height / 2)
@@ -71,12 +78,23 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         let rect = NSRect(origin: origin, size: logicalSize)
         log("target frame=\(format(frame)) window rect=\(format(rect))")
 
-        let view = PanelView(frame: NSRect(origin: .zero, size: logicalSize), tiles: tiles, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
-        let style: NSWindow.StyleMask = launchOptions.debugWindow || !quakeLike
-            ? [.titled, .closable, .miniaturizable, .resizable]
-            : [.borderless]
+        let contentFrame = NSRect(origin: .zero, size: logicalSize)
+        let panelContentView: NSView
+        if launchOptions.displayTest {
+            let view = DisplayTestView(frame: contentFrame)
+            panelContentView = view
+            testView = view
+        } else {
+            let view = PanelView(frame: contentFrame, tiles: tiles, portraitMode: !launchOptions.debugWindow && frame.height > frame.width)
+            panelContentView = view
+            panelView = view
+        }
+
+        let style: NSWindow.StyleMask = launchOptions.displayTest || (!launchOptions.debugWindow && quakeLike)
+            ? [.borderless]
+            : [.titled, .closable, .miniaturizable, .resizable]
         let panelWindow = NSWindow(
-            contentRect: NSRect(origin: .zero, size: logicalSize),
+            contentRect: contentFrame,
             styleMask: style,
             backing: .buffered,
             defer: false,
@@ -85,21 +103,23 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         panelWindow.title = "OpenQuake Panel"
         panelWindow.backgroundColor = .black
         panelWindow.isOpaque = true
-        panelWindow.contentView = view
+        panelWindow.contentView = panelContentView
         panelWindow.setFrame(rect, display: true)
         panelWindow.makeKeyAndOrderFront(nil)
         panelWindow.orderFrontRegardless()
-        if quakeLike && !launchOptions.debugWindow {
+        if launchOptions.displayTest {
+            panelWindow.level = .screenSaver
+            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        } else if quakeLike && !launchOptions.debugWindow {
             panelWindow.level = .floating
-            panelWindow.collectionBehavior = [.fullScreenAuxiliary, .canJoinAllSpaces]
+            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         } else {
             panelWindow.level = .normal
         }
-        view.needsDisplay = true
-        view.displayIfNeeded()
-        log("window visible=\(panelWindow.isVisible) frame=\(format(panelWindow.frame)) content=\(format(view.frame))")
+        panelContentView.needsDisplay = true
+        panelContentView.displayIfNeeded()
+        log("window visible=\(panelWindow.isVisible) frame=\(format(panelWindow.frame)) content=\(format(panelContentView.frame)) level=\(panelWindow.level.rawValue)")
 
-        self.panelView = view
         self.window = panelWindow
     }
 
@@ -314,6 +334,83 @@ final class PanelView: NSView {
     private func updateStatus() {
         let pong = lastPong.map { " · pong \(Int(Date().timeIntervalSince($0)))s ago" } ?? ""
         statusLabel.stringValue = "OpenQuake Native · \(status)\(pong)"
+    }
+}
+
+final class DisplayTestView: NSView {
+    private let colors: [NSColor] = [.red, .green, .blue, .white, .black, .magenta, .cyan, .yellow]
+    private var phase = 0
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        autoresizingMask = [.width, .height]
+        Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.advancePhase()
+            }
+        }
+        log("DisplayTestView init frame=\(format(frameRect))")
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let background = colors[phase % colors.count]
+        background.setFill()
+        bounds.fill()
+
+        drawEdgeMarkers()
+        drawBands()
+        drawLabel()
+    }
+
+    private func advancePhase() {
+        phase += 1
+        needsDisplay = true
+    }
+
+    private func drawEdgeMarkers() {
+        NSColor.black.withAlphaComponent(0.45).setStroke()
+        let border = NSBezierPath(rect: bounds.insetBy(dx: 8, dy: 8))
+        border.lineWidth = 16
+        border.stroke()
+
+        NSColor.white.setStroke()
+        let inner = NSBezierPath(rect: bounds.insetBy(dx: 26, dy: 26))
+        inner.lineWidth = 4
+        inner.stroke()
+    }
+
+    private func drawBands() {
+        let bandWidth = max(1, bounds.width / CGFloat(colors.count))
+        for (index, color) in colors.enumerated() {
+            color.setFill()
+            NSRect(x: CGFloat(index) * bandWidth, y: 0, width: bandWidth, height: 42).fill()
+            NSRect(x: CGFloat(index) * bandWidth, y: bounds.height - 42, width: bandWidth, height: 42).fill()
+        }
+    }
+
+    private func drawLabel() {
+        let text = "OPENQUAKE DISPLAY TEST \(phase)"
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 54, weight: .black),
+            .foregroundColor: NSColor.white,
+            .strokeColor: NSColor.black,
+            .strokeWidth: -4
+        ]
+        let attributed = NSAttributedString(string: text, attributes: attributes)
+        let textSize = attributed.size()
+        let textRect = NSRect(
+            x: max(20, bounds.midX - textSize.width / 2),
+            y: max(64, bounds.midY - textSize.height / 2),
+            width: min(textSize.width, bounds.width - 40),
+            height: textSize.height
+        )
+        attributed.draw(in: textRect)
     }
 }
 
