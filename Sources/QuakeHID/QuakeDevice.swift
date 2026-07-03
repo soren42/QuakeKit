@@ -115,21 +115,26 @@ public final class QuakeDevice: @unchecked Sendable {
     public func activate() {
         [0.0, 0.3, 0.8, 1.5].forEach { delay in
             Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                _ = self?.sendControlFrame(QuakeProtocol.screenOn)
-                _ = self?.setBrightness(255)
+                self?.sendActivationPulse(label: "delayed+\(String(format: "%.1f", delay))")
             }
         }
-        _ = sendControlFrame(QuakeProtocol.screenOn)
-        _ = setBrightness(255)
-        _ = sendControlFrame(QuakeProtocol.queryFirmware)
-        _ = sendControlFrame(QuakeProtocol.queryMic)
-        _ = sendControlFrame(QuakeProtocol.queryLuminance)
+        sendActivationPulse(label: "initial")
+        let firmwareOK = sendControlFrameReliably(QuakeProtocol.queryFirmware)
+        let micOK = sendControlFrameReliably(QuakeProtocol.queryMic)
+        let luminanceOK = sendControlFrameReliably(QuakeProtocol.queryLuminance)
+        emitDiagnostic("activate queries firmware=\(firmwareOK) mic=\(micOK) luminance=\(luminanceOK)")
 
         keepAliveTimer?.invalidate()
         keepAliveTick = 0
         keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             self?.sendKeepAlive()
         }
+    }
+
+    private func sendActivationPulse(label: String) {
+        let screenOnOK = sendControlFrameReliably(QuakeProtocol.screenOn)
+        let brightnessOK = setBrightness(255)
+        emitDiagnostic("activate \(label) screenOn=\(screenOnOK) brightness=\(brightnessOK)")
     }
 
     public func sendKeepAlive() {
@@ -172,6 +177,24 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     @discardableResult
+    public func sendControlFrameReliably(_ frame: [UInt8]) -> Bool {
+        let report = [UInt8(0x00)] + frame
+        if sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: true) {
+            return true
+        }
+        let variants: [(IOHIDReportType, Bool)] = [
+            (kIOHIDReportTypeOutput, false),
+            (kIOHIDReportTypeFeature, true),
+            (kIOHIDReportTypeFeature, false)
+        ]
+        for (type, includeReportID) in variants where sendControlReport(report, type: type, includeReportIDInPayload: includeReportID) {
+            emitDiagnostic("control frame fallback type=\(type.rawValue) includeReportID=\(includeReportID)")
+            return true
+        }
+        return false
+    }
+
+    @discardableResult
     public func sendControlReport(_ report: [UInt8]) -> Bool {
         sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: true)
     }
@@ -181,24 +204,35 @@ public final class QuakeDevice: @unchecked Sendable {
         guard let controlDevice else { return false }
         let reportID = CFIndex(report.first ?? 0)
         let payload = includeReportIDInPayload ? report : Array(report.dropFirst())
-        return payload.withUnsafeBytes { rawBuffer in
-            guard let baseAddress = rawBuffer.bindMemory(to: UInt8.self).baseAddress else {
-                return false
+        var lastResult: IOReturn = kIOReturnSuccess
+        for attempt in 1...3 {
+            let ok = payload.withUnsafeBytes { rawBuffer in
+                guard let baseAddress = rawBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                    lastResult = kIOReturnBadArgument
+                    return false
+                }
+                let result = IOHIDDeviceSetReport(
+                    controlDevice,
+                    type,
+                    reportID,
+                    baseAddress,
+                    payload.count
+                )
+                lastResult = result
+                return result == kIOReturnSuccess
             }
-            let result = IOHIDDeviceSetReport(
-                controlDevice,
-                type,
-                reportID,
-                baseAddress,
-                payload.count
-            )
-            return result == kIOReturnSuccess
+            if ok { return true }
+            if attempt < 3 {
+                Thread.sleep(forTimeInterval: 0.025)
+            }
         }
+        emitDiagnostic("control write failed type=\(type.rawValue) includeReportID=\(includeReportIDInPayload) len=\(payload.count) result=\(lastResult)")
+        return false
     }
 
     @discardableResult
     public func setBrightness(_ value: UInt8) -> Bool {
-        sendControlFrame(QuakeProtocol.setBrightness(value))
+        sendControlFrameReliably(QuakeProtocol.setBrightness(value))
     }
 
     @discardableResult
@@ -206,7 +240,7 @@ public final class QuakeDevice: @unchecked Sendable {
         if !enabled {
             return turnKnobRingOff()
         }
-        var ok = sendControlFrame(QuakeProtocol.setKnobLEDPower(enabled))
+        var ok = sendControlFrameReliably(QuakeProtocol.setKnobLEDPower(enabled))
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x02, values: [enabled ? 1 : 0])) && ok
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x01, values: [200])) && ok
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x03, values: [128])) && ok
@@ -225,7 +259,7 @@ public final class QuakeDevice: @unchecked Sendable {
         let speed = UInt8(output.animation == .solid ? 0 : 160)
         let effect = output.animation.viaEffectIndex
 
-        var ok = sendControlFrame(QuakeProtocol.setKnobLEDPower(true))
+        var ok = sendControlFrameReliably(QuakeProtocol.setKnobLEDPower(true))
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x02, values: [effect])) && ok
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x01, values: [brightness])) && ok
         ok = sendControlReport(QuakeProtocol.viaSet(field: 0x03, values: [speed])) && ok
@@ -235,7 +269,7 @@ public final class QuakeDevice: @unchecked Sendable {
 
     @discardableResult
     public func turnKnobRingOff() -> Bool {
-        var ok = sendControlFrame(QuakeProtocol.setKnobLEDPower(false))
+        var ok = sendControlFrameReliably(QuakeProtocol.setKnobLEDPower(false))
         let variants: [(IOHIDReportType, Bool)] = [
             (kIOHIDReportTypeOutput, true),
             (kIOHIDReportTypeOutput, false),
@@ -345,6 +379,11 @@ public final class QuakeDevice: @unchecked Sendable {
         for event in QuakeProtocol.decodeTouchReport(bytes) {
             eventHandler(RuntimeEvent(source: "dk-quake", event: event))
         }
+    }
+
+    private func emitDiagnostic(_ message: String) {
+        diagnostics.append(message)
+        diagnosticHandler?(message)
     }
 }
 

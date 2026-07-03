@@ -40,7 +40,7 @@ struct PanelLaunchOptions {
     var hidOpenMode: QuakeDevice.OpenMode {
         if sharedHID { return .shared }
         if strictHIDSeize { return .seizeRequired }
-        return .seizePreferred
+        return .shared
     }
 
     private static func parseKeepAliveProfile(from arguments: [String]) -> QuakeDevice.KeepAliveProfile {
@@ -65,7 +65,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
         NSApp.activate(ignoringOtherApps: true)
         acquireDisplaySleepAssertion()
         openPanelWindow()
