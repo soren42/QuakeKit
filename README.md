@@ -16,6 +16,7 @@ Confirmed:
 - HID control input works.
 - HID touch input works.
 - Knob-ring output works.
+- Standalone device wake and keep-alive work without DK-Suite: the panel lights from cold and stays lit (see `docs/DEVICE_WAKE_KEEPALIVE.md`).
 - The plugin manifest/API skeleton builds and validates sample manifests.
 - Local shell/PHP/stdio-style plugin actions can be invoked through the runtime host.
 - The AppKit panel UI renders on the DK physical display.

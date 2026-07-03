@@ -121,13 +121,19 @@ public final class QuakeDevice: @unchecked Sendable {
         }
     }
 
+    /// Interval between keep-alive pings. DK-Suite sends a ping every 15 s
+    /// (`deviceKeepAliveGap`); the firmware blanks the panel and knob ring after
+    /// roughly two missed pings (~30 s without a valid host frame).
+    public static let keepAliveInterval: TimeInterval = 15.0
+
     public func activate() {
-        [0.0, 0.3, 0.8, 1.5].forEach { delay in
-            Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                self?.sendActivationPulse(label: "delayed+\(String(format: "%.1f", delay))", profile: self?.startupProfile ?? .teejs)
-            }
-        }
+        // Any valid vendor frame wakes the firmware out of its dark idle state, so a
+        // single correctly framed ping + screen-on is sufficient. One retry pulse
+        // covers a device that is still enumerating at first send.
         sendActivationPulse(label: "initial", profile: startupProfile)
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+            self?.sendActivationPulse(label: "retry+1.0", profile: self?.startupProfile ?? .teejs)
+        }
         let firmwareOK = sendControlFrameReliably(QuakeProtocol.queryFirmware)
         if startupProfile == .diagnostic {
             let micOK = sendControlFrameReliably(QuakeProtocol.queryMic)
@@ -139,7 +145,8 @@ public final class QuakeDevice: @unchecked Sendable {
 
         keepAliveTimer?.invalidate()
         keepAliveTick = 0
-        keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+        sendKeepAlive()
+        keepAliveTimer = Timer.scheduledTimer(withTimeInterval: Self.keepAliveInterval, repeats: true) { [weak self] _ in
             self?.sendKeepAlive()
         }
     }
@@ -191,6 +198,15 @@ public final class QuakeDevice: @unchecked Sendable {
         }
     }
 
+    /// Sends a vendor short-command frame on the control interface.
+    ///
+    /// The control collection uses unnumbered reports (report ID 0). The bytes on the
+    /// wire must therefore start with the 0xA3 frame header itself — the report ID is
+    /// passed to IOKit out-of-band and must NOT be prepended to the payload. DK-Suite
+    /// gets this via node-hid/hidapi, which strips the leading 0x00 before calling
+    /// IOHIDDeviceSetReport. Including the 0x00 in the payload shifts every byte by
+    /// one; the firmware fails its header check and silently drops the frame even
+    /// though IOHIDDeviceSetReport reports success.
     @discardableResult
     public func sendControlFrame(_ frame: [UInt8]) -> Bool {
         let report = [UInt8(0x00)] + frame
@@ -200,16 +216,11 @@ public final class QuakeDevice: @unchecked Sendable {
     @discardableResult
     public func sendControlFrameReliably(_ frame: [UInt8]) -> Bool {
         let report = [UInt8(0x00)] + frame
-        if sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: true) {
+        if sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: false) {
             return true
         }
-        let variants: [(IOHIDReportType, Bool)] = [
-            (kIOHIDReportTypeOutput, false),
-            (kIOHIDReportTypeFeature, true),
-            (kIOHIDReportTypeFeature, false)
-        ]
-        for (type, includeReportID) in variants where sendControlReport(report, type: type, includeReportIDInPayload: includeReportID) {
-            emitDiagnostic("control frame fallback type=\(type.rawValue) includeReportID=\(includeReportID)")
+        if sendControlReport(report, type: kIOHIDReportTypeFeature, includeReportIDInPayload: false) {
+            emitDiagnostic("control frame fallback to feature report")
             return true
         }
         return false
@@ -233,7 +244,7 @@ public final class QuakeDevice: @unchecked Sendable {
 
     @discardableResult
     public func sendControlReport(_ report: [UInt8]) -> Bool {
-        sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: true)
+        sendControlReport(report, type: kIOHIDReportTypeOutput, includeReportIDInPayload: false)
     }
 
     @discardableResult
@@ -312,16 +323,8 @@ public final class QuakeDevice: @unchecked Sendable {
     @discardableResult
     public func turnKnobRingOff() -> Bool {
         var ok = sendControlFrameReliably(QuakeProtocol.setKnobLEDPower(false))
-        let variants: [(IOHIDReportType, Bool)] = [
-            (kIOHIDReportTypeOutput, true),
-            (kIOHIDReportTypeOutput, false),
-            (kIOHIDReportTypeFeature, true),
-            (kIOHIDReportTypeFeature, false)
-        ]
-        for (type, includeReportID) in variants {
-            ok = sendControlReport(QuakeProtocol.viaSet(field: 0x02, values: [0]), type: type, includeReportIDInPayload: includeReportID) && ok
-            ok = sendControlReport(QuakeProtocol.viaSet(field: 0x01, values: [0]), type: type, includeReportIDInPayload: includeReportID) && ok
-        }
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x02, values: [0])) && ok
+        ok = sendControlReport(QuakeProtocol.viaSet(field: 0x01, values: [0])) && ok
         return ok
     }
 

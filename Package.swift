@@ -45,6 +45,10 @@ let package = Package(
         .executableTarget(
             name: "QuakeTest",
             dependencies: ["QuakeHID", "QuakePluginAPI", "QuakeRuntime"]
+        ),
+        .testTarget(
+            name: "QuakeKitTests",
+            dependencies: ["QuakeHID", "QuakeRuntime"]
         )
     ]
 )
