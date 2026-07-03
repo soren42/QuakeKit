@@ -129,6 +129,11 @@ Launch modes:
 .build/debug/quake-panel --shared-hid --keepalive screenOn
 .build/debug/quake-panel --shared-hid --keepalive aggressive
 
+# Startup profiles: teejs mirrors open-quake's minimal connector startup;
+# diagnostic sends extra safe wake/luminance probes and logs raw control reports.
+.build/debug/quake-panel --startup teejs
+.build/debug/quake-panel --startup diagnostic
+
 # Display-only diagnostic mode: renders UI but intentionally disables all HID input.
 .build/debug/quake-panel --no-hid
 

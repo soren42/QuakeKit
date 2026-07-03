@@ -17,10 +17,16 @@ public final class QuakeDevice: @unchecked Sendable {
         case aggressive
     }
 
+    public enum StartupProfile: String, Sendable {
+        case teejs
+        case diagnostic
+    }
+
     private let managers: [ManagerBinding]
     private let eventHandler: EventHandler
     private let openMode: OpenMode
     private let keepAliveProfile: KeepAliveProfile
+    private let startupProfile: StartupProfile
     private let diagnosticHandler: ((String) -> Void)?
     public private(set) var diagnostics: [String] = []
     private var controlDevice: IOHIDDevice?
@@ -34,12 +40,14 @@ public final class QuakeDevice: @unchecked Sendable {
     public init(
         openMode: OpenMode = .seizePreferred,
         keepAliveProfile: KeepAliveProfile = .vendor,
+        startupProfile: StartupProfile = .teejs,
         diagnosticHandler: ((String) -> Void)? = nil,
         eventHandler: @escaping EventHandler
     ) {
         self.eventHandler = eventHandler
         self.openMode = openMode
         self.keepAliveProfile = keepAliveProfile
+        self.startupProfile = startupProfile
         self.diagnosticHandler = diagnosticHandler
 
         let controlManagers = QuakeProtocol.controlSpecs.map { spec in
@@ -116,14 +124,18 @@ public final class QuakeDevice: @unchecked Sendable {
     public func activate() {
         [0.0, 0.3, 0.8, 1.5].forEach { delay in
             Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                self?.sendActivationPulse(label: "delayed+\(String(format: "%.1f", delay))")
+                self?.sendActivationPulse(label: "delayed+\(String(format: "%.1f", delay))", profile: self?.startupProfile ?? .teejs)
             }
         }
-        sendActivationPulse(label: "initial")
+        sendActivationPulse(label: "initial", profile: startupProfile)
         let firmwareOK = sendControlFrameReliably(QuakeProtocol.queryFirmware)
-        let micOK = sendControlFrameReliably(QuakeProtocol.queryMic)
-        let luminanceOK = sendControlFrameReliably(QuakeProtocol.queryLuminance)
-        emitDiagnostic("activate queries firmware=\(firmwareOK) mic=\(micOK) luminance=\(luminanceOK)")
+        if startupProfile == .diagnostic {
+            let micOK = sendControlFrameReliably(QuakeProtocol.queryMic)
+            let luminanceOK = sendControlFrameReliably(QuakeProtocol.queryLuminance)
+            emitDiagnostic("activate queries firmware=\(firmwareOK) mic=\(micOK) luminance=\(luminanceOK)")
+        } else {
+            emitDiagnostic("activate queries firmware=\(firmwareOK)")
+        }
 
         keepAliveTimer?.invalidate()
         keepAliveTick = 0
@@ -132,12 +144,18 @@ public final class QuakeDevice: @unchecked Sendable {
         }
     }
 
-    private func sendActivationPulse(label: String) {
-        let screenOnResults = sendControlFrameVariants(QuakeProtocol.screenOn)
-        let brightnessResults = sendControlFrameVariants(QuakeProtocol.setBrightness(255))
-        let screenOnOK = screenOnResults.contains(true)
-        let brightnessOK = brightnessResults.contains(true)
-        emitDiagnostic("activate \(label) screenOn=\(screenOnOK) brightness=\(brightnessOK)")
+    private func sendActivationPulse(label: String, profile: StartupProfile) {
+        switch profile {
+        case .teejs:
+            let screenOnOK = sendControlFrame(QuakeProtocol.screenOn)
+            emitDiagnostic("activate \(label) profile=teejs screenOn=\(screenOnOK)")
+        case .diagnostic:
+            let screenOnResults = sendControlFrameVariants(QuakeProtocol.screenOn)
+            let brightnessResults = sendControlFrameVariants(QuakeProtocol.setBrightness(255))
+            let screenOnOK = screenOnResults.contains(true)
+            let brightnessOK = brightnessResults.contains(true)
+            emitDiagnostic("activate \(label) profile=diagnostic screenOn=\(screenOnOK) brightness=\(brightnessOK)")
+        }
     }
 
     public func sendKeepAlive() {

@@ -25,6 +25,7 @@ struct PanelLaunchOptions {
     var strictHIDSeize: Bool
     var simpleFullscreen: Bool
     var keepAliveProfile: QuakeDevice.KeepAliveProfile
+    var startupProfile: QuakeDevice.StartupProfile
 
     init(arguments: ArraySlice<String>) {
         let rawArguments = Array(arguments)
@@ -37,6 +38,7 @@ struct PanelLaunchOptions {
         self.strictHIDSeize = values.contains("--strict-hid-seize")
         self.simpleFullscreen = values.contains("--simple-fullscreen")
         self.keepAliveProfile = Self.parseKeepAliveProfile(from: rawArguments)
+        self.startupProfile = Self.parseStartupProfile(from: rawArguments)
     }
 
     var hidOpenMode: QuakeDevice.OpenMode {
@@ -50,6 +52,13 @@ struct PanelLaunchOptions {
             return .vendor
         }
         return QuakeDevice.KeepAliveProfile(rawValue: arguments[index + 1]) ?? .vendor
+    }
+
+    private static func parseStartupProfile(from arguments: [String]) -> QuakeDevice.StartupProfile {
+        guard let index = arguments.firstIndex(of: "--startup"), arguments.indices.contains(index + 1) else {
+            return .teejs
+        }
+        return QuakeDevice.StartupProfile(rawValue: arguments[index + 1]) ?? .teejs
     }
 }
 
@@ -67,7 +76,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) startup=\(launchOptions.startupProfile.rawValue) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
         NSApp.activate(ignoringOtherApps: true)
         acquireDisplaySleepAssertion()
         openPanelWindow()
@@ -237,6 +246,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         let quake = QuakeDevice(
             openMode: launchOptions.hidOpenMode,
             keepAliveProfile: launchOptions.keepAliveProfile,
+            startupProfile: launchOptions.startupProfile,
             diagnosticHandler: { message in
                 log("hid \(message)")
             }
@@ -254,7 +264,9 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             }
             device = quake
             panelView?.status = "HID connected"
-            applyStartupDeviceSettings()
+            if launchOptions.startupProfile == .diagnostic {
+                applyStartupDeviceSettings()
+            }
             requestKnobRing(state: .success, priority: .focus, ttl: 1.2, source: "hid")
             startRingTimer()
         } catch {
