@@ -124,6 +124,11 @@ Launch modes:
 # Hardware mode that fails HID startup instead of falling back when seized opens fail.
 .build/debug/quake-panel --strict-hid-seize
 
+# Keepalive profiles for standalone display-blanking diagnostics.
+.build/debug/quake-panel --shared-hid --keepalive vendor
+.build/debug/quake-panel --shared-hid --keepalive screenOn
+.build/debug/quake-panel --shared-hid --keepalive aggressive
+
 # Display-only diagnostic mode: renders UI but intentionally disables all HID input.
 .build/debug/quake-panel --no-hid
 

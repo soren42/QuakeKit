@@ -23,21 +23,31 @@ struct PanelLaunchOptions {
     var noHID: Bool
     var sharedHID: Bool
     var strictHIDSeize: Bool
+    var keepAliveProfile: QuakeDevice.KeepAliveProfile
 
     init(arguments: ArraySlice<String>) {
-        let values = Set(arguments)
+        let rawArguments = Array(arguments)
+        let values = Set(rawArguments)
         self.debugWindow = values.contains("--debug-window")
         self.displayTest = values.contains("--display-test")
         self.mainScreen = values.contains("--main-screen")
         self.noHID = values.contains("--no-hid")
         self.sharedHID = values.contains("--shared-hid")
         self.strictHIDSeize = values.contains("--strict-hid-seize")
+        self.keepAliveProfile = Self.parseKeepAliveProfile(from: rawArguments)
     }
 
     var hidOpenMode: QuakeDevice.OpenMode {
         if sharedHID { return .shared }
         if strictHIDSeize { return .seizeRequired }
         return .seizePreferred
+    }
+
+    private static func parseKeepAliveProfile(from arguments: [String]) -> QuakeDevice.KeepAliveProfile {
+        guard let index = arguments.firstIndex(of: "--keepalive"), arguments.indices.contains(index + 1) else {
+            return .vendor
+        }
+        return QuakeDevice.KeepAliveProfile(rawValue: arguments[index + 1]) ?? .vendor
     }
 }
 
@@ -55,7 +65,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
         NSApp.activate(ignoringOtherApps: true)
         acquireDisplaySleepAssertion()
         openPanelWindow()
@@ -178,7 +188,13 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         let deliver: @MainActor (RuntimeEvent) -> Void = { [weak self] event in
             self?.handle(event)
         }
-        let quake = QuakeDevice(openMode: launchOptions.hidOpenMode) { [weak self] event in
+        let quake = QuakeDevice(
+            openMode: launchOptions.hidOpenMode,
+            keepAliveProfile: launchOptions.keepAliveProfile,
+            diagnosticHandler: { message in
+                log("hid \(message)")
+            }
+        ) { [weak self] event in
             Task { @MainActor in
                 if self != nil {
                     deliver(event)

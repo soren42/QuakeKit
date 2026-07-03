@@ -15,6 +15,7 @@ let ledOff = arguments.contains("--led-off")
 let ledTest = arguments.contains("--led-test")
 let sharedHID = arguments.contains("--shared-hid")
 let strictHIDSeize = arguments.contains("--strict-hid-seize")
+let keepAliveProfile = parseKeepAliveProfile(from: rawArguments)
 let brightnessValue = parseBrightness(from: rawArguments)
 
 if selfTest {
@@ -59,7 +60,9 @@ if let runIndex = rawArguments.firstIndex(of: "--run-plugin-action") {
 }
 
 if ledOn || ledOff || ledTest || brightnessValue != nil {
-    let quake = QuakeDevice(openMode: hidOpenMode()) { event in
+    let quake = QuakeDevice(openMode: hidOpenMode(), keepAliveProfile: keepAliveProfile, diagnosticHandler: { message in
+        print("diag \(message)")
+    }) { event in
         print(format(event))
     }
     do {
@@ -121,12 +124,15 @@ guard listen else {
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
     print("Run with --brightness <0-255> to set and query screen luminance.")
     print("Run with --listen to open the device and print decoded events.")
+    print("Use --keepalive vendor|screenOn|aggressive to select HID keepalive behavior.")
     print("Use --shared-hid to avoid exclusive HID opens, or --strict-hid-seize to fail instead of falling back to shared opens.")
     print("Add --wake to send safe screen wake, keep-alive, and state query commands.")
     exit(devices.isEmpty ? 1 : 0)
 }
 
-let quake = QuakeDevice(openMode: hidOpenMode()) { event in
+let quake = QuakeDevice(openMode: hidOpenMode(), keepAliveProfile: keepAliveProfile, diagnosticHandler: { message in
+    print("diag \(message)")
+}) { event in
     print(format(event))
 }
 
@@ -224,6 +230,13 @@ func hidOpenMode() -> QuakeDevice.OpenMode {
     if sharedHID { return .shared }
     if strictHIDSeize { return .seizeRequired }
     return .seizePreferred
+}
+
+func parseKeepAliveProfile(from arguments: [String]) -> QuakeDevice.KeepAliveProfile {
+    guard let index = arguments.firstIndex(of: "--keepalive"), arguments.indices.contains(index + 1) else {
+        return .vendor
+    }
+    return QuakeDevice.KeepAliveProfile(rawValue: arguments[index + 1]) ?? .vendor
 }
 
 func installPackage(at path: String) {

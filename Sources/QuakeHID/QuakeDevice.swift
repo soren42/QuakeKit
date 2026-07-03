@@ -11,9 +11,17 @@ public final class QuakeDevice: @unchecked Sendable {
         case seizeRequired
     }
 
+    public enum KeepAliveProfile: String, Sendable {
+        case vendor
+        case screenOn
+        case aggressive
+    }
+
     private let managers: [ManagerBinding]
     private let eventHandler: EventHandler
     private let openMode: OpenMode
+    private let keepAliveProfile: KeepAliveProfile
+    private let diagnosticHandler: ((String) -> Void)?
     public private(set) var diagnostics: [String] = []
     private var controlDevice: IOHIDDevice?
     private var touchDevice: IOHIDDevice?
@@ -22,9 +30,16 @@ public final class QuakeDevice: @unchecked Sendable {
     private var keepAliveTimer: Timer?
     private var keepAliveTick = 0
 
-    public init(openMode: OpenMode = .seizePreferred, eventHandler: @escaping EventHandler) {
+    public init(
+        openMode: OpenMode = .seizePreferred,
+        keepAliveProfile: KeepAliveProfile = .vendor,
+        diagnosticHandler: ((String) -> Void)? = nil,
+        eventHandler: @escaping EventHandler
+    ) {
         self.eventHandler = eventHandler
         self.openMode = openMode
+        self.keepAliveProfile = keepAliveProfile
+        self.diagnosticHandler = diagnosticHandler
 
         let controlManagers = QuakeProtocol.controlSpecs.map { spec in
             var dictionary: [String: Any] = [
@@ -119,13 +134,34 @@ public final class QuakeDevice: @unchecked Sendable {
 
     public func sendKeepAlive() {
         keepAliveTick += 1
-        _ = sendControlFrame(QuakeProtocol.ping)
-        if keepAliveTick % 2 == 0 {
-            _ = sendControlFrame(QuakeProtocol.screenOn)
+        let pingOK = sendControlFrame(QuakeProtocol.ping)
+        var screenOnOK: Bool?
+        var brightnessOK: Bool?
+        var luminanceOK: Bool?
+
+        switch keepAliveProfile {
+        case .vendor:
+            break
+        case .screenOn:
+            screenOnOK = sendControlFrame(QuakeProtocol.screenOn)
+        case .aggressive:
+            screenOnOK = sendControlFrame(QuakeProtocol.screenOn)
+            if keepAliveTick % 5 == 0 {
+                brightnessOK = setBrightness(255)
+                luminanceOK = sendControlFrame(QuakeProtocol.queryLuminance)
+            }
         }
-        if keepAliveTick % 10 == 0 {
-            _ = setBrightness(255)
-            _ = sendControlFrame(QuakeProtocol.queryLuminance)
+
+        if keepAliveTick % 5 == 0 || !pingOK || screenOnOK == false || brightnessOK == false || luminanceOK == false {
+            let details = [
+                "tick=\(keepAliveTick)",
+                "profile=\(keepAliveProfile.rawValue)",
+                "ping=\(pingOK)",
+                screenOnOK.map { "screenOn=\($0)" },
+                brightnessOK.map { "brightness=\($0)" },
+                luminanceOK.map { "luminance=\($0)" }
+            ].compactMap { $0 }.joined(separator: " ")
+            diagnosticHandler?("keepalive \(details)")
         }
     }
 
