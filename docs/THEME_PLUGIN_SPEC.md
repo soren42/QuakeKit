@@ -42,6 +42,7 @@ from the `assets` array.
 | `metrics` | object | no | Shared dimensions such as radius, spacing, density. |
 | `components` | object | no | Standard component style tokens. |
 | `hardware` | object | no | Physical-device presentation defaults such as the knob LED ring. |
+| `layout` | object | no | Preferred host layout defaults for pages and widget grids. |
 | `assets` | array | no | Images, fonts, CSS, scripts, or sounds bundled with the theme. |
 | `options` | array | no | User-configurable visual controls exposed by the host UI. |
 
@@ -185,9 +186,31 @@ Assets allow themes to bundle design artifacts such as backgrounds or fonts.
 | `kind` | string | yes | `image`, `font`, `sound`, `css`, or `script`. |
 | `path` | string | yes | Path relative to the theme package root. |
 | `scale` | number | no | Asset scale multiplier, usually `1`, `2`, or `3`. |
+| `role` | string | no | `background`, `texture`, `icon`, `status`, or `illustration`. |
+| `fit` | string | no | Image fit: `cover`, `contain`, `stretch`, `tile`, or `center`. |
+| `opacity` | number | no | Compositing opacity from `0` to `1`. |
 
 Themes may include CSS or scripts for web applets, but native host components
 must not execute theme scripts.
+
+The native panel currently renders the first image asset whose `role` is
+`background`, or the first image asset with no role, behind native controls.
+
+## Layout
+
+`layout` is optional. It lets a theme express the display composition it was
+designed around without forcing every plugin to draw a whole page.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `defaultPageStyle` | string | `grid`, `fullScreen`, `halfAndGrid`, `twoHalves`, or `quarters`. |
+| `widgetGrid` | object | Preferred widget grid dimensions. |
+| `appletGrid` | object | Preferred applet grid dimensions. |
+| `splitRatio` | number | Desired split ratio from `0.2` to `0.8`. |
+
+The current native shell applies `defaultPageStyle` to host pages where a plugin
+does not declare a more specific view layout. Grid dimensions are part of the
+theme contract and will be used more deeply as the layout editor matures.
 
 ## Options
 

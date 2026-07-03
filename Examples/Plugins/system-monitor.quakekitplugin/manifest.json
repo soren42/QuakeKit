@@ -11,12 +11,42 @@
   },
   "capabilities": [
     "dataProvider",
+    "settings",
     "viewProvider",
     "backgroundWorker"
   ],
   "permissions": [
     {
       "localProcess": {}
+    }
+  ],
+  "settings": [
+    {
+      "id": "refresh_interval",
+      "title": "Refresh Interval",
+      "type": "choice",
+      "defaultValue": 5,
+      "choices": [
+        2,
+        5,
+        10,
+        30
+      ],
+      "environment": "QUAKEKIT_SYSTEM_REFRESH_SECONDS",
+      "help": "Preferred refresh cadence in seconds for hosts that run background streams."
+    },
+    {
+      "id": "detail_level",
+      "title": "Detail Level",
+      "type": "choice",
+      "defaultValue": "balanced",
+      "choices": [
+        "minimal",
+        "balanced",
+        "verbose"
+      ],
+      "environment": "QUAKEKIT_SYSTEM_DETAIL_LEVEL",
+      "help": "Controls how much system detail the plugin returns."
     }
   ],
   "actions": [
@@ -42,6 +72,18 @@
           "title": "Memory",
           "type": "number",
           "required": false
+        },
+        {
+          "id": "disk",
+          "title": "Disk",
+          "type": "number",
+          "required": false
+        },
+        {
+          "id": "battery",
+          "title": "Battery",
+          "type": "number",
+          "required": false
         }
       ]
     }
@@ -52,6 +94,7 @@
       "title": "System Overview",
       "type": "dataDriven",
       "presentation": "pageAndWidget",
+      "layout": "quarters",
       "dataStreamID": "system.metrics",
       "columnSpan": 2,
       "rowSpan": 1,

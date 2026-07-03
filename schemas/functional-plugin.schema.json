@@ -430,6 +430,19 @@
             "pageAndWidget"
           ]
         },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "grid",
+            "fullScreen",
+            "halfLeading",
+            "halfTrailing",
+            "halfAndGrid",
+            "twoHalves",
+            "quarters"
+          ],
+          "description": "Host layout hint for page-style renderers. Widgets still use columnSpan/rowSpan."
+        },
         "entryPath": {
           "type": "string",
           "minLength": 1

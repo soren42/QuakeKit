@@ -1,0 +1,217 @@
+{
+  "$schema": "../../schemas/theme-plugin.schema.json",
+  "id": "cyberpunk_neon",
+  "name": "Cyberpunk Neon",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "kind": "theme",
+  "author": "QuakeKit",
+  "description": "Black-glass dashboard theme with high contrast neon cyan, magenta, and acid green accents.",
+  "palette": {
+    "mode": "dark",
+    "colors": {
+      "background": {
+        "value": "#020006",
+        "role": "Near-black glass base",
+        "configurable": false
+      },
+      "surface": {
+        "value": "#080712E6",
+        "role": "Dark translucent card surface",
+        "configurable": true
+      },
+      "surfaceRaised": {
+        "value": "#121024F2",
+        "role": "Focused neon glass surface",
+        "configurable": true
+      },
+      "border": {
+        "value": "#00F5FF88",
+        "role": "Cyan neon border",
+        "configurable": true
+      },
+      "textPrimary": {
+        "value": "#F8FBFF",
+        "role": "Primary text",
+        "configurable": false
+      },
+      "textSecondary": {
+        "value": "#B7B2FF",
+        "role": "Secondary violet text",
+        "configurable": false
+      },
+      "accent": {
+        "value": "#00F5FF",
+        "role": "Cyan focus",
+        "configurable": true
+      },
+      "success": {
+        "value": "#B6FF00",
+        "role": "Acid green healthy state",
+        "configurable": true
+      },
+      "warning": {
+        "value": "#FFE600",
+        "role": "Electric yellow warning",
+        "configurable": true
+      },
+      "danger": {
+        "value": "#FF2BD6",
+        "role": "Magenta alert",
+        "configurable": true
+      }
+    },
+    "semanticColors": {
+      "background": "background",
+      "surface": "surface",
+      "surfaceRaised": "surfaceRaised",
+      "border": "border",
+      "textPrimary": "textPrimary",
+      "textSecondary": "textSecondary",
+      "accent": "accent",
+      "success": "success",
+      "warning": "warning",
+      "danger": "danger"
+    }
+  },
+  "typography": {
+    "displayFont": "SF Pro",
+    "bodyFont": "SF Pro",
+    "monoFont": "SF Mono",
+    "scale": {
+      "caption": 12,
+      "body": 15,
+      "title": 24,
+      "value": 36
+    }
+  },
+  "metrics": {
+    "cornerRadius": 6,
+    "borderWidth": 1.5,
+    "spacing": 9,
+    "density": "compact"
+  },
+  "layout": {
+    "defaultPageStyle": "halfAndGrid",
+    "widgetGrid": {
+      "columns": 8,
+      "rows": 2
+    },
+    "appletGrid": {
+      "columns": 4,
+      "rows": 1
+    },
+    "splitRatio": 0.48
+  },
+  "components": {
+    "tile": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "accent",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "danger"
+    },
+    "tab": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "accent"
+    },
+    "statusRow": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "success"
+    },
+    "gauge": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "success"
+    },
+    "chart": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "accent": "danger"
+    }
+  },
+  "hardware": {
+    "knobRing": {
+      "enabled": true,
+      "idle": {
+        "color": "accent",
+        "intensity": 0.25,
+        "animation": "solid"
+      },
+      "focus": {
+        "color": "danger",
+        "intensity": 0.8,
+        "animation": "pulse"
+      },
+      "success": {
+        "color": "success",
+        "intensity": 0.9,
+        "animation": "solid"
+      },
+      "warning": {
+        "color": "warning",
+        "intensity": 0.9,
+        "animation": "pulse"
+      },
+      "danger": {
+        "color": "danger",
+        "intensity": 1,
+        "animation": "flash"
+      },
+      "progress": {
+        "color": "accent",
+        "intensity": 0.85,
+        "animation": "progress"
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "neonCircuitBackdrop",
+      "kind": "image",
+      "path": "assets/neon-circuit.svg",
+      "role": "background",
+      "fit": "cover",
+      "opacity": 0.32,
+      "scale": 1
+    }
+  ],
+  "options": [
+    {
+      "id": "accentColor",
+      "title": "Neon cyan",
+      "type": "color",
+      "target": "palette.colors.accent.value",
+      "defaultValue": "#00F5FF"
+    },
+    {
+      "id": "dangerColor",
+      "title": "Neon magenta",
+      "type": "color",
+      "target": "palette.colors.danger.value",
+      "defaultValue": "#FF2BD6"
+    },
+    {
+      "id": "successColor",
+      "title": "Acid green",
+      "type": "color",
+      "target": "palette.colors.success.value",
+      "defaultValue": "#B6FF00"
+    },
+    {
+      "id": "spacing",
+      "title": "Panel density",
+      "type": "number",
+      "target": "metrics.spacing",
+      "defaultValue": 9,
+      "minimum": 6,
+      "maximum": 14
+    }
+  ]
+}

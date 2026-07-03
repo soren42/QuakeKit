@@ -59,6 +59,9 @@
     "hardware": {
       "$ref": "#/$defs/hardware"
     },
+    "layout": {
+      "$ref": "#/$defs/layout"
+    },
     "assets": {
       "type": "array",
       "default": [],
@@ -372,6 +375,78 @@
         "scale": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "background",
+            "texture",
+            "icon",
+            "status",
+            "illustration"
+          ]
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "cover",
+            "contain",
+            "stretch",
+            "tile",
+            "center"
+          ]
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaultPageStyle": {
+          "type": "string",
+          "enum": [
+            "grid",
+            "fullScreen",
+            "halfAndGrid",
+            "twoHalves",
+            "quarters"
+          ],
+          "default": "grid"
+        },
+        "widgetGrid": {
+          "$ref": "#/$defs/gridLayout"
+        },
+        "appletGrid": {
+          "$ref": "#/$defs/gridLayout"
+        },
+        "splitRatio": {
+          "type": "number",
+          "minimum": 0.2,
+          "maximum": 0.8,
+          "default": 0.5
+        }
+      }
+    },
+    "gridLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "columns",
+        "rows"
+      ],
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

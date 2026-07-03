@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "native_status",
+  "name": "Native Status",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "nativeSwift",
+    "command": "QuakeKitExamples.NativeStatusPlugin",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "viewProvider"
+  ],
+  "permissions": [],
+  "actions": [
+    {
+      "id": "nativeStatus.refresh",
+      "title": "Refresh Native Status",
+      "argumentSchema": []
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "nativeStatus.snapshot",
+      "title": "Native Status Snapshot",
+      "valueSchema": [
+        {
+          "id": "state",
+          "title": "State",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "updatedAt",
+          "title": "Updated At",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "nativeStatus.overview",
+      "title": "Native Status",
+      "type": "native",
+      "presentation": "widget",
+      "dataStreamID": "nativeStatus.snapshot",
+      "columnSpan": 1,
+      "rowSpan": 1,
+      "preferredWidth": 240,
+      "preferredHeight": 200
+    }
+  ]
+}

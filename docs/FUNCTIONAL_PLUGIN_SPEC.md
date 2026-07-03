@@ -7,6 +7,8 @@ active theme decide how that work is rendered.
 
 The normative machine schema is
 [`schemas/functional-plugin.schema.json`](../schemas/functional-plugin.schema.json).
+For language-specific manifest examples, see
+[PLUGIN_LANGUAGE_EXAMPLES.md](PLUGIN_LANGUAGE_EXAMPLES.md).
 
 ## Package Layout
 
@@ -185,6 +187,7 @@ offer full applet pages, compact widgets, or a view that supports both modes.
 | `title` | string | yes | Human-readable view title. |
 | `type` | string | no | `native`, `webCanvas`, `webDocument`, `text`, or `dataDriven`. |
 | `presentation` | string | no | `page`, `widget`, or `pageAndWidget`. |
+| `layout` | string | no | Page layout hint: `grid`, `fullScreen`, `halfLeading`, `halfTrailing`, `halfAndGrid`, `twoHalves`, or `quarters`. |
 | `entryPath` | string | no | Local asset entrypoint such as `index.html`. |
 | `dataStreamID` | string | no | Data stream backing the view. |
 | `columnSpan` | integer | no | Widget grid width hint. |
@@ -193,7 +196,8 @@ offer full applet pages, compact widgets, or a view that supports both modes.
 | `preferredHeight` | integer | no | Preferred rendered height in points. |
 
 The host decides final layout. Plugins provide hints, not absolute control of
-the display.
+the display. Widget views still use `columnSpan` and `rowSpan`; page views may
+use `layout` to request a non-grid shell such as split-screen or quarters.
 
 ## Theme And Hardware Boundaries
 

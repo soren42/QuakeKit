@@ -219,10 +219,21 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         case pageAndWidget
     }
 
+    public enum Layout: String, Codable, Sendable {
+        case grid
+        case fullScreen
+        case halfLeading
+        case halfTrailing
+        case halfAndGrid
+        case twoHalves
+        case quarters
+    }
+
     public var id: String
     public var title: String
     public var type: ViewType?
     public var presentation: Presentation?
+    public var layout: Layout?
     public var entryPath: String?
     public var dataStreamID: String?
     public var columnSpan: Int?
@@ -235,6 +246,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         title: String,
         type: ViewType? = nil,
         presentation: Presentation? = nil,
+        layout: Layout? = nil,
         entryPath: String? = nil,
         dataStreamID: String? = nil,
         columnSpan: Int? = nil,
@@ -246,6 +258,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         self.title = title
         self.type = type
         self.presentation = presentation
+        self.layout = layout
         self.entryPath = entryPath
         self.dataStreamID = dataStreamID
         self.columnSpan = columnSpan

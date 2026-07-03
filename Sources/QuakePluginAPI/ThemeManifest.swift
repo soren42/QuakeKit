@@ -13,6 +13,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
     public var metrics: ThemeMetrics?
     public var components: ThemeComponents?
     public var hardware: ThemeHardware?
+    public var layout: ThemeLayout?
     public var assets: [ThemeAsset]
     public var options: [ThemeOption]
 
@@ -29,6 +30,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
         metrics: ThemeMetrics? = nil,
         components: ThemeComponents? = nil,
         hardware: ThemeHardware? = nil,
+        layout: ThemeLayout? = nil,
         assets: [ThemeAsset] = [],
         options: [ThemeOption] = []
     ) {
@@ -44,6 +46,7 @@ public struct ThemeManifest: Codable, Equatable, Identifiable, Sendable {
         self.metrics = metrics
         self.components = components
         self.hardware = hardware
+        self.layout = layout
         self.assets = assets
         self.options = options
     }
@@ -267,16 +270,83 @@ public struct ThemeAsset: Codable, Equatable, Identifiable, Sendable {
         case script
     }
 
+    public enum AssetRole: String, Codable, Sendable {
+        case background
+        case texture
+        case icon
+        case status
+        case illustration
+    }
+
+    public enum ImageFit: String, Codable, Sendable {
+        case cover
+        case contain
+        case stretch
+        case tile
+        case center
+    }
+
     public var id: String
     public var kind: AssetKind
     public var path: String
     public var scale: Double?
+    public var role: AssetRole?
+    public var fit: ImageFit?
+    public var opacity: Double?
 
-    public init(id: String, kind: AssetKind, path: String, scale: Double? = nil) {
+    public init(
+        id: String,
+        kind: AssetKind,
+        path: String,
+        scale: Double? = nil,
+        role: AssetRole? = nil,
+        fit: ImageFit? = nil,
+        opacity: Double? = nil
+    ) {
         self.id = id
         self.kind = kind
         self.path = path
         self.scale = scale
+        self.role = role
+        self.fit = fit
+        self.opacity = opacity
+    }
+}
+
+public struct ThemeLayout: Codable, Equatable, Sendable {
+    public var defaultPageStyle: ThemePageStyle
+    public var widgetGrid: ThemeGridLayout
+    public var appletGrid: ThemeGridLayout
+    public var splitRatio: Double
+
+    public init(
+        defaultPageStyle: ThemePageStyle = .grid,
+        widgetGrid: ThemeGridLayout = ThemeGridLayout(columns: 8, rows: 2),
+        appletGrid: ThemeGridLayout = ThemeGridLayout(columns: 4, rows: 1),
+        splitRatio: Double = 0.5
+    ) {
+        self.defaultPageStyle = defaultPageStyle
+        self.widgetGrid = widgetGrid
+        self.appletGrid = appletGrid
+        self.splitRatio = splitRatio
+    }
+}
+
+public enum ThemePageStyle: String, Codable, Equatable, Sendable {
+    case grid
+    case fullScreen
+    case halfAndGrid
+    case twoHalves
+    case quarters
+}
+
+public struct ThemeGridLayout: Codable, Equatable, Sendable {
+    public var columns: Int
+    public var rows: Int
+
+    public init(columns: Int, rows: Int) {
+        self.columns = columns
+        self.rows = rows
     }
 }
 
@@ -422,6 +492,23 @@ public enum ThemeManifestValidator {
         let assetIDs = manifest.assets.map(\.id)
         if Set(assetIDs).count != assetIDs.count {
             errors.append("Theme asset ids must be unique.")
+        }
+        for asset in manifest.assets {
+            if let opacity = asset.opacity, !(0...1).contains(opacity) {
+                errors.append("Theme asset \(asset.id) opacity must be between 0 and 1.")
+            }
+        }
+
+        if let layout = manifest.layout {
+            if layout.widgetGrid.columns < 1 || layout.widgetGrid.rows < 1 {
+                errors.append("Theme widget grid dimensions must be positive.")
+            }
+            if layout.appletGrid.columns < 1 || layout.appletGrid.rows < 1 {
+                errors.append("Theme applet grid dimensions must be positive.")
+            }
+            if !(0.2...0.8).contains(layout.splitRatio) {
+                errors.append("Theme layout splitRatio must be between 0.2 and 0.8.")
+            }
         }
 
         let optionIDs = manifest.options.map(\.id)

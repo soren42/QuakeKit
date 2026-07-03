@@ -462,15 +462,31 @@ enum ShellAction: Equatable {
     case resetPluginSettings(String)
 }
 
+enum PanelPageLayout: Equatable {
+    case grid
+    case fullScreen
+    case halfAndGrid
+    case twoHalves
+    case quarters
+}
+
 struct ShellPage: Equatable {
     var title: String
     var kind: Kind
+    var layout: PanelPageLayout
     var tiles: [ShellTile]
 
     enum Kind: Equatable {
         case grid
         case runtimeStatus
         case pluginView(pluginID: String, viewID: String)
+    }
+
+    init(title: String, kind: Kind, layout: PanelPageLayout = .grid, tiles: [ShellTile]) {
+        self.title = title
+        self.kind = kind
+        self.layout = layout
+        self.tiles = tiles
     }
 }
 
@@ -731,6 +747,9 @@ enum ShellCatalog {
         overrides: [String: JSONValue],
         settingsConfiguration: QuakeSettingsConfiguration
     ) -> [ShellPage] {
+        let themeLayout = themePackages.indices.contains(activeThemeIndex)
+            ? panelLayout(from: themePackages[activeThemeIndex].manifest.layout?.defaultPageStyle)
+            : .grid
         let widgetTiles = pluginTiles(
             from: pluginPackages,
             presentationFilter: { $0 == .widget || $0 == .pageAndWidget },
@@ -750,14 +769,16 @@ enum ShellCatalog {
             themePackages: themePackages,
             settingsConfiguration: settingsConfiguration
         )
+        let languageTiles = pluginLanguageTiles()
 
         return [
-            ShellPage(title: "Home", kind: .grid, tiles: [
+            ShellPage(title: "Home", kind: .grid, layout: themeLayout == .grid ? .halfAndGrid : themeLayout, tiles: [
             ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(5)),
             ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
             ShellTile(title: "Apps", subtitle: "\(appTiles.count + actionTiles.count) entries", action: .openPage(2)),
             ShellTile(title: "Themes", subtitle: "\(themePackages.count) installed", action: .openPage(3)),
             ShellTile(title: "Settings", subtitle: "Host and plugin config", action: .openPage(4)),
+            ShellTile(title: "Plugin APIs", subtitle: "Swift HTML PHP bash", action: .openPage(6)),
             ShellTile(title: "HID", subtitle: "Control online", action: .openPage(5)),
             ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
             ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
@@ -772,11 +793,36 @@ enum ShellCatalog {
             ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
             ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
             ]),
-            ShellPage(title: "Widgets", kind: .grid, tiles: widgetTiles),
-            ShellPage(title: "Apps", kind: .grid, tiles: appTiles + actionTiles),
+            ShellPage(title: "Widgets", kind: .grid, layout: themeLayout, tiles: widgetTiles),
+            ShellPage(title: "Apps", kind: .grid, layout: themeLayout == .grid ? .twoHalves : themeLayout, tiles: appTiles + actionTiles),
             ShellPage(title: "Themes", kind: .grid, tiles: themeTiles),
             ShellPage(title: "Settings", kind: .grid, tiles: settingsTiles),
-            ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
+            ShellPage(title: "Runtime", kind: .runtimeStatus, layout: .quarters, tiles: []),
+            ShellPage(title: "Plugin APIs", kind: .grid, layout: .quarters, tiles: languageTiles)
+        ]
+    }
+
+    private static func panelLayout(from style: ThemePageStyle?) -> PanelPageLayout {
+        switch style {
+        case .fullScreen:
+            return .fullScreen
+        case .halfAndGrid:
+            return .halfAndGrid
+        case .twoHalves:
+            return .twoHalves
+        case .quarters:
+            return .quarters
+        case .grid, .none:
+            return .grid
+        }
+    }
+
+    private static func pluginLanguageTiles() -> [ShellTile] {
+        [
+            ShellTile(title: "Swift", subtitle: "nativeSwift bundles", action: .setStatus("Swift plugins target native host APIs and future in-process loading")),
+            ShellTile(title: "HTML", subtitle: "webView/webCanvas", action: .setStatus("HTML plugins render packaged documents or canvas applets")),
+            ShellTile(title: "PHP", subtitle: "stdio JSON over php", action: .setStatus("PHP plugins run as process adapters with settings in environment variables")),
+            ShellTile(title: "Bash", subtitle: "POSIX shell adapters", action: .setStatus("Shell plugins run local process adapters and return JSON payloads"))
         ]
     }
 
@@ -937,6 +983,7 @@ final class PanelView: NSView {
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
     private var pageLabels: [NSTextField] = []
+    private let themeBackgroundView = ThemeBackgroundImageView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
     private let titleLabel = NSTextField(labelWithString: "")
     private let previousGridPad = ArrowPadView(direction: .previous)
@@ -1119,6 +1166,9 @@ final class PanelView: NSView {
     }
 
     private func setupSubviews() {
+        themeBackgroundView.autoresizingMask = [.width, .height]
+        addSubview(themeBackgroundView)
+
         titleLabel.font = NSFont.systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
         titleLabel.backgroundColor = .clear
@@ -1207,6 +1257,7 @@ final class PanelView: NSView {
 
     private func layoutChrome() {
         let inset: CGFloat = 16
+        themeBackgroundView.frame = bounds
         titleLabel.frame = NSRect(x: inset, y: bounds.height - 46, width: 280, height: 30)
         let tabY = bounds.height - 48
         for (index, label) in pageLabels.enumerated() {
@@ -1217,7 +1268,6 @@ final class PanelView: NSView {
     }
 
     private func layoutContent() {
-        let gap = activeTheme.spacing
         let inset: CGFloat = 16
         let topChrome: CGFloat = 62
         let bottomChrome: CGFloat = 38
@@ -1230,18 +1280,60 @@ final class PanelView: NSView {
         if gridSubpageCount > 1 {
             gridRect = gridRect.insetBy(dx: 36, dy: 0)
         }
-        let usableHeight = gridRect.height
-        let tileWidth = (gridRect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
-        let tileHeight = (usableHeight - gap * CGFloat(rows - 1)) / CGFloat(rows)
+        layoutTiles(in: gridRect)
+        updateGridPads()
+    }
 
-        for index in tileViews.indices {
-            let column = index % columns
-            let row = index / columns
-            let x = gridRect.minX + CGFloat(column) * (tileWidth + gap)
-            let y = gridRect.maxY - CGFloat(row + 1) * tileHeight - CGFloat(row) * gap
+    private func layoutTiles(in rect: NSRect) {
+        switch currentPage.layout {
+        case .grid:
+            layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: columns, rows: rows)
+        case .fullScreen:
+            for index in tileViews.indices {
+                tileViews[index].frame = index == 0 ? rect : .zero
+            }
+        case .halfAndGrid:
+            layoutHalfAndGrid(in: rect)
+        case .twoHalves:
+            layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 1)
+        case .quarters:
+            layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 2)
+        }
+    }
+
+    private func layoutHalfAndGrid(in rect: NSRect) {
+        guard !tileViews.isEmpty else { return }
+        let gap = activeTheme.spacing
+        let featureWidth = floor((rect.width - gap) * 0.48)
+        let gridRect = NSRect(
+            x: rect.minX + featureWidth + gap,
+            y: rect.minY,
+            width: rect.width - featureWidth - gap,
+            height: rect.height
+        )
+        tileViews[0].frame = NSRect(x: rect.minX, y: rect.minY, width: featureWidth, height: rect.height)
+        if tileViews.count > 1 {
+            layoutTileGrid(indices: Array(tileViews.indices.dropFirst()), in: gridRect, columns: 2, rows: 3)
+        }
+    }
+
+    private func layoutTileGrid(indices: [Int], in rect: NSRect, columns: Int, rows: Int) {
+        guard columns > 0, rows > 0 else { return }
+        let gap = activeTheme.spacing
+        let tileWidth = (rect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+        let tileHeight = (rect.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
+
+        for (offset, index) in indices.enumerated() where tileViews.indices.contains(index) {
+            let column = offset % columns
+            let row = offset / columns
+            if row >= rows {
+                tileViews[index].frame = .zero
+                continue
+            }
+            let x = rect.minX + CGFloat(column) * (tileWidth + gap)
+            let y = rect.maxY - CGFloat(row + 1) * tileHeight - CGFloat(row) * gap
             tileViews[index].frame = NSRect(x: x, y: y, width: tileWidth, height: tileHeight)
         }
-        updateGridPads()
     }
 
     private func layoutRuntimeRows(in rect: NSRect) {
@@ -1272,6 +1364,7 @@ final class PanelView: NSView {
         titleLabel.stringValue = "QuakeKit"
         titleLabel.textColor = activeTheme.textPrimary
         layer?.backgroundColor = activeTheme.background.cgColor
+        themeBackgroundView.configure(package: activeThemePackage)
         for (index, label) in pageLabels.enumerated() {
             let active = index == currentPageIndex
             label.layer?.backgroundColor = (active
@@ -1304,7 +1397,18 @@ final class PanelView: NSView {
     }
 
     private var tilesPerGridSubpage: Int {
-        columns * rows
+        switch currentPage.layout {
+        case .grid:
+            return columns * rows
+        case .fullScreen:
+            return 1
+        case .halfAndGrid:
+            return 7
+        case .twoHalves:
+            return 2
+        case .quarters:
+            return 4
+        }
     }
 
     private var gridSubpageCount: Int {
@@ -1365,7 +1469,12 @@ final class PanelView: NSView {
             status = "Plugin view missing"
             return
         }
-        transientPage = ShellPage(title: view.title, kind: .pluginView(pluginID: pluginID, viewID: viewID), tiles: [])
+        transientPage = ShellPage(
+            title: view.title,
+            kind: .pluginView(pluginID: pluginID, viewID: viewID),
+            layout: panelLayout(for: view),
+            tiles: []
+        )
         selectedIndex = 0
         status = "\(package.manifest.name) view"
         refreshData(for: view, package: package)
@@ -1384,6 +1493,7 @@ final class PanelView: NSView {
             ("View", view.title),
             ("Type", view.type?.rawValue ?? "unspecified"),
             ("Presentation", view.presentation?.rawValue ?? "page"),
+            ("Layout", view.layout?.rawValue ?? "host default"),
             ("Entrypoint", view.entryPath ?? package.manifest.entry.url?.relativeString ?? package.manifest.entry.command ?? "-"),
             ("Data Stream", view.dataStreamID ?? "-"),
             ("Preferred Size", "\(view.preferredWidth ?? 0)x\(view.preferredHeight ?? 0)"),
@@ -1391,11 +1501,21 @@ final class PanelView: NSView {
         ]
 
         if let streamID = view.dataStreamID, let snapshot = pluginDataStore.snapshot(pluginID: pluginID, streamID: streamID) {
-            rows.append(("Latest Data", summarize(snapshot.payload)))
+            rows.append(contentsOf: dataRows(from: snapshot.payload))
             rows.append(("Updated", relativeTime(snapshot.timestamp)))
         }
 
         return rows
+    }
+
+    private func dataRows(from value: JSONValue) -> [(title: String, value: String)] {
+        guard case .object(let object) = value else {
+            return [("Latest Data", summarize(value))]
+        }
+
+        return object.keys.sorted().prefix(10).map { key in
+            (title: titleize(key), value: display(object[key] ?? .null))
+        }
     }
 
     private func refreshData(for view: PluginView, package: PluginPackage) {
@@ -1553,6 +1673,11 @@ final class PanelView: NSView {
         return themePackages[activeThemeIndex].manifest
     }
 
+    private var activeThemePackage: ThemePackage? {
+        guard themePackages.indices.contains(activeThemeIndex) else { return nil }
+        return themePackages[activeThemeIndex]
+    }
+
     func resolvedKnobRingOutput(using coordinator: inout KnobRingCoordinator) -> KnobRingResolvedOutput? {
         guard var output = coordinator.resolve(theme: activeThemeManifest?.hardware?.knobRing) else {
             return nil
@@ -1690,9 +1815,37 @@ final class PanelView: NSView {
         }
     }
 
+    private func titleize(_ key: String) -> String {
+        let spaced = key.reduce(into: "") { result, character in
+            if character.isUppercase && !result.isEmpty {
+                result.append(" ")
+            }
+            result.append(character == "_" || character == "-" ? " " : character)
+        }
+        return spaced
+            .split(separator: " ")
+            .map { word in word.prefix(1).uppercased() + String(word.dropFirst()) }
+            .joined(separator: " ")
+    }
+
     private func isPluginView(_ kind: ShellPage.Kind) -> Bool {
         if case .pluginView = kind { return true }
         return false
+    }
+
+    private func panelLayout(for view: PluginView) -> PanelPageLayout {
+        switch view.layout {
+        case .fullScreen:
+            return .fullScreen
+        case .halfLeading, .halfTrailing, .halfAndGrid:
+            return .halfAndGrid
+        case .twoHalves:
+            return .twoHalves
+        case .quarters:
+            return .quarters
+        case .grid, .none:
+            return .grid
+        }
     }
 
     private func summarize(_ value: JSONValue) -> String {
@@ -1711,6 +1864,59 @@ final class PanelView: NSView {
     private func relativeTime(_ date: Date) -> String {
         let seconds = max(0, Int(Date().timeIntervalSince(date)))
         return seconds == 0 ? "now" : "\(seconds)s ago"
+    }
+}
+
+final class ThemeBackgroundImageView: NSView {
+    private var image: NSImage?
+    private var fit: ThemeAsset.ImageFit = .cover
+    private var opacity: CGFloat = 0.28
+    private var assetKey: String?
+
+    func configure(package: ThemePackage?) {
+        guard let package,
+              let asset = package.manifest.assets.first(where: { $0.kind == .image && ($0.role == .background || $0.role == nil) }) else {
+            image = nil
+            assetKey = nil
+            needsDisplay = true
+            return
+        }
+
+        let key = "\(package.manifest.id):\(asset.path)"
+        if key != assetKey {
+            image = NSImage(contentsOf: package.baseURL.appendingPathComponent(asset.path))
+            assetKey = key
+        }
+        fit = asset.fit ?? .cover
+        opacity = CGFloat(min(1, max(0, asset.opacity ?? 0.28)))
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let image, image.size.width > 0, image.size.height > 0 else { return }
+        let target = targetRect(for: image.size)
+        image.draw(in: target, from: NSRect(origin: .zero, size: image.size), operation: .sourceOver, fraction: opacity)
+    }
+
+    private func targetRect(for imageSize: NSSize) -> NSRect {
+        switch fit {
+        case .stretch:
+            return bounds
+        case .center:
+            return NSRect(
+                x: bounds.midX - imageSize.width / 2,
+                y: bounds.midY - imageSize.height / 2,
+                width: imageSize.width,
+                height: imageSize.height
+            )
+        case .contain, .cover, .tile:
+            let scaleX = bounds.width / imageSize.width
+            let scaleY = bounds.height / imageSize.height
+            let scale = fit == .contain ? min(scaleX, scaleY) : max(scaleX, scaleY)
+            let size = NSSize(width: imageSize.width * scale, height: imageSize.height * scale)
+            return NSRect(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2, width: size.width, height: size.height)
+        }
     }
 }
 
