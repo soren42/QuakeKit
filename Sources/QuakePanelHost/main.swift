@@ -690,6 +690,7 @@ final class PanelView: NSView {
     private let portraitMode: Bool
     private var currentPageIndex = 0
     private var transientPage: ShellPage?
+    private var gridSubpageIndex = 0
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
     private var themeConfiguration: ThemeUserConfiguration
@@ -700,6 +701,8 @@ final class PanelView: NSView {
     private var pageLabels: [NSTextField] = []
     private let statusLabel = NSTextField(labelWithString: "")
     private let titleLabel = NSTextField(labelWithString: "")
+    private let previousGridPad = ArrowPadView(direction: .previous)
+    private let nextGridPad = ArrowPadView(direction: .next)
 
     init(frame frameRect: NSRect, pluginPackages: [PluginPackage], themePackages: [ThemePackage], portraitMode: Bool) {
         self.pluginPackages = pluginPackages
@@ -741,18 +744,31 @@ final class PanelView: NSView {
     }
 
     func moveSelection(_ delta: Int) {
-        let count = currentPage.tiles.count
+        let count = visibleTiles.count
         guard count > 0 else { return }
-        selectedIndex = (selectedIndex + delta + count) % count
-        status = "Selected \(currentPage.tiles[selectedIndex].title)"
+        let proposedIndex = selectedIndex + delta
+        if proposedIndex < 0 {
+            if showPreviousGridSubpage() {
+                selectedIndex = visibleTiles.count - 1
+            }
+            return
+        }
+        if proposedIndex >= count {
+            if showNextGridSubpage() {
+                selectedIndex = 0
+            }
+            return
+        }
+        selectedIndex = proposedIndex
+        status = "Selected \(visibleTiles[selectedIndex].title)"
     }
 
     func activateSelection() {
-        guard currentPage.tiles.indices.contains(selectedIndex) else {
+        guard visibleTiles.indices.contains(selectedIndex) else {
             status = "Runtime page active"
             return
         }
-        let tile = currentPage.tiles[selectedIndex]
+        let tile = visibleTiles[selectedIndex]
         switch tile.action {
         case .openPage(let index):
             openPage(index)
@@ -786,7 +802,15 @@ final class PanelView: NSView {
         }
 
         guard currentPage.kind == .grid else { return }
-        if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), currentPage.tiles.indices.contains(index) {
+        if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
+            _ = showPreviousGridSubpage()
+            return
+        }
+        if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
+            _ = showNextGridSubpage()
+            return
+        }
+        if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
             selectedIndex = index
             activateSelection()
         }
@@ -868,6 +892,12 @@ final class PanelView: NSView {
         statusLabel.backgroundColor = .clear
         statusLabel.lineBreakMode = .byTruncatingTail
         addSubview(statusLabel)
+        previousGridPad.theme = activeTheme
+        nextGridPad.theme = activeTheme
+        previousGridPad.isHidden = true
+        nextGridPad.isHidden = true
+        addSubview(previousGridPad)
+        addSubview(nextGridPad)
         rebuildPageContent()
     }
 
@@ -880,6 +910,7 @@ final class PanelView: NSView {
         guard currentPageIndex != index || transientPage != nil else { return }
         transientPage = nil
         currentPageIndex = index
+        gridSubpageIndex = 0
         selectedIndex = 0
         status = "Page \(pages[index].title)"
         log("shell page \(index): \(pages[index].title)")
@@ -891,10 +922,13 @@ final class PanelView: NSView {
         runtimeRows.forEach { $0.removeFromSuperview() }
         tileViews.removeAll()
         runtimeRows.removeAll()
+        previousGridPad.isHidden = true
+        nextGridPad.isHidden = true
 
         switch currentPage.kind {
         case .grid:
-            tileViews = currentPage.tiles.map { tile in
+            clampGridSubpage()
+            tileViews = visibleTiles.map { tile in
                 let view = TileCellView(tile: tile, theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
@@ -930,6 +964,7 @@ final class PanelView: NSView {
             label.frame = NSRect(x: 320 + CGFloat(index) * 120, y: tabY, width: 104, height: 28)
         }
         statusLabel.frame = NSRect(x: inset + 4, y: 8, width: bounds.width - (inset + 4) * 2, height: 24)
+        layoutGridPads()
     }
 
     private func layoutContent() {
@@ -942,7 +977,10 @@ final class PanelView: NSView {
             layoutRuntimeRows(in: contentRect)
             return
         }
-        let gridRect = contentRect
+        var gridRect = contentRect
+        if gridSubpageCount > 1 {
+            gridRect = gridRect.insetBy(dx: 36, dy: 0)
+        }
         let usableHeight = gridRect.height
         let tileWidth = (gridRect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
         let tileHeight = (usableHeight - gap * CGFloat(rows - 1)) / CGFloat(rows)
@@ -954,6 +992,7 @@ final class PanelView: NSView {
             let y = gridRect.maxY - CGFloat(row + 1) * tileHeight - CGFloat(row) * gap
             tileViews[index].frame = NSRect(x: x, y: y, width: tileWidth, height: tileHeight)
         }
+        updateGridPads()
     }
 
     private func layoutRuntimeRows(in rect: NSRect) {
@@ -998,6 +1037,8 @@ final class PanelView: NSView {
         statusLabel.textColor = activeTheme.accent
         tileViews.forEach { $0.theme = activeTheme }
         runtimeRows.forEach { $0.theme = activeTheme }
+        previousGridPad.theme = activeTheme
+        nextGridPad.theme = activeTheme
     }
 
     private func updateStatus() {
@@ -1011,6 +1052,62 @@ final class PanelView: NSView {
         for index in runtimeRows.indices where rows.indices.contains(index) {
             runtimeRows[index].value = rows[index].value
         }
+    }
+
+    private var tilesPerGridSubpage: Int {
+        columns * rows
+    }
+
+    private var gridSubpageCount: Int {
+        guard currentPage.kind == .grid else { return 1 }
+        return max(1, Int(ceil(Double(currentPage.tiles.count) / Double(tilesPerGridSubpage))))
+    }
+
+    private var visibleTiles: [ShellTile] {
+        guard currentPage.kind == .grid else { return currentPage.tiles }
+        let start = gridSubpageIndex * tilesPerGridSubpage
+        guard start < currentPage.tiles.count else { return [] }
+        let end = min(currentPage.tiles.count, start + tilesPerGridSubpage)
+        return Array(currentPage.tiles[start..<end])
+    }
+
+    private func clampGridSubpage() {
+        gridSubpageIndex = min(max(0, gridSubpageIndex), gridSubpageCount - 1)
+        selectedIndex = min(max(0, selectedIndex), max(0, visibleTiles.count - 1))
+    }
+
+    @discardableResult
+    private func showPreviousGridSubpage() -> Bool {
+        guard currentPage.kind == .grid, gridSubpageIndex > 0 else { return false }
+        gridSubpageIndex -= 1
+        selectedIndex = 0
+        status = "Page \(currentPage.title) \(gridSubpageIndex + 1)/\(gridSubpageCount)"
+        rebuildPageContent()
+        return true
+    }
+
+    @discardableResult
+    private func showNextGridSubpage() -> Bool {
+        guard currentPage.kind == .grid, gridSubpageIndex + 1 < gridSubpageCount else { return false }
+        gridSubpageIndex += 1
+        selectedIndex = 0
+        status = "Page \(currentPage.title) \(gridSubpageIndex + 1)/\(gridSubpageCount)"
+        rebuildPageContent()
+        return true
+    }
+
+    private func layoutGridPads() {
+        let padWidth: CGFloat = 28
+        previousGridPad.frame = NSRect(x: 0, y: 58, width: padWidth, height: max(60, bounds.height - 96))
+        nextGridPad.frame = NSRect(x: bounds.width - padWidth, y: 58, width: padWidth, height: max(60, bounds.height - 96))
+    }
+
+    private func updateGridPads() {
+        let hasOverflow = currentPage.kind == .grid && gridSubpageCount > 1
+        previousGridPad.isHidden = !hasOverflow || gridSubpageIndex == 0
+        nextGridPad.isHidden = !hasOverflow || gridSubpageIndex + 1 >= gridSubpageCount
+        previousGridPad.needsDisplay = true
+        nextGridPad.needsDisplay = true
     }
 
     private func openPluginView(pluginID: String, viewID: String) {
@@ -1380,6 +1477,61 @@ final class StatusRowView: NSView {
         layer?.backgroundColor = theme.surface.cgColor
         titleLabel.textColor = theme.textSecondary
         valueLabel.textColor = theme.textPrimary
+    }
+}
+
+final class ArrowPadView: NSView {
+    enum Direction {
+        case previous
+        case next
+    }
+
+    let direction: Direction
+    var theme: PanelTheme = .fallback {
+        didSet { needsDisplay = true }
+    }
+
+    init(direction: Direction) {
+        self.direction = direction
+        super.init(frame: .zero)
+        wantsLayer = true
+        autoresizingMask = [.height, .minYMargin, .maxYMargin]
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let rect = bounds.insetBy(dx: 4, dy: 4)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
+        theme.surface.withAlphaComponent(0.85).setFill()
+        path.fill()
+        theme.border.setStroke()
+        path.lineWidth = max(1, theme.borderWidth)
+        path.stroke()
+
+        let midX = rect.midX
+        let midY = rect.midY
+        let arrow = NSBezierPath()
+        let width: CGFloat = 8
+        let height: CGFloat = 22
+        switch direction {
+        case .previous:
+            arrow.move(to: NSPoint(x: midX + width / 2, y: midY - height / 2))
+            arrow.line(to: NSPoint(x: midX - width / 2, y: midY))
+            arrow.line(to: NSPoint(x: midX + width / 2, y: midY + height / 2))
+        case .next:
+            arrow.move(to: NSPoint(x: midX - width / 2, y: midY - height / 2))
+            arrow.line(to: NSPoint(x: midX + width / 2, y: midY))
+            arrow.line(to: NSPoint(x: midX - width / 2, y: midY + height / 2))
+        }
+        theme.accent.setStroke()
+        arrow.lineWidth = 3
+        arrow.lineCapStyle = .round
+        arrow.lineJoinStyle = .round
+        arrow.stroke()
     }
 }
 

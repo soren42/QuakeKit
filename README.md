@@ -20,6 +20,7 @@ Confirmed:
 - Local shell/PHP/stdio-style plugin actions can be invoked through the runtime host.
 - The AppKit panel UI renders on the DK physical display.
 - The native shell supports Home, Widgets, Apps, Themes, and Runtime pages.
+- Grid pages paginate overflow with knob boundary navigation and touch arrow pads.
 
 ## First Tangible Target
 
@@ -65,6 +66,9 @@ Run a sample plugin action without hardware:
 
 ```bash
 swift run quake-probe --run-plugin-action Examples/Plugins/system-monitor.quakekitplugin/manifest.json system.refresh
+swift run quake-probe --run-plugin-action Examples/Plugins/weather.quakekitplugin/manifest.json weather.refresh
+swift run quake-probe --run-plugin-action Examples/Plugins/markets.quakekitplugin/manifest.json markets.refresh
+swift run quake-probe --run-plugin-action Examples/Plugins/sports.quakekitplugin/manifest.json sports.refresh
 ```
 
 Validate all bundled example manifests:
@@ -119,6 +123,12 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
 - `quake-test`: portable regression target for protocol, plugin, and runtime checks.
 - `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
+
+Bundled plugin adapters are intentionally keyless and tolerant of offline use.
+Weather uses Open-Meteo with `QUAKEKIT_WEATHER_LAT`,
+`QUAKEKIT_WEATHER_LON`, and `QUAKEKIT_WEATHER_LABEL` overrides. Markets uses
+Yahoo Finance chart data with `QUAKEKIT_MARKET_SYMBOLS`. Sports uses ESPN's
+public scoreboard endpoint with `QUAKEKIT_SPORTS_LEAGUE`.
 
 ## Current Hardware Notes
 

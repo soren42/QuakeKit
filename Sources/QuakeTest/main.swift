@@ -72,6 +72,9 @@ run("plugin action execution") {
     expect(host.invokeAction(pluginID: "echo", actionID: "echo.say").response.ok, "echo action failed")
     expect(host.invokeAction(pluginID: "system_monitor", actionID: "system.refresh").response.ok, "system refresh action failed")
     expect(host.invokeAction(pluginID: "ai_agent", actionID: "agent.listen").response.ok, "agent listen action failed")
+    expect(host.invokeAction(pluginID: "weather", actionID: "weather.refresh").response.ok, "weather refresh action failed")
+    expect(host.invokeAction(pluginID: "markets", actionID: "markets.refresh").response.ok, "markets refresh action failed")
+    expect(host.invokeAction(pluginID: "sports_scores", actionID: "sports.refresh").response.ok, "sports refresh action failed")
 }
 
 run("plugin data store snapshots") {

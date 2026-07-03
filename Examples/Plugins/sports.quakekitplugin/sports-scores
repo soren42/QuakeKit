@@ -2,4 +2,17 @@
 set -eu
 
 cat >/dev/null
-printf '{"games":[{"league":"MLB","home":"ATL","away":"NYM","status":"Preview"}],"source":"sports-scores"}\n'
+
+league="${QUAKEKIT_SPORTS_LEAGUE:-mlb}"
+url="https://site.api.espn.com/apis/site/v2/sports/baseball/${league}/scoreboard"
+payload="$(curl -fsSL --max-time 2 "$url" 2>/dev/null || true)"
+if [ -n "$payload" ]; then
+  first_name="$(printf '%s' "$payload" | grep -o '"shortName":"[^"]*"' | head -1 | sed 's/"shortName":"//;s/"$//' || true)"
+  status="$(printf '%s' "$payload" | grep -o '"description":"[^"]*"' | head -1 | sed 's/"description":"//;s/"$//' || true)"
+  if [ -n "$first_name" ]; then
+    printf '{"games":[{"league":"%s","matchup":"%s","status":"%s"}],"source":"espn"}\n' "$league" "$first_name" "${status:-Scheduled}"
+    exit 0
+  fi
+fi
+
+printf '{"games":[{"league":"MLB","home":"ATL","away":"NYM","status":"Preview"}],"source":"fallback"}\n'

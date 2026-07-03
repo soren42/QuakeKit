@@ -22,7 +22,13 @@
       }
     }
   ],
-  "actions": [],
+  "actions": [
+    {
+      "id": "sports.refresh",
+      "title": "Refresh Scores",
+      "argumentSchema": []
+    }
+  ],
   "dataStreams": [
     {
       "id": "sports.favoriteTeams",

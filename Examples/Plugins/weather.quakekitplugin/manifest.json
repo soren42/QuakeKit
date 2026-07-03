@@ -5,10 +5,9 @@
   "version": "0.1.0",
   "apiVersion": "0.1",
   "entry": {
-    "transport": "webView",
-    "command": null,
-    "arguments": [],
-    "url": "index.html"
+    "transport": "shell",
+    "command": "weather.sh",
+    "arguments": []
   },
   "capabilities": [
     "dataProvider",

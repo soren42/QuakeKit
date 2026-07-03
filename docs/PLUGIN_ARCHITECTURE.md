@@ -107,3 +107,7 @@ from `quake-probe --run-plugin-action`. Full applet/widget rendering and live
 data-stream subscription are still implementation layers in progress. Data-driven
 plugin detail surfaces can already capture a first action result into
 `PluginDataStore` and display that payload as a runtime snapshot.
+
+The bundled weather, markets, and sports adapters attempt live public data with
+short timeouts and then return deterministic fallback payloads. This makes the
+examples useful on-device without API keys while preserving reliable tests.

@@ -22,7 +22,13 @@
       }
     }
   ],
-  "actions": [],
+  "actions": [
+    {
+      "id": "markets.refresh",
+      "title": "Refresh Watchlist",
+      "argumentSchema": []
+    }
+  ],
   "dataStreams": [
     {
       "id": "markets.watchlist",
