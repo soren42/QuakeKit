@@ -38,6 +38,15 @@ if let validateIndex = rawArguments.firstIndex(of: "--validate-theme") {
     exit(0)
 }
 
+if let installIndex = rawArguments.firstIndex(of: "--install-package") {
+    guard rawArguments.indices.contains(installIndex + 1) else {
+        fputs("--install-package requires a package directory or tar archive path\n", stderr)
+        exit(64)
+    }
+    installPackage(at: rawArguments[installIndex + 1])
+    exit(0)
+}
+
 if let runIndex = rawArguments.firstIndex(of: "--run-plugin-action") {
     guard rawArguments.indices.contains(runIndex + 2) else {
         fputs("--run-plugin-action requires <manifest-path> <action-id>\n", stderr)
@@ -104,6 +113,7 @@ guard listen else {
     print("Run with --self-test to verify protocol encoding/decoding without hardware.")
     print("Run with --validate-plugin <path> to decode and validate a plugin manifest.")
     print("Run with --validate-theme <path> to decode and validate a theme manifest.")
+    print("Run with --install-package <path> to install a .quakekitplugin, .quakekittheme, .tar, .tar.gz, or .tgz package.")
     print("Run with --run-plugin-action <manifest-path> <action-id> to invoke a local plugin action.")
     print("Run with --all-hid to dump every related HID collection without usage-page filtering.")
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
@@ -205,6 +215,20 @@ func parseBrightness(from arguments: [String]) -> UInt8? {
         exit(64)
     }
     return UInt8(value)
+}
+
+func installPackage(at path: String) {
+    do {
+        let installed = try QuakePackageInstaller.installPackage(from: URL(fileURLWithPath: path))
+        print("Installed \(installed.kind.rawValue): \(installed.id) (\(installed.name))")
+        print("path: \(installed.url.path)")
+    } catch let error as QuakePackageInstallError {
+        fputs("Could not install package: \(error.description)\n", stderr)
+        exit(65)
+    } catch {
+        fputs("Could not install package: \(error)\n", stderr)
+        exit(65)
+    }
 }
 
 func validatePluginManifest(at path: String) {

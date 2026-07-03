@@ -23,6 +23,11 @@ Loose JSON manifests such as `Examples/Plugins/echo-plugin.json` are supported
 for early development and validation. Packaged plugins should use
 `manifest.json` at the package root.
 
+Installable bundles may be provided either as an unpacked `.quakekitplugin`
+directory or as a `.tar`, `.tar.gz`, or `.tgz` archive containing one plugin
+directory. The installer validates the manifest before copying the package into
+`~/Library/Application Support/QuakeKit/Plugins/`.
+
 ## Manifest Fields
 
 ### Root
@@ -37,6 +42,7 @@ for early development and validation. Packaged plugins should use
 | `entry` | object | yes | Plugin entrypoint and transport. |
 | `capabilities` | array | no | Host-facing feature flags exposed by the plugin. |
 | `permissions` | array | no | Explicit capabilities requiring user or host trust. |
+| `settings` | array | no | User-configurable plugin preferences exposed in the host settings UI. |
 | `actions` | array | no | Commands the host or user can invoke. |
 | `dataStreams` | array | no | Published values that views and other plugins may consume. |
 | `views` | array | no | Applet pages, widgets, or shared page/widget surfaces. |
@@ -95,6 +101,46 @@ exactly one permission.
 
 Permissions should be narrow and declarative. A plugin should request the minimum
 set needed for its declared actions, streams, and views.
+
+## Settings
+
+Settings are user-editable plugin preferences. They are intended for runtime
+configuration such as a weather location, ticker watchlist, preferred sports
+league, polling interval, or service endpoint. Presentation choices still belong
+to theme plugins.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | yes | Stable lowercase setting id. Pattern: `^[a-z0-9][a-z0-9_-]*$`. |
+| `title` | string | yes | Human-readable label shown in the settings UI. |
+| `type` | string | yes | `string`, `integer`, `number`, `boolean`, `choice`, or `secret`. |
+| `defaultValue` | any | yes | Default value used when the user has not saved an override. |
+| `choices` | array | only for `choice` | Ordered values the host cycles through in the panel UI. |
+| `minimum` | number | no | Lower bound for numeric editors. |
+| `maximum` | number | no | Upper bound for numeric editors. |
+| `environment` | string | no | Environment variable populated before launching process-style transports. |
+| `help` | string | no | Short implementation note for designers and developers. |
+
+The first native settings UI cycles through declared choices and bounded
+numeric values. Process-style transports also receive every setting as
+`QUAKEKIT_SETTING_<SETTING_ID>`, uppercased with punctuation converted to
+underscores. If `environment` is present, the same value is also exported under
+that exact variable name.
+
+Example:
+
+```json
+"settings": [
+  {
+    "id": "location",
+    "title": "Location",
+    "type": "choice",
+    "defaultValue": "Charlotte, NC",
+    "choices": ["Charlotte, NC", "Raleigh, NC"],
+    "environment": "QUAKEKIT_WEATHER_LOCATION"
+  }
+]
+```
 
 ## Actions
 
@@ -177,6 +223,13 @@ Validate bundled examples with:
 for f in Examples/Plugins/*.json Examples/Plugins/*.quakekitplugin/manifest.json; do
   swift run quake-probe --validate-plugin "$f"
 done
+```
+
+Install a packaged plugin:
+
+```bash
+swift run quake-probe --install-package ./MyWeather.quakekitplugin
+swift run quake-probe --install-package ./MyWeather.quakekitplugin.tar.gz
 ```
 
 Run a local executable action with:

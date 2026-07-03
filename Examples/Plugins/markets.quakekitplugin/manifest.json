@@ -11,6 +11,7 @@
   },
   "capabilities": [
     "dataProvider",
+    "settings",
     "viewProvider"
   ],
   "permissions": [
@@ -20,6 +21,22 @@
           "query1.finance.yahoo.com"
         ]
       }
+    }
+  ],
+  "settings": [
+    {
+      "id": "watchlist",
+      "title": "Watchlist",
+      "type": "choice",
+      "defaultValue": "AAPL,NVDA,MSFT",
+      "choices": [
+        "AAPL,NVDA,MSFT",
+        "SPY,QQQ,DIA",
+        "TSLA,AMD,INTC",
+        "BTC-USD,ETH-USD,SOL-USD"
+      ],
+      "environment": "QUAKEKIT_MARKET_SYMBOLS",
+      "help": "Comma-separated ticker preset for the market data provider."
     }
   ],
   "actions": [

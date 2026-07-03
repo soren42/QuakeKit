@@ -259,48 +259,58 @@ enum DisplayLocator {
 enum PanelPluginLoader {
     static func loadSamplePackages() -> [PluginPackage] {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let directory = root.appendingPathComponent("Examples/Plugins", isDirectory: true)
-        let results = PluginPackageLoader.loadPackages(from: directory)
-        var packages: [PluginPackage] = []
+        let directories = [
+            root.appendingPathComponent("Examples/Plugins", isDirectory: true),
+            try? QuakePackageLocations.installedPluginDirectory()
+        ].compactMap { $0 }
+        var packagesByID: [String: PluginPackage] = [:]
 
-        for result in results {
-            switch result {
-            case .success(let package, let warnings):
-                packages.append(package)
-                log("plugin loaded \(package.manifest.id) views=\(package.manifest.views.count)")
-                for warning in warnings {
-                    log("plugin warning \(package.manifest.id): \(warning)")
+        for directory in directories {
+            let results = PluginPackageLoader.loadPackages(from: directory)
+            for result in results {
+                switch result {
+                case .success(let package, let warnings):
+                    packagesByID[package.manifest.id] = package
+                    log("plugin loaded \(package.manifest.id) views=\(package.manifest.views.count) source=\(package.baseURL.path)")
+                    for warning in warnings {
+                        log("plugin warning \(package.manifest.id): \(warning)")
+                    }
+                case .failure(let url, let errors):
+                    log("plugin failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
                 }
-            case .failure(let url, let errors):
-                log("plugin failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
             }
         }
 
-        return packages
+        return packagesByID.values.sorted { $0.manifest.name < $1.manifest.name }
     }
 }
 
 enum PanelThemeLoader {
     static func loadSamplePackages() -> [ThemePackage] {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let directory = root.appendingPathComponent("Examples/Themes", isDirectory: true)
-        let results = ThemePackageLoader.loadPackages(from: directory)
-        var packages: [ThemePackage] = []
+        let directories = [
+            root.appendingPathComponent("Examples/Themes", isDirectory: true),
+            try? QuakePackageLocations.installedThemeDirectory()
+        ].compactMap { $0 }
+        var packagesByID: [String: ThemePackage] = [:]
 
-        for result in results {
-            switch result {
-            case .success(let package, let warnings):
-                packages.append(package)
-                log("theme loaded \(package.manifest.id) colors=\(package.manifest.palette.colors.count)")
-                for warning in warnings {
-                    log("theme warning \(package.manifest.id): \(warning)")
+        for directory in directories {
+            let results = ThemePackageLoader.loadPackages(from: directory)
+            for result in results {
+                switch result {
+                case .success(let package, let warnings):
+                    packagesByID[package.manifest.id] = package
+                    log("theme loaded \(package.manifest.id) colors=\(package.manifest.palette.colors.count) source=\(package.baseURL.path)")
+                    for warning in warnings {
+                        log("theme warning \(package.manifest.id): \(warning)")
+                    }
+                case .failure(let url, let errors):
+                    log("theme failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
                 }
-            case .failure(let url, let errors):
-                log("theme failed \(url.lastPathComponent): \(errors.joined(separator: "; "))")
             }
         }
 
-        return packages
+        return packagesByID.values.sorted { $0.manifest.name < $1.manifest.name }
     }
 }
 
@@ -318,6 +328,10 @@ enum ShellAction: Equatable {
     case selectTheme(Int)
     case editThemeOption(String)
     case resetThemeOverrides
+    case editGlobalSetting(String)
+    case openPluginSettings(String)
+    case editPluginSetting(pluginID: String, settingID: String)
+    case resetPluginSettings(String)
 }
 
 struct ShellPage: Equatable {
@@ -351,6 +365,49 @@ struct ThemeUserConfiguration: Codable, Equatable {
     init(activeThemeID: String? = nil, overrides: [String: JSONValue] = [:]) {
         self.activeThemeID = activeThemeID
         self.overrides = overrides
+    }
+}
+
+struct QuakeSettingsConfiguration: Codable, Equatable {
+    var defaultPageIndex: Int
+    var pluginSettings: [String: [String: JSONValue]]
+
+    init(defaultPageIndex: Int = 0, pluginSettings: [String: [String: JSONValue]] = [:]) {
+        self.defaultPageIndex = defaultPageIndex
+        self.pluginSettings = pluginSettings
+    }
+}
+
+enum QuakeSettingsStore {
+    static func load() -> QuakeSettingsConfiguration {
+        guard let url = configURL(), let data = try? Data(contentsOf: url) else {
+            return QuakeSettingsConfiguration()
+        }
+        do {
+            return try JSONDecoder().decode(QuakeSettingsConfiguration.self, from: data)
+        } catch {
+            log("settings config load failed: \(error)")
+            return QuakeSettingsConfiguration()
+        }
+    }
+
+    static func save(_ configuration: QuakeSettingsConfiguration) {
+        guard let url = configURL() else { return }
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(configuration).write(to: url, options: .atomic)
+        } catch {
+            log("settings config save failed: \(error)")
+        }
+    }
+
+    private static func configURL() -> URL? {
+        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        return directory?
+            .appendingPathComponent("QuakeKit", isDirectory: true)
+            .appendingPathComponent("settings.json")
     }
 }
 
@@ -497,6 +554,17 @@ extension JSONValue {
         }
     }
 
+    var integerValue: Int? {
+        switch self {
+        case .integer(let value):
+            return value
+        case .double(let value):
+            return Int(value)
+        default:
+            return nil
+        }
+    }
+
     var boolValue: Bool? {
         if case .bool(let value) = self { return value }
         return nil
@@ -532,7 +600,8 @@ enum ShellCatalog {
         pluginPackages: [PluginPackage],
         themePackages: [ThemePackage],
         activeThemeIndex: Int,
-        overrides: [String: JSONValue]
+        overrides: [String: JSONValue],
+        settingsConfiguration: QuakeSettingsConfiguration
     ) -> [ShellPage] {
         let widgetTiles = pluginTiles(
             from: pluginPackages,
@@ -548,19 +617,24 @@ enum ShellCatalog {
         )
         let actionTiles = pluginActionTiles(from: pluginPackages)
         let themeTiles = themeTiles(from: themePackages, activeThemeIndex: activeThemeIndex, overrides: overrides)
+        let settingsTiles = settingsTiles(
+            pluginPackages: pluginPackages,
+            themePackages: themePackages,
+            settingsConfiguration: settingsConfiguration
+        )
 
         return [
             ShellPage(title: "Home", kind: .grid, tiles: [
-            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(4)),
+            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(5)),
             ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
             ShellTile(title: "Apps", subtitle: "\(appTiles.count + actionTiles.count) entries", action: .openPage(2)),
             ShellTile(title: "Themes", subtitle: "\(themePackages.count) installed", action: .openPage(3)),
-            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(4)),
+            ShellTile(title: "Settings", subtitle: "Host and plugin config", action: .openPage(4)),
+            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(5)),
             ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
             ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
             ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
             ShellTile(title: "Data", subtitle: "Provider slots", action: .setStatus("Data providers will feed widgets")),
-            ShellTile(title: "Settings", subtitle: "Host config", action: .setStatus("Settings page stub")),
             ShellTile(title: "Actions", subtitle: "Host routed", action: .setStatus("Action router is local for now")),
             ShellTile(title: "Views", subtitle: "Swift/AppKit", action: .setStatus("Native view surface")),
             ShellTile(title: "Dashboards", subtitle: "Future web view", action: .setStatus("Dashboard embedding later")),
@@ -573,6 +647,7 @@ enum ShellCatalog {
             ShellPage(title: "Widgets", kind: .grid, tiles: widgetTiles),
             ShellPage(title: "Apps", kind: .grid, tiles: appTiles + actionTiles),
             ShellPage(title: "Themes", kind: .grid, tiles: themeTiles),
+            ShellPage(title: "Settings", kind: .grid, tiles: settingsTiles),
             ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
         ]
     }
@@ -643,6 +718,40 @@ enum ShellCatalog {
             : tiles
     }
 
+    private static func settingsTiles(
+        pluginPackages: [PluginPackage],
+        themePackages: [ThemePackage],
+        settingsConfiguration: QuakeSettingsConfiguration
+    ) -> [ShellTile] {
+        var tiles = [
+            ShellTile(
+                title: "Default Page",
+                subtitle: "Page \(settingsConfiguration.defaultPageIndex + 1)",
+                action: .editGlobalSetting("defaultPage")
+            ),
+            ShellTile(
+                title: "Plugins",
+                subtitle: "\(pluginPackages.count) loaded",
+                action: .setStatus("Install plugins with quake-probe --install-package <path>")
+            ),
+            ShellTile(
+                title: "Themes",
+                subtitle: "\(themePackages.count) loaded",
+                action: .setStatus("Install themes with quake-probe --install-package <path>")
+            )
+        ]
+
+        tiles.append(contentsOf: pluginPackages.filter { !$0.manifest.settings.isEmpty }.map { package in
+            ShellTile(
+                title: package.manifest.name,
+                subtitle: "\(package.manifest.settings.count) settings",
+                action: .openPluginSettings(package.manifest.id)
+            )
+        })
+
+        return tiles
+    }
+
     private static func optionSubtitle(_ option: ThemeOption, overrides: [String: JSONValue]) -> String {
         let current = overrides[option.target] ?? option.defaultValue
         switch option.type {
@@ -694,6 +803,7 @@ final class PanelView: NSView {
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
     private var themeConfiguration: ThemeUserConfiguration
+    private var settingsConfiguration: QuakeSettingsConfiguration
     private var pluginDataStore = PluginDataStore()
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
@@ -710,6 +820,7 @@ final class PanelView: NSView {
         self.themePackages = themePackages
         self.portraitMode = portraitMode
         self.themeConfiguration = ThemeConfigurationStore.load()
+        self.settingsConfiguration = QuakeSettingsStore.load()
         if let activeThemeID = themeConfiguration.activeThemeID,
            let index = themePackages.firstIndex(where: { $0.manifest.id == activeThemeID }) {
             self.activeThemeIndex = index
@@ -718,8 +829,10 @@ final class PanelView: NSView {
             pluginPackages: pluginPackages,
             themePackages: themePackages,
             activeThemeIndex: activeThemeIndex,
-            overrides: themeConfiguration.overrides
+            overrides: themeConfiguration.overrides,
+            settingsConfiguration: settingsConfiguration
         )
+        self.currentPageIndex = min(max(0, settingsConfiguration.defaultPageIndex), max(0, self.pages.count - 1))
         self.activeTheme = themePackages.indices.contains(activeThemeIndex)
             ? PanelTheme.from(themePackages[activeThemeIndex].manifest, overrides: themeConfiguration.overrides)
             : .fallback
@@ -784,6 +897,14 @@ final class PanelView: NSView {
             editThemeOption(id)
         case .resetThemeOverrides:
             resetThemeOverrides()
+        case .editGlobalSetting(let id):
+            editGlobalSetting(id)
+        case .openPluginSettings(let pluginID):
+            openPluginSettings(pluginID: pluginID)
+        case .editPluginSetting(let pluginID, let settingID):
+            editPluginSetting(pluginID: pluginID, settingID: settingID)
+        case .resetPluginSettings(let pluginID):
+            resetPluginSettings(pluginID)
         }
     }
 
@@ -1151,7 +1272,11 @@ final class PanelView: NSView {
 
     private func refreshData(for view: PluginView, package: PluginPackage) {
         guard let streamID = view.dataStreamID, let action = package.manifest.actions.first else { return }
-        let result = pluginRuntime.invokeAction(pluginID: package.manifest.id, actionID: action.id)
+        let result = pluginRuntime.invokeAction(
+            pluginID: package.manifest.id,
+            actionID: action.id,
+            settings: settingsConfiguration.pluginSettings[package.manifest.id] ?? [:]
+        )
         if let payload = result.response.result, result.response.ok {
             pluginDataStore.set(pluginID: package.manifest.id, streamID: streamID, payload: payload)
         } else if let error = result.response.error {
@@ -1202,8 +1327,87 @@ final class PanelView: NSView {
         rebuildPageContent()
     }
 
+    private func editGlobalSetting(_ id: String) {
+        switch id {
+        case "defaultPage":
+            settingsConfiguration.defaultPageIndex = (settingsConfiguration.defaultPageIndex + 1) % max(1, pages.count)
+            QuakeSettingsStore.save(settingsConfiguration)
+            rebuildPages()
+            status = "Default page: \(pages[settingsConfiguration.defaultPageIndex].title)"
+            rebuildPageContent()
+        default:
+            status = "Unknown setting \(id)"
+        }
+    }
+
+    private func openPluginSettings(pluginID: String) {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }) else {
+            status = "Plugin settings missing"
+            return
+        }
+        transientPage = ShellPage(
+            title: "\(package.manifest.name) Settings",
+            kind: .grid,
+            tiles: pluginSettingsTiles(for: package)
+        )
+        selectedIndex = 0
+        gridSubpageIndex = 0
+        status = "\(package.manifest.name) settings"
+        rebuildPageContent()
+    }
+
+    private func pluginSettingsTiles(for package: PluginPackage) -> [ShellTile] {
+        var tiles = package.manifest.settings.map { setting in
+            ShellTile(
+                title: setting.title,
+                subtitle: settingSubtitle(setting, pluginID: package.manifest.id),
+                action: .editPluginSetting(pluginID: package.manifest.id, settingID: setting.id)
+            )
+        }
+        tiles.append(ShellTile(
+            title: "Reset",
+            subtitle: "Restore defaults",
+            action: .resetPluginSettings(package.manifest.id)
+        ))
+        return tiles
+    }
+
+    private func editPluginSetting(pluginID: String, settingID: String) {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }),
+              let setting = package.manifest.settings.first(where: { $0.id == settingID }) else {
+            status = "Missing plugin setting"
+            return
+        }
+        let value = nextValue(for: setting, pluginID: pluginID)
+        settingsConfiguration.pluginSettings[pluginID, default: [:]][setting.id] = value
+        QuakeSettingsStore.save(settingsConfiguration)
+        rebuildPages()
+        if transientPage?.title == "\(package.manifest.name) Settings" {
+            transientPage = ShellPage(title: "\(package.manifest.name) Settings", kind: .grid, tiles: pluginSettingsTiles(for: package))
+        }
+        status = "\(setting.title): \(display(value))"
+        rebuildPageContent()
+    }
+
+    private func resetPluginSettings(_ pluginID: String) {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }) else {
+            status = "Plugin settings missing"
+            return
+        }
+        settingsConfiguration.pluginSettings[pluginID] = nil
+        QuakeSettingsStore.save(settingsConfiguration)
+        rebuildPages()
+        transientPage = ShellPage(title: "\(package.manifest.name) Settings", kind: .grid, tiles: pluginSettingsTiles(for: package))
+        status = "\(package.manifest.name) settings reset"
+        rebuildPageContent()
+    }
+
     private func invokePluginAction(pluginID: String, actionID: String) {
-        let result = pluginRuntime.invokeAction(pluginID: pluginID, actionID: actionID)
+        let result = pluginRuntime.invokeAction(
+            pluginID: pluginID,
+            actionID: actionID,
+            settings: settingsConfiguration.pluginSettings[pluginID] ?? [:]
+        )
         if result.response.ok {
             if let value = result.response.result {
                 status = "\(pluginID): \(summarize(value))"
@@ -1247,8 +1451,10 @@ final class PanelView: NSView {
             pluginPackages: pluginPackages,
             themePackages: themePackages,
             activeThemeIndex: activeThemeIndex,
-            overrides: themeConfiguration.overrides
+            overrides: themeConfiguration.overrides,
+            settingsConfiguration: settingsConfiguration
         )
+        currentPageIndex = min(max(0, currentPageIndex), max(0, pages.count - 1))
         for (index, label) in pageLabels.enumerated() where pages.indices.contains(index) {
             label.stringValue = "\(index + 1) \(pages[index].title)"
         }
@@ -1281,6 +1487,51 @@ final class PanelView: NSView {
         case .boolean:
             let next = !(themeConfiguration.overrides[option.target]?.boolValue ?? option.defaultValue.boolValue ?? false)
             return .bool(next)
+        }
+    }
+
+    private func nextValue(for setting: PluginSetting, pluginID: String) -> JSONValue {
+        let current = settingsConfiguration.pluginSettings[pluginID]?[setting.id] ?? setting.defaultValue
+        switch setting.type {
+        case .choice:
+            guard !setting.choices.isEmpty else { return setting.defaultValue }
+            let currentIndex = setting.choices.firstIndex(of: current) ?? 0
+            return setting.choices[(currentIndex + 1) % setting.choices.count]
+        case .boolean:
+            return .bool(!(current.boolValue ?? setting.defaultValue.boolValue ?? false))
+        case .integer:
+            let minimum = Int(setting.minimum ?? 0)
+            let maximum = Int(setting.maximum ?? Double(max(minimum + 1, 10)))
+            let next = (current.integerValue ?? minimum) + 1
+            return .integer(next > maximum ? minimum : next)
+        case .number:
+            let minimum = setting.minimum ?? 0
+            let maximum = setting.maximum ?? max(minimum + 1, 10)
+            let steps = 5
+            let currentValue = current.doubleValue ?? minimum
+            let normalized = maximum == minimum ? 0 : (currentValue - minimum) / (maximum - minimum)
+            let currentIndex = min(steps - 1, max(0, Int((normalized * Double(steps - 1)).rounded())))
+            let index = (currentIndex + 1) % steps
+            return .double(minimum + (maximum - minimum) * Double(index) / Double(steps - 1))
+        case .string, .secret:
+            return setting.defaultValue
+        }
+    }
+
+    private func settingSubtitle(_ setting: PluginSetting, pluginID: String) -> String {
+        let value = settingsConfiguration.pluginSettings[pluginID]?[setting.id] ?? setting.defaultValue
+        switch setting.type {
+        case .choice:
+            return "\(display(value)) · \(setting.choices.count) choices"
+        case .boolean:
+            return display(value)
+        case .integer, .number:
+            let range = [setting.minimum, setting.maximum].compactMap { $0.map { String($0) } }.joined(separator: "...")
+            return range.isEmpty ? display(value) : "\(display(value)) · range \(range)"
+        case .string:
+            return display(value)
+        case .secret:
+            return "configured"
         }
     }
 

@@ -71,6 +71,7 @@ public final class PluginExecutionHost: @unchecked Sendable {
         pluginID: String,
         actionID: String,
         params: JSONValue = .object([:]),
+        settings: [String: JSONValue] = [:],
         timeout: TimeInterval = 5
     ) -> PluginInvocationResult {
         let request = PluginRequest(method: "action.\(actionID)", params: params)
@@ -82,7 +83,7 @@ public final class PluginExecutionHost: @unchecked Sendable {
                 throw PluginExecutionError.actionNotFound(pluginID: pluginID, actionID: actionID)
             }
 
-            let process = try makeProcess(for: package)
+            let process = try makeProcess(for: package, settings: settings)
             let stdin = Pipe()
             let stdout = Pipe()
             let stderr = Pipe()
@@ -131,7 +132,7 @@ public final class PluginExecutionHost: @unchecked Sendable {
         return package
     }
 
-    private func makeProcess(for package: PluginPackage) throws -> Process {
+    private func makeProcess(for package: PluginPackage, settings: [String: JSONValue]) throws -> Process {
         let entry = package.manifest.entry
         let process = Process()
         process.currentDirectoryURL = package.baseURL
@@ -157,7 +158,7 @@ public final class PluginExecutionHost: @unchecked Sendable {
             throw PluginExecutionError.unsupportedTransport(entry.transport)
         }
 
-        process.environment = environment(for: package)
+        process.environment = environment(for: package, settings: settings)
         return process
     }
 
@@ -183,13 +184,46 @@ public final class PluginExecutionHost: @unchecked Sendable {
         throw PluginExecutionError.commandNotFound(command)
     }
 
-    private func environment(for package: PluginPackage) -> [String: String] {
+    private func environment(for package: PluginPackage, settings: [String: JSONValue]) -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment["QUAKEKIT_PLUGIN_ID"] = package.manifest.id
         environment["QUAKEKIT_PLUGIN_NAME"] = package.manifest.name
         environment["QUAKEKIT_PLUGIN_BASE"] = package.baseURL.path
         environment["QUAKEKIT_API_VERSION"] = package.manifest.apiVersion
+        for setting in package.manifest.settings {
+            let value = settings[setting.id] ?? setting.defaultValue
+            environment["QUAKEKIT_SETTING_\(environmentKey(setting.id))"] = environmentString(value)
+            if let key = setting.environment, !key.isEmpty {
+                environment[key] = environmentString(value)
+            }
+        }
         return environment
+    }
+
+    private func environmentKey(_ value: String) -> String {
+        value.map { character in
+            character.isLetter || character.isNumber ? Character(character.uppercased()) : "_"
+        }.map(String.init).joined()
+    }
+
+    private func environmentString(_ value: JSONValue) -> String {
+        switch value {
+        case .null:
+            return ""
+        case .bool(let value):
+            return value ? "true" : "false"
+        case .string(let value):
+            return value
+        case .integer(let value):
+            return "\(value)"
+        case .double(let value):
+            return String(value)
+        case .array, .object:
+            if let data = try? encoder.encode(value), let string = String(data: data, encoding: .utf8) {
+                return string
+            }
+            return ""
+        }
     }
 
     private func send(_ request: PluginRequest, to pipe: Pipe) throws {

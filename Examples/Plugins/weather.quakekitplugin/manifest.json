@@ -11,6 +11,7 @@
   },
   "capabilities": [
     "dataProvider",
+    "settings",
     "viewProvider"
   ],
   "permissions": [
@@ -21,6 +22,35 @@
           "api.open-meteo.com"
         ]
       }
+    }
+  ],
+  "settings": [
+    {
+      "id": "location",
+      "title": "Location",
+      "type": "choice",
+      "defaultValue": "Charlotte, NC",
+      "choices": [
+        "Charlotte, NC",
+        "Raleigh, NC",
+        "New York, NY",
+        "San Francisco, CA",
+        "Custom"
+      ],
+      "environment": "QUAKEKIT_WEATHER_LOCATION",
+      "help": "Preset city used by the weather data provider."
+    },
+    {
+      "id": "units",
+      "title": "Units",
+      "type": "choice",
+      "defaultValue": "fahrenheit",
+      "choices": [
+        "fahrenheit",
+        "celsius"
+      ],
+      "environment": "QUAKEKIT_WEATHER_UNITS",
+      "help": "Temperature unit requested from Open-Meteo."
     }
   ],
   "actions": [

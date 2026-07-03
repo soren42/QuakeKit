@@ -4,7 +4,13 @@ set -eu
 cat >/dev/null
 
 league="${QUAKEKIT_SPORTS_LEAGUE:-mlb}"
-url="https://site.api.espn.com/apis/site/v2/sports/baseball/${league}/scoreboard"
+case "$league" in
+  nba) sport_path="basketball/nba" ;;
+  nfl) sport_path="football/nfl" ;;
+  nhl) sport_path="hockey/nhl" ;;
+  *) sport_path="baseball/mlb"; league="mlb" ;;
+esac
+url="https://site.api.espn.com/apis/site/v2/sports/${sport_path}/scoreboard"
 payload="$(curl -fsSL --max-time 2 "$url" 2>/dev/null || true)"
 if [ -n "$payload" ]; then
   first_name="$(printf '%s' "$payload" | grep -o '"shortName":"[^"]*"' | head -1 | sed 's/"shortName":"//;s/"$//' || true)"

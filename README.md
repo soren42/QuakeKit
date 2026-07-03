@@ -21,6 +21,7 @@ Confirmed:
 - The AppKit panel UI renders on the DK physical display.
 - The native shell supports Home, Widgets, Apps, Themes, and Runtime pages.
 - Grid pages paginate overflow with knob boundary navigation and touch arrow pads.
+- The native shell supports global settings, plugin settings, and package installation from directories or tar bundles.
 
 ## First Tangible Target
 
@@ -87,6 +88,18 @@ for f in Examples/Themes/*.quakekittheme/theme.json; do
 done
 ```
 
+Install a functional plugin or theme package:
+
+```bash
+swift run quake-probe --install-package ./SomePlugin.quakekitplugin
+swift run quake-probe --install-package ./SomeTheme.quakekittheme
+swift run quake-probe --install-package ./SomePlugin.quakekitplugin.tar.gz
+```
+
+Installed packages are copied into `~/Library/Application Support/QuakeKit/Plugins/`
+or `~/Library/Application Support/QuakeKit/Themes/` and override bundled examples
+with the same manifest id.
+
 With hardware connected, run the safe live probe:
 
 ```bash
@@ -119,16 +132,18 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 - `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
 - `QuakeRuntime`: device events, page/tile/action models, runtime event envelope, plugin data snapshots, and knob-ring arbitration.
 - `PluginExecutionHost`: local plugin action execution for packaged shell, PHP, and stdio-style adapters.
-- `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, capabilities, package loading, and host/plugin message types.
+- `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, settings, capabilities, package loading, package installation, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
 - `quake-test`: portable regression target for protocol, plugin, and runtime checks.
 - `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
 
 Bundled plugin adapters are intentionally keyless and tolerant of offline use.
-Weather uses Open-Meteo with `QUAKEKIT_WEATHER_LAT`,
-`QUAKEKIT_WEATHER_LON`, and `QUAKEKIT_WEATHER_LABEL` overrides. Markets uses
-Yahoo Finance chart data with `QUAKEKIT_MARKET_SYMBOLS`. Sports uses ESPN's
-public scoreboard endpoint with `QUAKEKIT_SPORTS_LEAGUE`.
+Weather uses Open-Meteo and now defaults to Charlotte, NC through its declared
+plugin setting; it also supports `QUAKEKIT_WEATHER_LOCATION`,
+`QUAKEKIT_WEATHER_UNITS`, `QUAKEKIT_WEATHER_LAT`, `QUAKEKIT_WEATHER_LON`, and
+`QUAKEKIT_WEATHER_LABEL` overrides. Markets uses Yahoo Finance chart data with
+`QUAKEKIT_MARKET_SYMBOLS`. Sports uses ESPN's public scoreboard endpoint with
+`QUAKEKIT_SPORTS_LEAGUE`.
 
 ## Current Hardware Notes
 

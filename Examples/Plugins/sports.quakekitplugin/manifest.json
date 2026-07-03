@@ -11,6 +11,7 @@
   },
   "capabilities": [
     "dataProvider",
+    "settings",
     "viewProvider"
   ],
   "permissions": [
@@ -20,6 +21,22 @@
           "site.api.espn.com"
         ]
       }
+    }
+  ],
+  "settings": [
+    {
+      "id": "league",
+      "title": "League",
+      "type": "choice",
+      "defaultValue": "mlb",
+      "choices": [
+        "mlb",
+        "nba",
+        "nfl",
+        "nhl"
+      ],
+      "environment": "QUAKEKIT_SPORTS_LEAGUE",
+      "help": "League used by the scoreboard provider."
     }
   ],
   "actions": [

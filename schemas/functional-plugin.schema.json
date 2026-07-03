@@ -51,6 +51,13 @@
         "$ref": "#/$defs/permission"
       }
     },
+    "settings": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/setting"
+      }
+    },
     "actions": {
       "type": "array",
       "default": [],
@@ -269,6 +276,78 @@
           }
         }
       }
+    },
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "type",
+        "defaultValue"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "number",
+            "boolean",
+            "choice",
+            "secret"
+          ]
+        },
+        "defaultValue": {},
+        "choices": {
+          "type": "array",
+          "default": [],
+          "items": {}
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "environment": {
+          "type": "string",
+          "pattern": "^[A-Z_][A-Z0-9_]*$",
+          "description": "Optional environment variable populated before launching process-style plugin transports."
+        },
+        "help": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "choice"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "choices"
+            ],
+            "properties": {
+              "choices": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     },
     "action": {
       "type": "object",

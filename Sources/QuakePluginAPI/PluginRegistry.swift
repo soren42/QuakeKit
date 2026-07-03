@@ -52,6 +52,25 @@ public enum PluginManifestValidator {
             errors.append("Plugin capabilities must be unique.")
         }
 
+        let settingIDs = manifest.settings.map(\.id)
+        if Set(settingIDs).count != settingIDs.count {
+            errors.append("Plugin setting ids must be unique.")
+        }
+        for setting in manifest.settings {
+            if setting.id.range(of: idPattern, options: .regularExpression) == nil {
+                errors.append("Setting \(setting.id) id must match \(idPattern).")
+            }
+            if setting.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                errors.append("Setting \(setting.id) title is required.")
+            }
+            if setting.type == .choice && setting.choices.isEmpty {
+                errors.append("Setting \(setting.id) must define choices.")
+            }
+            if let minimum = setting.minimum, let maximum = setting.maximum, minimum > maximum {
+                errors.append("Setting \(setting.id) minimum must be less than or equal to maximum.")
+            }
+        }
+
         let actionIDs = manifest.actions.map(\.id)
         if Set(actionIDs).count != actionIDs.count {
             errors.append("Plugin action ids must be unique.")
