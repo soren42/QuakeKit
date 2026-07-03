@@ -29,6 +29,7 @@ public final class QuakeDevice: @unchecked Sendable {
     private var touchBuffer = [UInt8](repeating: 0, count: 64)
     private var keepAliveTimer: Timer?
     private var keepAliveTick = 0
+    private var rawControlReportCount = 0
 
     public init(
         openMode: OpenMode = .seizePreferred,
@@ -393,7 +394,12 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     fileprivate func handleControl(bytes: [UInt8]) {
-        for event in QuakeProtocol.decodeControlReport(bytes) {
+        rawControlReportCount += 1
+        let events = QuakeProtocol.decodeControlReport(bytes)
+        if rawControlReportCount <= 30 || events.isEmpty {
+            emitDiagnostic("control raw[\(rawControlReportCount)] \(hexBytes(bytes)) decoded=\(events.count)")
+        }
+        for event in events {
             eventHandler(RuntimeEvent(source: "dk-quake", event: event))
         }
     }
@@ -408,6 +414,10 @@ public final class QuakeDevice: @unchecked Sendable {
         diagnostics.append(message)
         diagnosticHandler?(message)
     }
+}
+
+private func hexBytes(_ bytes: [UInt8]) -> String {
+    bytes.prefix(32).map { String(format: "%02X", $0) }.joined(separator: " ")
 }
 
 private struct KnobRingHSL {

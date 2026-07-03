@@ -23,6 +23,7 @@ struct PanelLaunchOptions {
     var noHID: Bool
     var sharedHID: Bool
     var strictHIDSeize: Bool
+    var simpleFullscreen: Bool
     var keepAliveProfile: QuakeDevice.KeepAliveProfile
 
     init(arguments: ArraySlice<String>) {
@@ -34,6 +35,7 @@ struct PanelLaunchOptions {
         self.noHID = values.contains("--no-hid")
         self.sharedHID = values.contains("--shared-hid")
         self.strictHIDSeize = values.contains("--strict-hid-seize")
+        self.simpleFullscreen = values.contains("--simple-fullscreen")
         self.keepAliveProfile = Self.parseKeepAliveProfile(from: rawArguments)
     }
 
@@ -65,7 +67,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
         NSApp.activate(ignoringOtherApps: true)
         acquireDisplaySleepAssertion()
         openPanelWindow()
@@ -189,8 +191,16 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             panelWindow.level = .screenSaver
             panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         } else if quakeLike && !launchOptions.debugWindow {
-            panelWindow.level = .floating
+            panelWindow.level = .screenSaver
             panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            if launchOptions.simpleFullscreen {
+                panelWindow.toggleFullScreen(nil)
+            }
+            Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak panelWindow] _ in
+                Task { @MainActor in
+                    panelWindow?.level = .floating
+                }
+            }
         } else {
             panelWindow.level = .normal
         }
