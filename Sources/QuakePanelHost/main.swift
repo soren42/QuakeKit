@@ -98,7 +98,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     @objc private func displayConfigurationChanged() {
         log("display configuration changed")
         _ = device?.sendControlFrameReliably(QuakeProtocol.screenOn)
-        openPanelWindow()
+        reframePanelWindow()
     }
 
     private func acquireDisplaySleepAssertion() {
@@ -198,11 +198,26 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         panelContentView.displayIfNeeded()
         log("window visible=\(panelWindow.isVisible) frame=\(format(panelWindow.frame)) content=\(format(panelContentView.frame)) level=\(panelWindow.level.rawValue)")
 
-        if let oldWindow = window, oldWindow !== panelWindow {
-            oldWindow.orderOut(nil)
-            oldWindow.close()
-        }
         self.window = panelWindow
+    }
+
+    private func reframePanelWindow() {
+        guard let panelWindow = window else {
+            openPanelWindow()
+            return
+        }
+        let targetScreen = launchOptions.mainScreen ? NSScreen.main : (DisplayLocator.quakeScreen() ?? NSScreen.main)
+        guard let targetScreen else { return }
+        let frame = targetScreen.frame
+        let quakeLike = !launchOptions.mainScreen && DisplayLocator.isQuakeLike(frame.size)
+        let logicalSize = quakeLike && !launchOptions.debugWindow ? frame.size : panelWindow.frame.size
+        let origin = quakeLike && !launchOptions.debugWindow
+            ? frame.origin
+            : NSPoint(x: frame.midX - logicalSize.width / 2, y: frame.midY - logicalSize.height / 2)
+        let rect = NSRect(origin: origin, size: logicalSize)
+        panelWindow.setFrame(rect, display: true)
+        panelWindow.orderFrontRegardless()
+        log("window reframed=\(format(panelWindow.frame)) target=\(format(frame))")
     }
 
     private func startDevice() {
