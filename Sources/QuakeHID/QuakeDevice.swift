@@ -20,6 +20,7 @@ public final class QuakeDevice: @unchecked Sendable {
     private var controlBuffer = [UInt8](repeating: 0, count: 64)
     private var touchBuffer = [UInt8](repeating: 0, count: 64)
     private var keepAliveTimer: Timer?
+    private var keepAliveTick = 0
 
     public init(openMode: OpenMode = .seizePreferred, eventHandler: @escaping EventHandler) {
         self.eventHandler = eventHandler
@@ -80,6 +81,7 @@ public final class QuakeDevice: @unchecked Sendable {
     public func stop() {
         keepAliveTimer?.invalidate()
         keepAliveTimer = nil
+        keepAliveTick = 0
 
         if let controlDevice {
             IOHIDDeviceUnscheduleFromRunLoop(controlDevice, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
@@ -109,8 +111,21 @@ public final class QuakeDevice: @unchecked Sendable {
         _ = sendControlFrame(QuakeProtocol.queryLuminance)
 
         keepAliveTimer?.invalidate()
+        keepAliveTick = 0
         keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            _ = self?.sendControlFrame(QuakeProtocol.ping)
+            self?.sendKeepAlive()
+        }
+    }
+
+    public func sendKeepAlive() {
+        keepAliveTick += 1
+        _ = sendControlFrame(QuakeProtocol.ping)
+        if keepAliveTick % 2 == 0 {
+            _ = sendControlFrame(QuakeProtocol.screenOn)
+        }
+        if keepAliveTick % 10 == 0 {
+            _ = setBrightness(255)
+            _ = sendControlFrame(QuakeProtocol.queryLuminance)
         }
     }
 

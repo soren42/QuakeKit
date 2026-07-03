@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import IOKit.pwr_mgt
 import QuakeHID
 import QuakePluginAPI
 import QuakeRuntime
@@ -49,12 +50,14 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var ringCoordinator = KnobRingCoordinator()
     private var ringTimer: Timer?
     private var lastRingOutput: KnobRingResolvedOutput?
+    private var displaySleepAssertionID: IOPMAssertionID = 0
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize)")
         NSApp.activate(ignoringOtherApps: true)
+        acquireDisplaySleepAssertion()
         openPanelWindow()
         if launchOptions.noHID {
             log("HID disabled by --no-hid; touch and knob input will not be available")
@@ -68,6 +71,31 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         ringTimer?.invalidate()
         ringTimer = nil
         device?.stop()
+        releaseDisplaySleepAssertion()
+    }
+
+    private func acquireDisplaySleepAssertion() {
+        guard displaySleepAssertionID == 0 else { return }
+        var assertionID = IOPMAssertionID(0)
+        let result = IOPMAssertionCreateWithName(
+            kIOPMAssertionTypeNoDisplaySleep as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            "QuakeKit panel is owning the DK-QUAKE display" as CFString,
+            &assertionID
+        )
+        if result == kIOReturnSuccess {
+            displaySleepAssertionID = assertionID
+            log("display sleep assertion acquired id=\(assertionID)")
+        } else {
+            log("display sleep assertion failed \(result)")
+        }
+    }
+
+    private func releaseDisplaySleepAssertion() {
+        guard displaySleepAssertionID != 0 else { return }
+        let result = IOPMAssertionRelease(displaySleepAssertionID)
+        log("display sleep assertion released id=\(displaySleepAssertionID) result=\(result)")
+        displaySleepAssertionID = 0
     }
 
     private func openPanelWindow() {
