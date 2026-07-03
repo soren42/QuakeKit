@@ -132,8 +132,10 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     private func sendActivationPulse(label: String) {
-        let screenOnOK = sendControlFrameReliably(QuakeProtocol.screenOn)
-        let brightnessOK = setBrightness(255)
+        let screenOnResults = sendControlFrameVariants(QuakeProtocol.screenOn)
+        let brightnessResults = sendControlFrameVariants(QuakeProtocol.setBrightness(255))
+        let screenOnOK = screenOnResults.contains(true)
+        let brightnessOK = brightnessResults.contains(true)
         emitDiagnostic("activate \(label) screenOn=\(screenOnOK) brightness=\(brightnessOK)")
     }
 
@@ -192,6 +194,22 @@ public final class QuakeDevice: @unchecked Sendable {
             return true
         }
         return false
+    }
+
+    @discardableResult
+    public func sendControlFrameVariants(_ frame: [UInt8]) -> [Bool] {
+        let report = [UInt8(0x00)] + frame
+        let variants: [(IOHIDReportType, Bool)] = [
+            (kIOHIDReportTypeOutput, true),
+            (kIOHIDReportTypeOutput, false),
+            (kIOHIDReportTypeFeature, true),
+            (kIOHIDReportTypeFeature, false)
+        ]
+        return variants.map { type, includeReportID in
+            let ok = sendControlReport(report, type: type, includeReportIDInPayload: includeReportID)
+            emitDiagnostic("control frame variant type=\(type.rawValue) includeReportID=\(includeReportID) ok=\(ok)")
+            return ok
+        }
     }
 
     @discardableResult
