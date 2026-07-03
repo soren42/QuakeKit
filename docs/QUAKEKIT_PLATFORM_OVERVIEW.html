@@ -679,6 +679,7 @@
         </tbody>
       </table>
       <p>Resolution rules are deterministic: expired requests are pruned, higher priority wins, and newer requests win ties. If no request is active, the runtime uses the theme's <code>idle</code> state. If the active theme disables the ring or does not define a usable state, the host turns the ring off.</p>
+      <p>Functional plugin detail surfaces also have an initial data path: data-driven views can run a declared refresh action, store the payload in <code>PluginDataStore</code>, and display the latest snapshot while the longer-lived stream subscription engine is still under construction.</p>
       <pre><code>// Current runtime shape.
 KnobRingRequest(
   source: "weather",

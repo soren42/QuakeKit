@@ -693,6 +693,7 @@ final class PanelView: NSView {
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
     private var themeConfiguration: ThemeUserConfiguration
+    private var pluginDataStore = PluginDataStore()
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
@@ -958,7 +959,8 @@ final class PanelView: NSView {
     private func layoutRuntimeRows(in rect: NSRect) {
         let gap = activeTheme.spacing
         let columns = 4
-        let rowHeight = (rect.height - gap * 1) / 2
+        let rowCount = max(1, Int(ceil(Double(runtimeRows.count) / Double(columns))))
+        let rowHeight = (rect.height - gap * CGFloat(max(0, rowCount - 1))) / CGFloat(rowCount)
         let columnWidth = (rect.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
         for index in runtimeRows.indices {
             let column = index % columns
@@ -1020,6 +1022,7 @@ final class PanelView: NSView {
         transientPage = ShellPage(title: view.title, kind: .pluginView(pluginID: pluginID, viewID: viewID), tiles: [])
         selectedIndex = 0
         status = "\(package.manifest.name) view"
+        refreshData(for: view, package: package)
         log("plugin view opened \(pluginID).\(viewID)")
         rebuildPageContent()
     }
@@ -1030,7 +1033,7 @@ final class PanelView: NSView {
             return [("Plugin View", "missing")]
         }
 
-        return [
+        var rows = [
             ("Plugin", package.manifest.name),
             ("View", view.title),
             ("Type", view.type?.rawValue ?? "unspecified"),
@@ -1040,6 +1043,23 @@ final class PanelView: NSView {
             ("Preferred Size", "\(view.preferredWidth ?? 0)x\(view.preferredHeight ?? 0)"),
             ("Package", package.baseURL.lastPathComponent)
         ]
+
+        if let streamID = view.dataStreamID, let snapshot = pluginDataStore.snapshot(pluginID: pluginID, streamID: streamID) {
+            rows.append(("Latest Data", summarize(snapshot.payload)))
+            rows.append(("Updated", relativeTime(snapshot.timestamp)))
+        }
+
+        return rows
+    }
+
+    private func refreshData(for view: PluginView, package: PluginPackage) {
+        guard let streamID = view.dataStreamID, let action = package.manifest.actions.first else { return }
+        let result = pluginRuntime.invokeAction(pluginID: package.manifest.id, actionID: action.id)
+        if let payload = result.response.result, result.response.ok {
+            pluginDataStore.set(pluginID: package.manifest.id, streamID: streamID, payload: payload)
+        } else if let error = result.response.error {
+            status = "\(package.manifest.id): \(error)"
+        }
     }
 
     private func selectTheme(_ index: Int) {
@@ -1210,6 +1230,11 @@ final class PanelView: NSView {
         default:
             return display(value)
         }
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let seconds = max(0, Int(Date().timeIntervalSince(date)))
+        return seconds == 0 ? "now" : "\(seconds)s ago"
     }
 }
 

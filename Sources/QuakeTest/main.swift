@@ -74,6 +74,13 @@ run("plugin action execution") {
     expect(host.invokeAction(pluginID: "ai_agent", actionID: "agent.listen").response.ok, "agent listen action failed")
 }
 
+run("plugin data store snapshots") {
+    var store = PluginDataStore()
+    store.apply(PluginEvent(pluginID: "system_monitor", streamID: "system.metrics", payload: .object(["cpu": .double(12.5)])))
+    expect(store.snapshot(pluginID: "system_monitor", streamID: "system.metrics")?.payload == .object(["cpu": .double(12.5)]), "snapshot lookup failed")
+    expect(store.snapshots(for: "system_monitor").count == 1, "plugin snapshot filter failed")
+}
+
 run("validator rejects dangling stream references") {
     let manifest = PluginManifest(
         id: "bad_plugin",

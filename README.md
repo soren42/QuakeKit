@@ -113,7 +113,7 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 ## Current Milestone
 
 - `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
-- `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
+- `QuakeRuntime`: device events, page/tile/action models, runtime event envelope, plugin data snapshots, and knob-ring arbitration.
 - `PluginExecutionHost`: local plugin action execution for packaged shell, PHP, and stdio-style adapters.
 - `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, capabilities, package loading, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
