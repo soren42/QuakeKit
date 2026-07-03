@@ -13,6 +13,8 @@ let allHID = arguments.contains("--all-hid")
 let ledOn = arguments.contains("--led-on")
 let ledOff = arguments.contains("--led-off")
 let ledTest = arguments.contains("--led-test")
+let sharedHID = arguments.contains("--shared-hid")
+let strictHIDSeize = arguments.contains("--strict-hid-seize")
 let brightnessValue = parseBrightness(from: rawArguments)
 
 if selfTest {
@@ -57,7 +59,7 @@ if let runIndex = rawArguments.firstIndex(of: "--run-plugin-action") {
 }
 
 if ledOn || ledOff || ledTest || brightnessValue != nil {
-    let quake = QuakeDevice { event in
+    let quake = QuakeDevice(openMode: hidOpenMode()) { event in
         print(format(event))
     }
     do {
@@ -119,11 +121,12 @@ guard listen else {
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
     print("Run with --brightness <0-255> to set and query screen luminance.")
     print("Run with --listen to open the device and print decoded events.")
+    print("Use --shared-hid to avoid exclusive HID opens, or --strict-hid-seize to fail instead of falling back to shared opens.")
     print("Add --wake to send safe screen wake, keep-alive, and state query commands.")
     exit(devices.isEmpty ? 1 : 0)
 }
 
-let quake = QuakeDevice { event in
+let quake = QuakeDevice(openMode: hidOpenMode()) { event in
     print(format(event))
 }
 
@@ -215,6 +218,12 @@ func parseBrightness(from arguments: [String]) -> UInt8? {
         exit(64)
     }
     return UInt8(value)
+}
+
+func hidOpenMode() -> QuakeDevice.OpenMode {
+    if sharedHID { return .shared }
+    if strictHIDSeize { return .seizeRequired }
+    return .seizePreferred
 }
 
 func installPackage(at path: String) {

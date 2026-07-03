@@ -20,6 +20,8 @@ struct PanelLaunchOptions {
     var displayTest: Bool
     var mainScreen: Bool
     var noHID: Bool
+    var sharedHID: Bool
+    var strictHIDSeize: Bool
 
     init(arguments: ArraySlice<String>) {
         let values = Set(arguments)
@@ -27,6 +29,14 @@ struct PanelLaunchOptions {
         self.displayTest = values.contains("--display-test")
         self.mainScreen = values.contains("--main-screen")
         self.noHID = values.contains("--no-hid")
+        self.sharedHID = values.contains("--shared-hid")
+        self.strictHIDSeize = values.contains("--strict-hid-seize")
+    }
+
+    var hidOpenMode: QuakeDevice.OpenMode {
+        if sharedHID { return .shared }
+        if strictHIDSeize { return .seizeRequired }
+        return .seizePreferred
     }
 }
 
@@ -43,7 +53,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID)")
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize)")
         NSApp.activate(ignoringOtherApps: true)
         openPanelWindow()
         if launchOptions.noHID {
@@ -140,7 +150,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         let deliver: @MainActor (RuntimeEvent) -> Void = { [weak self] event in
             self?.handle(event)
         }
-        let quake = QuakeDevice { [weak self] event in
+        let quake = QuakeDevice(openMode: launchOptions.hidOpenMode) { [weak self] event in
             Task { @MainActor in
                 if self != nil {
                     deliver(event)

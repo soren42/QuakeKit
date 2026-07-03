@@ -118,6 +118,12 @@ Launch modes:
 # Normal hardware mode: display plus HID touch, knob, control, and heartbeat events.
 .build/debug/quake-panel
 
+# Hardware mode with shared HID opens for debugging if exclusive/seized opens fail.
+.build/debug/quake-panel --shared-hid
+
+# Hardware mode that fails HID startup instead of falling back when seized opens fail.
+.build/debug/quake-panel --strict-hid-seize
+
 # Display-only diagnostic mode: renders UI but intentionally disables all HID input.
 .build/debug/quake-panel --no-hid
 

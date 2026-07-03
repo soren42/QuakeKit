@@ -5,8 +5,15 @@ import QuakeRuntime
 public final class QuakeDevice: @unchecked Sendable {
     public typealias EventHandler = (RuntimeEvent) -> Void
 
+    public enum OpenMode: Sendable {
+        case shared
+        case seizePreferred
+        case seizeRequired
+    }
+
     private let managers: [ManagerBinding]
     private let eventHandler: EventHandler
+    private let openMode: OpenMode
     public private(set) var diagnostics: [String] = []
     private var controlDevice: IOHIDDevice?
     private var touchDevice: IOHIDDevice?
@@ -14,8 +21,9 @@ public final class QuakeDevice: @unchecked Sendable {
     private var touchBuffer = [UInt8](repeating: 0, count: 64)
     private var keepAliveTimer: Timer?
 
-    public init(eventHandler: @escaping EventHandler) {
+    public init(openMode: OpenMode = .seizePreferred, eventHandler: @escaping EventHandler) {
         self.eventHandler = eventHandler
+        self.openMode = openMode
 
         let controlManagers = QuakeProtocol.controlSpecs.map { spec in
             var dictionary: [String: Any] = [
@@ -210,12 +218,11 @@ public final class QuakeDevice: @unchecked Sendable {
             return
         }
 
-        let openResult = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+        let openResult = openDevice(device, interface: spec.interface)
         guard openResult == kIOReturnSuccess else {
             diagnostics.append("\(spec.interface.rawValue): device open failed \(openResult)")
             return
         }
-        diagnostics.append("\(spec.interface.rawValue): device opened")
 
         IOHIDDeviceScheduleWithRunLoop(device, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
 
@@ -240,6 +247,34 @@ public final class QuakeDevice: @unchecked Sendable {
                 touchInputCallback,
                 Unmanaged.passUnretained(self).toOpaque()
             )
+        }
+    }
+
+    private func openDevice(_ device: IOHIDDevice, interface: QuakeInterface) -> IOReturn {
+        switch openMode {
+        case .shared:
+            let result = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+            if result == kIOReturnSuccess {
+                diagnostics.append("\(interface.rawValue): device opened shared")
+            }
+            return result
+        case .seizePreferred:
+            let seized = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeSeizeDevice))
+            if seized == kIOReturnSuccess {
+                diagnostics.append("\(interface.rawValue): device opened seized")
+                return seized
+            }
+            let shared = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+            if shared == kIOReturnSuccess {
+                diagnostics.append("\(interface.rawValue): device seize failed \(seized); opened shared fallback")
+            }
+            return shared
+        case .seizeRequired:
+            let result = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeSeizeDevice))
+            if result == kIOReturnSuccess {
+                diagnostics.append("\(interface.rawValue): device opened seized")
+            }
+            return result
         }
     }
 
