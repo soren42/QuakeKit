@@ -69,6 +69,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         acquireDisplaySleepAssertion()
         openPanelWindow()
+        observeDisplayChanges()
         if launchOptions.noHID {
             log("HID disabled by --no-hid; touch and knob input will not be available")
             panelView?.status = "Display only, HID disabled"
@@ -80,8 +81,24 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         ringTimer?.invalidate()
         ringTimer = nil
+        NotificationCenter.default.removeObserver(self)
         device?.stop()
         releaseDisplaySleepAssertion()
+    }
+
+    private func observeDisplayChanges() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(displayConfigurationChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+    }
+
+    @objc private func displayConfigurationChanged() {
+        log("display configuration changed")
+        _ = device?.sendControlFrameReliably(QuakeProtocol.screenOn)
+        openPanelWindow()
     }
 
     private func acquireDisplaySleepAssertion() {
@@ -181,6 +198,10 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         panelContentView.displayIfNeeded()
         log("window visible=\(panelWindow.isVisible) frame=\(format(panelWindow.frame)) content=\(format(panelContentView.frame)) level=\(panelWindow.level.rawValue)")
 
+        if let oldWindow = window, oldWindow !== panelWindow {
+            oldWindow.orderOut(nil)
+            oldWindow.close()
+        }
         self.window = panelWindow
     }
 
@@ -208,11 +229,27 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             }
             device = quake
             panelView?.status = "HID connected"
+            applyStartupDeviceSettings()
             requestKnobRing(state: .success, priority: .focus, ttl: 1.2, source: "hid")
             startRingTimer()
         } catch {
             log("hid unavailable: \(error)")
             panelView?.status = "HID unavailable: \(error)"
+        }
+    }
+
+    private func applyStartupDeviceSettings() {
+        guard let device else { return }
+        let ledOK = device.setKnobRing(enabled: true)
+        let micOK = device.setMic(false)
+        log("startup device settings knobRing=\(ledOK) micOff=\(micOK)")
+        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let device = self?.device else { return }
+                let screenOK = device.sendControlFrameReliably(QuakeProtocol.screenOn)
+                let micOK = device.setMic(false)
+                log("startup device reassert screenOn=\(screenOK) micOff=\(micOK)")
+            }
         }
     }
 
@@ -233,7 +270,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             switch event {
             case .rotate(let direction):
                 log("event knob rotate \(direction)")
-                panelView?.moveSelection(direction > 0 ? -1 : 1)
+                panelView?.moveSelection(direction > 0 ? 1 : -1)
             case .press(let index):
                 log("event knob press \(index)")
                 if index == 2 {

@@ -254,6 +254,11 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     @discardableResult
+    public func setMic(_ enabled: Bool) -> Bool {
+        sendControlFrameReliably(QuakeProtocol.setMic(enabled))
+    }
+
+    @discardableResult
     public func setKnobRing(enabled: Bool) -> Bool {
         if !enabled {
             return turnKnobRingOff()
