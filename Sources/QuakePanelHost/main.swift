@@ -713,6 +713,16 @@ extension JSONValue {
         if case .bool(let value) = self { return value }
         return nil
     }
+
+    var arrayValue: [JSONValue]? {
+        if case .array(let value) = self { return value }
+        return nil
+    }
+
+    var objectValue: [String: JSONValue]? {
+        if case .object(let value) = self { return value }
+        return nil
+    }
 }
 
 extension NSColor {
@@ -982,6 +992,7 @@ final class PanelView: NSView {
     private var runtime = RuntimeSnapshot()
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
+    private var systemDashboardView: SystemMonitorDashboardView?
     private var pageLabels: [NSTextField] = []
     private let themeBackgroundView = ThemeBackgroundImageView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
@@ -1219,8 +1230,10 @@ final class PanelView: NSView {
     private func rebuildPageContent() {
         tileViews.forEach { $0.removeFromSuperview() }
         runtimeRows.forEach { $0.removeFromSuperview() }
+        systemDashboardView?.removeFromSuperview()
         tileViews.removeAll()
         runtimeRows.removeAll()
+        systemDashboardView = nil
         previousGridPad.isHidden = true
         nextGridPad.isHidden = true
 
@@ -1241,11 +1254,18 @@ final class PanelView: NSView {
                 return view
             }
         case .pluginView(let pluginID, let viewID):
-            runtimeRows = pluginViewRows(pluginID: pluginID, viewID: viewID).map { row in
-                let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
+            if pluginID == "system_monitor", viewID == "system.overview" {
+                let view = SystemMonitorDashboardView(snapshot: systemMonitorSnapshot(), theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
-                return view
+                systemDashboardView = view
+            } else {
+                runtimeRows = pluginViewRows(pluginID: pluginID, viewID: viewID).map { row in
+                    let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
+                    view.translatesAutoresizingMaskIntoConstraints = true
+                    addSubview(view)
+                    return view
+                }
             }
         }
 
@@ -1272,6 +1292,10 @@ final class PanelView: NSView {
         let topChrome: CGFloat = 62
         let bottomChrome: CGFloat = 38
         let contentRect = NSRect(x: inset, y: bottomChrome, width: bounds.width - inset * 2, height: bounds.height - topChrome - bottomChrome)
+        if let systemDashboardView {
+            systemDashboardView.frame = contentRect
+            return
+        }
         if currentPage.kind == .runtimeStatus || isPluginView(currentPage.kind) {
             layoutRuntimeRows(in: contentRect)
             return
@@ -1379,6 +1403,7 @@ final class PanelView: NSView {
         statusLabel.textColor = activeTheme.accent
         tileViews.forEach { $0.theme = activeTheme }
         runtimeRows.forEach { $0.theme = activeTheme }
+        systemDashboardView?.theme = activeTheme
         previousGridPad.theme = activeTheme
         nextGridPad.theme = activeTheme
     }
@@ -1516,6 +1541,13 @@ final class PanelView: NSView {
         return object.keys.sorted().prefix(10).map { key in
             (title: titleize(key), value: display(object[key] ?? .null))
         }
+    }
+
+    private func systemMonitorSnapshot() -> SystemMonitorSnapshot {
+        guard let snapshot = pluginDataStore.snapshot(pluginID: "system_monitor", streamID: "system.metrics") else {
+            return .placeholder
+        }
+        return SystemMonitorSnapshot(value: snapshot.payload, timestamp: snapshot.timestamp)
     }
 
     private func refreshData(for view: PluginView, package: PluginPackage) {
@@ -1917,6 +1949,364 @@ final class ThemeBackgroundImageView: NSView {
             let size = NSSize(width: imageSize.width * scale, height: imageSize.height * scale)
             return NSRect(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2, width: size.width, height: size.height)
         }
+    }
+}
+
+struct SystemMonitorProcess: Equatable {
+    var pid: Int
+    var name: String
+    var cpu: Double
+    var memory: Double
+}
+
+struct SystemMonitorSnapshot: Equatable {
+    var cpu: Double
+    var cpuUser: Double
+    var cpuSystem: Double
+    var memory: Double
+    var disk: Double
+    var battery: Double
+    var loadAverage: String
+    var loadHistory: [Double]
+    var cores: Int
+    var processes: Int
+    var runningProcesses: Int
+    var threads: Int
+    var networkInGB: Double
+    var networkOutGB: Double
+    var diskReadGB: Double
+    var diskWrittenGB: Double
+    var diskUsedGB: Double
+    var diskTotalGB: Double
+    var uptimeSeconds: Int
+    var topProcesses: [SystemMonitorProcess]
+    var timestamp: Date?
+
+    init(
+        cpu: Double,
+        cpuUser: Double,
+        cpuSystem: Double,
+        memory: Double,
+        disk: Double,
+        battery: Double,
+        loadAverage: String,
+        loadHistory: [Double],
+        cores: Int,
+        processes: Int,
+        runningProcesses: Int,
+        threads: Int,
+        networkInGB: Double,
+        networkOutGB: Double,
+        diskReadGB: Double,
+        diskWrittenGB: Double,
+        diskUsedGB: Double,
+        diskTotalGB: Double,
+        uptimeSeconds: Int,
+        topProcesses: [SystemMonitorProcess],
+        timestamp: Date?
+    ) {
+        self.cpu = cpu
+        self.cpuUser = cpuUser
+        self.cpuSystem = cpuSystem
+        self.memory = memory
+        self.disk = disk
+        self.battery = battery
+        self.loadAverage = loadAverage
+        self.loadHistory = loadHistory
+        self.cores = cores
+        self.processes = processes
+        self.runningProcesses = runningProcesses
+        self.threads = threads
+        self.networkInGB = networkInGB
+        self.networkOutGB = networkOutGB
+        self.diskReadGB = diskReadGB
+        self.diskWrittenGB = diskWrittenGB
+        self.diskUsedGB = diskUsedGB
+        self.diskTotalGB = diskTotalGB
+        self.uptimeSeconds = uptimeSeconds
+        self.topProcesses = topProcesses
+        self.timestamp = timestamp
+    }
+
+    static let placeholder = SystemMonitorSnapshot(
+        cpu: 0,
+        cpuUser: 0,
+        cpuSystem: 0,
+        memory: 0,
+        disk: 0,
+        battery: 0,
+        loadAverage: "-",
+        loadHistory: [0, 0, 0, 0],
+        cores: 0,
+        processes: 0,
+        runningProcesses: 0,
+        threads: 0,
+        networkInGB: 0,
+        networkOutGB: 0,
+        diskReadGB: 0,
+        diskWrittenGB: 0,
+        diskUsedGB: 0,
+        diskTotalGB: 0,
+        uptimeSeconds: 0,
+        topProcesses: [],
+        timestamp: nil
+    )
+
+    init(value: JSONValue, timestamp: Date) {
+        let object = value.objectValue ?? [:]
+        self.cpu = object["cpu"]?.doubleValue ?? 0
+        self.cpuUser = object["cpuUser"]?.doubleValue ?? 0
+        self.cpuSystem = object["cpuSystem"]?.doubleValue ?? 0
+        self.memory = object["memory"]?.doubleValue ?? 0
+        self.disk = object["disk"]?.doubleValue ?? 0
+        self.battery = object["battery"]?.doubleValue ?? 0
+        self.loadAverage = object["loadAverage"]?.stringValue ?? "-"
+        self.loadHistory = object["loadHistory"]?.arrayValue?.compactMap(\.doubleValue) ?? [self.cpu]
+        self.cores = object["cores"]?.integerValue ?? 0
+        self.processes = object["processes"]?.integerValue ?? 0
+        self.runningProcesses = object["runningProcesses"]?.integerValue ?? 0
+        self.threads = object["threads"]?.integerValue ?? 0
+        self.networkInGB = object["networkInGB"]?.doubleValue ?? 0
+        self.networkOutGB = object["networkOutGB"]?.doubleValue ?? 0
+        self.diskReadGB = object["diskReadGB"]?.doubleValue ?? 0
+        self.diskWrittenGB = object["diskWrittenGB"]?.doubleValue ?? 0
+        self.diskUsedGB = object["diskUsedGB"]?.doubleValue ?? 0
+        self.diskTotalGB = object["diskTotalGB"]?.doubleValue ?? 0
+        self.uptimeSeconds = object["uptimeSeconds"]?.integerValue ?? 0
+        self.topProcesses = object["topProcesses"]?.arrayValue?.compactMap { item in
+            guard let process = item.objectValue else { return nil }
+            return SystemMonitorProcess(
+                pid: process["pid"]?.integerValue ?? 0,
+                name: process["name"]?.stringValue ?? "-",
+                cpu: process["cpu"]?.doubleValue ?? 0,
+                memory: process["memory"]?.doubleValue ?? 0
+            )
+        } ?? []
+        self.timestamp = timestamp
+    }
+}
+
+final class SystemMonitorDashboardView: NSView {
+    var snapshot: SystemMonitorSnapshot {
+        didSet { needsDisplay = true }
+    }
+    var theme: PanelTheme {
+        didSet { needsDisplay = true }
+    }
+
+    init(snapshot: SystemMonitorSnapshot, theme: PanelTheme) {
+        self.snapshot = snapshot
+        self.theme = theme
+        super.init(frame: .zero)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        drawPanelBackground()
+        let gap = theme.spacing
+        let leftWidth = bounds.width * 0.30
+        let centerWidth = bounds.width * 0.38
+        let rightWidth = bounds.width - leftWidth - centerWidth - gap * 2
+        let left = NSRect(x: 0, y: 0, width: leftWidth, height: bounds.height)
+        let center = NSRect(x: left.maxX + gap, y: 0, width: centerWidth, height: bounds.height)
+        let right = NSRect(x: center.maxX + gap, y: 0, width: rightWidth, height: bounds.height)
+
+        drawGaugeCluster(in: left)
+        drawLoadAndStorage(in: center)
+        drawProcessTable(in: right)
+    }
+
+    private func drawPanelBackground() {
+        NSColor.black.withAlphaComponent(0.28).setFill()
+        bounds.fill()
+        theme.accent.withAlphaComponent(0.18).setStroke()
+        let grid = NSBezierPath()
+        let step: CGFloat = 36
+        var x: CGFloat = 0
+        while x <= bounds.width {
+            grid.move(to: NSPoint(x: x, y: 0))
+            grid.line(to: NSPoint(x: x, y: bounds.height))
+            x += step
+        }
+        var y: CGFloat = 0
+        while y <= bounds.height {
+            grid.move(to: NSPoint(x: 0, y: y))
+            grid.line(to: NSPoint(x: bounds.width, y: y))
+            y += step
+        }
+        grid.lineWidth = 0.5
+        grid.stroke()
+    }
+
+    private func drawGaugeCluster(in rect: NSRect) {
+        let gap = theme.spacing
+        let header = NSRect(x: rect.minX, y: rect.maxY - 56, width: rect.width, height: 56)
+        drawTitle("SYSTEM", subtitle: uptimeText(snapshot.uptimeSeconds), in: header)
+
+        let cardHeight = (rect.height - header.height - gap * 3) / 4
+        let cards = [
+            ("CPU", snapshot.cpu, theme.accent, "usr \(format(snapshot.cpuUser))% sys \(format(snapshot.cpuSystem))%"),
+            ("RAM", snapshot.memory, theme.danger, "\(snapshot.threads) threads"),
+            ("DISK", snapshot.disk, theme.success, "\(format(snapshot.diskUsedGB)) / \(format(snapshot.diskTotalGB)) GB"),
+            ("BATT", snapshot.battery, theme.warning, "state \(snapshot.battery == 0 ? "-" : format(snapshot.battery) + "%")")
+        ]
+        for (index, card) in cards.enumerated() {
+            let y = header.minY - gap - CGFloat(index + 1) * cardHeight - CGFloat(index) * gap
+            drawMetricCard(title: card.0, value: card.1, color: card.2, detail: card.3, in: NSRect(x: rect.minX, y: y, width: rect.width, height: cardHeight))
+        }
+    }
+
+    private func drawLoadAndStorage(in rect: NSRect) {
+        let gap = theme.spacing
+        let top = NSRect(x: rect.minX, y: rect.midY + gap / 2, width: rect.width, height: rect.height / 2 - gap / 2)
+        let bottom = NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height / 2 - gap / 2)
+        drawChartCard(
+            title: "LOAD HISTORY",
+            subtitle: "avg \(snapshot.loadAverage) across \(snapshot.cores) cores",
+            values: normalizedHistory(),
+            color: theme.accent,
+            in: top
+        )
+        drawIOCard(in: bottom)
+    }
+
+    private func drawProcessTable(in rect: NSRect) {
+        drawCard(in: rect)
+        drawText("TOP PROCESSES", in: NSRect(x: rect.minX + 14, y: rect.maxY - 34, width: rect.width - 28, height: 24), size: 16, weight: .bold, color: theme.textPrimary)
+        drawText("\(snapshot.processes) total · \(snapshot.runningProcesses) running", in: NSRect(x: rect.minX + 14, y: rect.maxY - 58, width: rect.width - 28, height: 18), size: 12, weight: .medium, color: theme.textSecondary)
+
+        let rows = snapshot.topProcesses.prefix(6)
+        let startY = rect.maxY - 88
+        let rowHeight: CGFloat = 35
+        for (index, process) in rows.enumerated() {
+            let y = startY - CGFloat(index) * rowHeight
+            let row = NSRect(x: rect.minX + 12, y: y - rowHeight + 6, width: rect.width - 24, height: rowHeight - 6)
+            let fill = index % 2 == 0 ? theme.surface.withAlphaComponent(0.48) : theme.surfaceRaised.withAlphaComponent(0.36)
+            fill.setFill()
+            NSBezierPath(roundedRect: row, xRadius: 5, yRadius: 5).fill()
+            drawText(shortProcessName(process.name), in: NSRect(x: row.minX + 8, y: row.minY + 8, width: row.width * 0.46, height: 18), size: 12, weight: .semibold, color: theme.textPrimary)
+            drawText("pid \(process.pid)", in: NSRect(x: row.minX + 8, y: row.minY - 7, width: row.width * 0.46, height: 14), size: 9, weight: .regular, color: theme.textSecondary)
+            drawBar(value: process.cpu, maximum: 100, color: theme.danger, label: "\(format(process.cpu))%", in: NSRect(x: row.midX, y: row.minY + 8, width: row.width * 0.23, height: 14))
+            drawBar(value: process.memory, maximum: 10, color: theme.accent, label: "\(format(process.memory))%", in: NSRect(x: row.minX + row.width * 0.76, y: row.minY + 8, width: row.width * 0.20, height: 14))
+        }
+    }
+
+    private func drawIOCard(in rect: NSRect) {
+        drawCard(in: rect)
+        drawText("I/O MATRIX", in: NSRect(x: rect.minX + 14, y: rect.maxY - 34, width: rect.width - 28, height: 22), size: 16, weight: .bold, color: theme.textPrimary)
+        let rows: [(String, Double, Double, NSColor)] = [
+            ("NET IN", snapshot.networkInGB, max(snapshot.networkInGB, snapshot.networkOutGB, 1), theme.accent),
+            ("NET OUT", snapshot.networkOutGB, max(snapshot.networkInGB, snapshot.networkOutGB, 1), theme.danger),
+            ("DISK R", snapshot.diskReadGB, max(snapshot.diskReadGB, snapshot.diskWrittenGB, 1), theme.success),
+            ("DISK W", snapshot.diskWrittenGB, max(snapshot.diskReadGB, snapshot.diskWrittenGB, 1), theme.warning)
+        ]
+        for (index, row) in rows.enumerated() {
+            let y = rect.maxY - 76 - CGFloat(index) * 39
+            drawText(row.0, in: NSRect(x: rect.minX + 16, y: y, width: 70, height: 18), size: 12, weight: .bold, color: theme.textSecondary)
+            drawBar(value: row.1, maximum: row.2, color: row.3, label: "\(format(row.1)) GB", in: NSRect(x: rect.minX + 92, y: y + 1, width: rect.width - 112, height: 16))
+        }
+    }
+
+    private func drawMetricCard(title: String, value: Double, color: NSColor, detail: String, in rect: NSRect) {
+        drawCard(in: rect)
+        drawText(title, in: NSRect(x: rect.minX + 14, y: rect.maxY - 30, width: 80, height: 20), size: 16, weight: .bold, color: theme.textSecondary)
+        drawText("\(format(value))%", in: NSRect(x: rect.minX + 100, y: rect.maxY - 38, width: rect.width - 114, height: 32), size: 28, weight: .black, color: color)
+        drawBar(value: value, maximum: 100, color: color, label: detail, in: NSRect(x: rect.minX + 14, y: rect.minY + 18, width: rect.width - 28, height: 18))
+    }
+
+    private func drawChartCard(title: String, subtitle: String, values: [Double], color: NSColor, in rect: NSRect) {
+        drawCard(in: rect)
+        drawText(title, in: NSRect(x: rect.minX + 14, y: rect.maxY - 34, width: rect.width - 28, height: 22), size: 16, weight: .bold, color: theme.textPrimary)
+        drawText(subtitle, in: NSRect(x: rect.minX + 14, y: rect.maxY - 56, width: rect.width - 28, height: 16), size: 11, weight: .medium, color: theme.textSecondary)
+        let chart = NSRect(x: rect.minX + 18, y: rect.minY + 20, width: rect.width - 36, height: rect.height - 88)
+        color.withAlphaComponent(0.12).setFill()
+        NSBezierPath(roundedRect: chart, xRadius: 5, yRadius: 5).fill()
+        drawSparkline(values: values, color: color, in: chart.insetBy(dx: 12, dy: 10))
+    }
+
+    private func drawCard(in rect: NSRect) {
+        let path = NSBezierPath(roundedRect: rect, xRadius: theme.cornerRadius, yRadius: theme.cornerRadius)
+        theme.surface.withAlphaComponent(0.76).setFill()
+        path.fill()
+        theme.border.withAlphaComponent(0.86).setStroke()
+        path.lineWidth = theme.borderWidth
+        path.stroke()
+    }
+
+    private func drawBar(value: Double, maximum: Double, color: NSColor, label: String, in rect: NSRect) {
+        let track = NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4)
+        theme.background.withAlphaComponent(0.8).setFill()
+        track.fill()
+        let width = rect.width * CGFloat(max(0, min(1, maximum == 0 ? 0 : value / maximum)))
+        if width > 0 {
+            color.withAlphaComponent(0.88).setFill()
+            NSBezierPath(roundedRect: NSRect(x: rect.minX, y: rect.minY, width: width, height: rect.height), xRadius: 4, yRadius: 4).fill()
+        }
+        drawText(label, in: rect.insetBy(dx: 6, dy: 1), size: 10, weight: .bold, color: theme.textPrimary)
+    }
+
+    private func drawSparkline(values: [Double], color: NSColor, in rect: NSRect) {
+        guard values.count > 1 else { return }
+        let maxValue = max(values.max() ?? 1, 1)
+        let path = NSBezierPath()
+        for (index, value) in values.enumerated() {
+            let x = rect.minX + CGFloat(index) * rect.width / CGFloat(values.count - 1)
+            let y = rect.minY + rect.height * CGFloat(max(0, min(1, value / maxValue)))
+            if index == 0 {
+                path.move(to: NSPoint(x: x, y: y))
+            } else {
+                path.line(to: NSPoint(x: x, y: y))
+            }
+        }
+        color.setStroke()
+        path.lineWidth = 3
+        path.stroke()
+    }
+
+    private func drawTitle(_ title: String, subtitle: String, in rect: NSRect) {
+        drawText(title, in: NSRect(x: rect.minX, y: rect.minY + 20, width: rect.width, height: 34), size: 30, weight: .black, color: theme.accent)
+        drawText(subtitle, in: NSRect(x: rect.minX + 2, y: rect.minY + 2, width: rect.width, height: 18), size: 12, weight: .medium, color: theme.textSecondary)
+    }
+
+    private func drawText(_ text: String, in rect: NSRect, size: CGFloat, weight: NSFont.Weight, color: NSColor) {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: size, weight: weight),
+            .foregroundColor: color,
+            .paragraphStyle: paragraph
+        ]
+        NSAttributedString(string: text, attributes: attributes).draw(in: rect)
+    }
+
+    private func normalizedHistory() -> [Double] {
+        let values = snapshot.loadHistory.map { max(0, min(100, $0)) }
+        return values.count > 1 ? values : [0, snapshot.cpu]
+    }
+
+    private func format(_ value: Double) -> String {
+        value >= 100 ? String(format: "%.0f", value) : String(format: "%.1f", value)
+    }
+
+    private func shortProcessName(_ value: String) -> String {
+        if let range = value.range(of: ".app/") {
+            let prefix = String(value[..<range.upperBound])
+            return URL(fileURLWithPath: prefix).deletingPathExtension().lastPathComponent
+        }
+        let executable = value.split(separator: " ").first.map(String.init) ?? value
+        return URL(fileURLWithPath: executable).lastPathComponent
+    }
+
+    private func uptimeText(_ seconds: Int) -> String {
+        guard seconds > 0 else { return "uptime -" }
+        let days = seconds / 86_400
+        let hours = (seconds % 86_400) / 3_600
+        return days > 0 ? "uptime \(days)d \(hours)h" : "uptime \(hours)h"
     }
 }
 

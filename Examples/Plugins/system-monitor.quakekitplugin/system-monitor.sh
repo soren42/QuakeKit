@@ -3,13 +3,26 @@ set -eu
 
 cat >/dev/null
 
-load="$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}' || printf '0')"
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+top_snapshot="$(top -l 1 -n 0 2>/dev/null || true)"
+load_line="$(printf '%s\n' "$top_snapshot" | awk -F': ' '/^Load Avg:/ {print $2; exit}')"
+load_one="$(printf '%s' "$load_line" | awk -F', ' '{gsub(/^ +| +$/,"",$1); print $1}')"
+load_five="$(printf '%s' "$load_line" | awk -F', ' '{gsub(/^ +| +$/,"",$2); print $2}')"
+load_fifteen="$(printf '%s' "$load_line" | awk -F', ' '{gsub(/^ +| +$/,"",$3); print $3}')"
+load="${load_five:-0}"
 cores="$(sysctl -n hw.ncpu 2>/dev/null || printf '1')"
 pages_free="$(vm_stat 2>/dev/null | awk '/Pages free/ {gsub("\\.","",$3); print $3; exit}' || printf '0')"
 pages_active="$(vm_stat 2>/dev/null | awk '/Pages active/ {gsub("\\.","",$3); print $3; exit}' || printf '0')"
 pages_inactive="$(vm_stat 2>/dev/null | awk '/Pages inactive/ {gsub("\\.","",$3); print $3; exit}' || printf '0')"
 pages_wired="$(vm_stat 2>/dev/null | awk '/Pages wired down/ {gsub("\\.","",$4); print $4; exit}' || printf '0')"
-disk_percent="$(df -P / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5; exit}' || printf '0')"
+disk_info="$(df -Pk / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $2 "," $3 "," $4 "," $5; exit}')"
+disk_total_kb="$(printf '%s' "$disk_info" | awk -F, '{print $1 + 0}')"
+disk_used_kb="$(printf '%s' "$disk_info" | awk -F, '{print $2 + 0}')"
+disk_available_kb="$(printf '%s' "$disk_info" | awk -F, '{print $3 + 0}')"
+disk_percent="$(printf '%s' "$disk_info" | awk -F, '{print $4 + 0}')"
 battery_percent="$(pmset -g batt 2>/dev/null | awk -F'[%;]' '/InternalBattery/ {gsub(/^ +/,"",$2); print $2; exit}' || printf '0')"
 battery_state="$(pmset -g batt 2>/dev/null | awk -F"'" '/InternalBattery/ {print $2; exit}' || printf 'unknown')"
 boot_epoch="$(sysctl -n kern.boottime 2>/dev/null | sed -n 's/^{ sec = \([0-9][0-9]*\),.*/\1/p' || printf '0')"
@@ -28,7 +41,44 @@ else
   memory_percent=0
 fi
 
-cpu_percent="$(awk -v load="$load" -v cores="$cores" 'BEGIN { if (cores < 1) cores = 1; value = (load / cores) * 100; if (value > 100) value = 100; printf "%.1f", value }')"
+cpu_line="$(printf '%s\n' "$top_snapshot" | awk '/^CPU usage:/ {print; exit}')"
+cpu_user="$(printf '%s\n' "$cpu_line" | sed -n 's/.*CPU usage: \([0-9.]*\)% user.*/\1/p')"
+cpu_system="$(printf '%s\n' "$cpu_line" | sed -n 's/.*user, \([0-9.]*\)% sys.*/\1/p')"
+cpu_idle="$(printf '%s\n' "$cpu_line" | sed -n 's/.*sys, \([0-9.]*\)% idle.*/\1/p')"
+cpu_percent="$(awk -v idle="${cpu_idle:-0}" 'BEGIN { value = 100 - idle; if (value < 0) value = 0; if (value > 100) value = 100; printf "%.1f", value }')"
+load_one_percent="$(awk -v load="${load_one:-0}" -v cores="$cores" 'BEGIN { if (cores < 1) cores = 1; value = (load / cores) * 100; if (value > 100) value = 100; printf "%.1f", value }')"
+load_five_percent="$(awk -v load="${load_five:-0}" -v cores="$cores" 'BEGIN { if (cores < 1) cores = 1; value = (load / cores) * 100; if (value > 100) value = 100; printf "%.1f", value }')"
+load_fifteen_percent="$(awk -v load="${load_fifteen:-0}" -v cores="$cores" 'BEGIN { if (cores < 1) cores = 1; value = (load / cores) * 100; if (value > 100) value = 100; printf "%.1f", value }')"
 
-printf '{"cpu":%s,"memory":%s,"disk":%s,"battery":%s,"batteryState":"%s","loadAverage":"%s","cores":%s,"uptimeSeconds":%s,"source":"system-monitor.sh"}\n' \
-  "$cpu_percent" "$memory_percent" "${disk_percent:-0}" "${battery_percent:-0}" "${battery_state:-unknown}" "$load" "$cores" "${uptime_seconds:-0}"
+process_total="$(printf '%s\n' "$top_snapshot" | awk '/^Processes:/ {print $2 + 0; exit}')"
+process_running="$(printf '%s\n' "$top_snapshot" | awk '/^Processes:/ {gsub(",","",$4); print $4 + 0; exit}')"
+thread_count="$(printf '%s\n' "$top_snapshot" | awk '/^Processes:/ {for (i=1; i<=NF; i++) if ($i == "threads") {print $(i-1) + 0; exit}}')"
+network_in_gb="$(printf '%s\n' "$top_snapshot" | awk '/^Networks:/ {for (i=1; i<=NF; i++) if ($i == "in,") {value=$(i-1); sub(".*/","",value); gsub(/[^0-9.]/,"",value); print value; exit}}')"
+network_out_gb="$(printf '%s\n' "$top_snapshot" | awk '/^Networks:/ {for (i=1; i<=NF; i++) if ($i == "out.") {value=$(i-1); sub(".*/","",value); gsub(/[^0-9.]/,"",value); print value; exit}}')"
+disk_read_gb="$(printf '%s\n' "$top_snapshot" | awk '/^Disks:/ {for (i=1; i<=NF; i++) if ($i == "read,") {value=$(i-1); sub(".*/","",value); gsub(/[^0-9.]/,"",value); print value; exit}}')"
+disk_written_gb="$(printf '%s\n' "$top_snapshot" | awk '/^Disks:/ {for (i=1; i<=NF; i++) if ($i == "written.") {value=$(i-1); sub(".*/","",value); gsub(/[^0-9.]/,"",value); print value; exit}}')"
+
+top_processes="$(
+  ps -axo pid=,pcpu=,pmem=,command= -r 2>/dev/null |
+    awk 'NR <= 6 {
+      pid=$1
+      cpu=$2
+      mem=$3
+      name=$0
+      sub(/^ *[0-9]+ +[0-9.]+ +[0-9.]+ +/, "", name)
+      gsub(/\\/,"\\\\",name)
+      gsub(/"/,"\\\"",name)
+      printf "%s{\"pid\":%s,\"name\":\"%s\",\"cpu\":%s,\"memory\":%s}", sep, pid, name, cpu, mem
+      sep=","
+    }'
+)"
+
+printf '{"cpu":%s,"cpuUser":%s,"cpuSystem":%s,"cpuIdle":%s,"memory":%s,"disk":%s,"diskTotalGB":%.1f,"diskUsedGB":%.1f,"diskAvailableGB":%.1f,"battery":%s,"batteryState":"%s","loadAverage":"%s","loadHistory":[%s,%s,%s,%s],"cores":%s,"processes":%s,"runningProcesses":%s,"threads":%s,"networkInGB":%s,"networkOutGB":%s,"diskReadGB":%s,"diskWrittenGB":%s,"uptimeSeconds":%s,"topProcesses":[%s],"source":"system-monitor.sh"}\n' \
+  "$cpu_percent" "${cpu_user:-0}" "${cpu_system:-0}" "${cpu_idle:-0}" "$memory_percent" "${disk_percent:-0}" \
+  "$(awk -v kb="${disk_total_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
+  "$(awk -v kb="${disk_used_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
+  "$(awk -v kb="${disk_available_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
+  "${battery_percent:-0}" "$(json_escape "${battery_state:-unknown}")" "${load:-0}" \
+  "${cpu_percent:-0}" "${load_one_percent:-0}" "${load_five_percent:-0}" "${load_fifteen_percent:-0}" \
+  "$cores" "${process_total:-0}" "${process_running:-0}" "${thread_count:-0}" \
+  "${network_in_gb:-0}" "${network_out_gb:-0}" "${disk_read_gb:-0}" "${disk_written_gb:-0}" "${uptime_seconds:-0}" "$top_processes"
