@@ -47,13 +47,14 @@ public enum PluginPackageLoader {
         do {
             let data = try Data(contentsOf: manifestURL)
             let manifest = try JSONDecoder().decode(PluginManifest.self, from: data)
-            let validation = PluginManifestValidator.validate(manifest)
+            let baseURL = manifestURL.deletingLastPathComponent()
+            let validation = PluginManifestValidator.validatePackage(manifest, baseURL: baseURL)
             guard validation.isValid else {
                 return .failure(manifestURL, validation.errors)
             }
             return .success(PluginPackage(
                 manifest: manifest,
-                baseURL: manifestURL.deletingLastPathComponent(),
+                baseURL: baseURL,
                 manifestURL: manifestURL
             ), warnings: validation.warnings)
         } catch {

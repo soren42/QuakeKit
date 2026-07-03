@@ -313,6 +313,8 @@ struct ShellTile: Equatable {
 enum ShellAction: Equatable {
     case openPage(Int)
     case setStatus(String)
+    case openPluginView(pluginID: String, viewID: String)
+    case invokePluginAction(pluginID: String, actionID: String)
     case selectTheme(Int)
     case editThemeOption(String)
     case resetThemeOverrides
@@ -326,6 +328,7 @@ struct ShellPage: Equatable {
     enum Kind: Equatable {
         case grid
         case runtimeStatus
+        case pluginView(pluginID: String, viewID: String)
     }
 }
 
@@ -543,13 +546,14 @@ enum ShellCatalog {
             emptyTitle: "No Apps",
             emptySubtitle: "Add full-page views"
         )
+        let actionTiles = pluginActionTiles(from: pluginPackages)
         let themeTiles = themeTiles(from: themePackages, activeThemeIndex: activeThemeIndex, overrides: overrides)
 
         return [
             ShellPage(title: "Home", kind: .grid, tiles: [
             ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(4)),
             ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
-            ShellTile(title: "Apps", subtitle: "\(appTiles.count) full pages", action: .openPage(2)),
+            ShellTile(title: "Apps", subtitle: "\(appTiles.count + actionTiles.count) entries", action: .openPage(2)),
             ShellTile(title: "Themes", subtitle: "\(themePackages.count) installed", action: .openPage(3)),
             ShellTile(title: "HID", subtitle: "Control online", action: .openPage(4)),
             ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
@@ -567,7 +571,7 @@ enum ShellCatalog {
             ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
             ]),
             ShellPage(title: "Widgets", kind: .grid, tiles: widgetTiles),
-            ShellPage(title: "Apps", kind: .grid, tiles: appTiles),
+            ShellPage(title: "Apps", kind: .grid, tiles: appTiles + actionTiles),
             ShellPage(title: "Themes", kind: .grid, tiles: themeTiles),
             ShellPage(title: "Runtime", kind: .runtimeStatus, tiles: [])
         ]
@@ -587,7 +591,7 @@ enum ShellCatalog {
                 return ShellTile(
                     title: view.title,
                     subtitle: "\(package.manifest.name) · \(type)",
-                    action: .setStatus("\(package.manifest.name): \(view.title)")
+                    action: .openPluginView(pluginID: package.manifest.id, viewID: view.id)
                 )
             }
         }
@@ -599,6 +603,18 @@ enum ShellCatalog {
         return [
             ShellTile(title: emptyTitle, subtitle: emptySubtitle, action: .setStatus(emptySubtitle))
         ]
+    }
+
+    private static func pluginActionTiles(from packages: [PluginPackage]) -> [ShellTile] {
+        packages.flatMap { package in
+            package.manifest.actions.map { action in
+                ShellTile(
+                    title: action.title,
+                    subtitle: "\(package.manifest.name) · action",
+                    action: .invokePluginAction(pluginID: package.manifest.id, actionID: action.id)
+                )
+            }
+        }
     }
 
     private static func themeTiles(from packages: [ThemePackage], activeThemeIndex: Int, overrides: [String: JSONValue]) -> [ShellTile] {
@@ -666,12 +682,14 @@ final class PanelView: NSView {
         didSet { updateStatus() }
     }
     private let pluginPackages: [PluginPackage]
+    private let pluginRuntime: PluginExecutionHost
     private let themePackages: [ThemePackage]
     private var pages: [ShellPage]
     private let columns = 8
     private let rows = 2
     private let portraitMode: Bool
     private var currentPageIndex = 0
+    private var transientPage: ShellPage?
     private var activeThemeIndex = 0
     private var activeTheme: PanelTheme
     private var themeConfiguration: ThemeUserConfiguration
@@ -684,6 +702,7 @@ final class PanelView: NSView {
 
     init(frame frameRect: NSRect, pluginPackages: [PluginPackage], themePackages: [ThemePackage], portraitMode: Bool) {
         self.pluginPackages = pluginPackages
+        self.pluginRuntime = PluginExecutionHost(packages: pluginPackages)
         self.themePackages = themePackages
         self.portraitMode = portraitMode
         self.themeConfiguration = ThemeConfigurationStore.load()
@@ -738,6 +757,10 @@ final class PanelView: NSView {
             openPage(index)
         case .setStatus(let message):
             status = message
+        case .openPluginView(let pluginID, let viewID):
+            openPluginView(pluginID: pluginID, viewID: viewID)
+        case .invokePluginAction(let pluginID, let actionID):
+            invokePluginAction(pluginID: pluginID, actionID: actionID)
         case .selectTheme(let index):
             selectTheme(index)
         case .editThemeOption(let id):
@@ -848,12 +871,13 @@ final class PanelView: NSView {
     }
 
     private var currentPage: ShellPage {
-        pages[currentPageIndex]
+        transientPage ?? pages[currentPageIndex]
     }
 
     private func openPage(_ index: Int) {
         guard pages.indices.contains(index) else { return }
-        guard currentPageIndex != index else { return }
+        guard currentPageIndex != index || transientPage != nil else { return }
+        transientPage = nil
         currentPageIndex = index
         selectedIndex = 0
         status = "Page \(pages[index].title)"
@@ -877,6 +901,13 @@ final class PanelView: NSView {
             }
         case .runtimeStatus:
             runtimeRows = RuntimeStatusModel.rows(from: runtime).map { row in
+                let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
+                view.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(view)
+                return view
+            }
+        case .pluginView(let pluginID, let viewID):
+            runtimeRows = pluginViewRows(pluginID: pluginID, viewID: viewID).map { row in
                 let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
@@ -906,7 +937,7 @@ final class PanelView: NSView {
         let topChrome: CGFloat = 62
         let bottomChrome: CGFloat = 38
         let contentRect = NSRect(x: inset, y: bottomChrome, width: bounds.width - inset * 2, height: bounds.height - topChrome - bottomChrome)
-        if currentPage.kind == .runtimeStatus {
+        if currentPage.kind == .runtimeStatus || isPluginView(currentPage.kind) {
             layoutRuntimeRows(in: contentRect)
             return
         }
@@ -980,6 +1011,37 @@ final class PanelView: NSView {
         }
     }
 
+    private func openPluginView(pluginID: String, viewID: String) {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }),
+              let view = package.manifest.views.first(where: { $0.id == viewID }) else {
+            status = "Plugin view missing"
+            return
+        }
+        transientPage = ShellPage(title: view.title, kind: .pluginView(pluginID: pluginID, viewID: viewID), tiles: [])
+        selectedIndex = 0
+        status = "\(package.manifest.name) view"
+        log("plugin view opened \(pluginID).\(viewID)")
+        rebuildPageContent()
+    }
+
+    private func pluginViewRows(pluginID: String, viewID: String) -> [(title: String, value: String)] {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }),
+              let view = package.manifest.views.first(where: { $0.id == viewID }) else {
+            return [("Plugin View", "missing")]
+        }
+
+        return [
+            ("Plugin", package.manifest.name),
+            ("View", view.title),
+            ("Type", view.type?.rawValue ?? "unspecified"),
+            ("Presentation", view.presentation?.rawValue ?? "page"),
+            ("Entrypoint", view.entryPath ?? package.manifest.entry.url?.relativeString ?? package.manifest.entry.command ?? "-"),
+            ("Data Stream", view.dataStreamID ?? "-"),
+            ("Preferred Size", "\(view.preferredWidth ?? 0)x\(view.preferredHeight ?? 0)"),
+            ("Package", package.baseURL.lastPathComponent)
+        ]
+    }
+
     private func selectTheme(_ index: Int) {
         guard themePackages.indices.contains(index) else { return }
         activeThemeIndex = index
@@ -1021,6 +1083,20 @@ final class PanelView: NSView {
         status = "Theme overrides reset"
         updateChrome()
         rebuildPageContent()
+    }
+
+    private func invokePluginAction(pluginID: String, actionID: String) {
+        let result = pluginRuntime.invokeAction(pluginID: pluginID, actionID: actionID)
+        if result.response.ok {
+            if let value = result.response.result {
+                status = "\(pluginID): \(summarize(value))"
+            } else {
+                status = "\(pluginID).\(actionID) complete"
+            }
+        } else {
+            status = "\(pluginID): \(result.response.error ?? "action failed")"
+        }
+        log("plugin action \(pluginID).\(actionID) ok=\(result.response.ok) duration=\(String(format: "%.3f", result.duration))s")
     }
 
     private var activeThemeManifest: ThemeManifest? {
@@ -1115,6 +1191,24 @@ final class PanelView: NSView {
             return value ? "on" : "off"
         default:
             return "updated"
+        }
+    }
+
+    private func isPluginView(_ kind: ShellPage.Kind) -> Bool {
+        if case .pluginView = kind { return true }
+        return false
+    }
+
+    private func summarize(_ value: JSONValue) -> String {
+        switch value {
+        case .object(let object):
+            return object.keys.sorted().prefix(4).map { key in
+                "\(key)=\(display(object[key] ?? .null))"
+            }.joined(separator: " ")
+        case .array(let values):
+            return "\(values.count) values"
+        default:
+            return display(value)
         }
     }
 }

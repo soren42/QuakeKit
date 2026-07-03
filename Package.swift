@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "QuakePluginAPI", targets: ["QuakePluginAPI"]),
         .library(name: "QuakeHID", targets: ["QuakeHID"]),
         .executable(name: "quake-probe", targets: ["QuakeProbe"]),
+        .executable(name: "quake-test", targets: ["QuakeTest"]),
         .executable(name: "quake-panel", targets: ["QuakePanelHost"])
     ],
     targets: [
@@ -40,6 +41,10 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("AppKit")
             ]
+        ),
+        .executableTarget(
+            name: "QuakeTest",
+            dependencies: ["QuakeHID", "QuakePluginAPI", "QuakeRuntime"]
         )
     ]
 )

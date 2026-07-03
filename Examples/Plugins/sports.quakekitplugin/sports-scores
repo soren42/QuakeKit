@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+cat >/dev/null
+printf '{"games":[{"league":"MLB","home":"ATL","away":"NYM","status":"Preview"}],"source":"sports-scores"}\n'

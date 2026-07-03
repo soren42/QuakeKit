@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+cat >/dev/null
+printf '{"message":"Echo plugin received the action request.","source":"echo-plugin"}\n'

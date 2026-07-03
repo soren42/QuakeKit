@@ -90,7 +90,8 @@ Each `PluginView` declares:
 - `preferredWidth` and `preferredHeight`: page/widget layout hints
 
 The current host loads manifests from `Examples/Plugins`. The panel shell builds
-separate `Widgets` and `Apps` pages from those manifests.
+separate `Widgets` and `Apps` pages from those manifests, and declared plugin
+actions appear on the `Apps` page for early runtime testing.
 
 ## Example Targets
 
@@ -100,5 +101,7 @@ separate `Widgets` and `Apps` pages from those manifests.
 - `sports_scores`: process-backed scoreboard page and widget.
 - `ai_agent`: microphone-capable conversational agent page.
 
-These examples are manifest-first. Rendering and process execution are the next
-implementation layers.
+These examples now include minimal runnable or renderable package assets. Local
+shell, PHP, and stdio-style actions can be invoked by `PluginExecutionHost` and
+from `quake-probe --run-plugin-action`. Full applet/widget rendering and live
+data-stream subscription are still implementation layers in progress.

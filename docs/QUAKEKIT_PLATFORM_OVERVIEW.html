@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Platform Overview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1016;
+      --panel: #111922;
+      --panel-2: #162230;
+      --ink: #eef5fb;
+      --muted: #9eb0c0;
+      --line: #2c3b4b;
+      --accent: #64d7bd;
+      --warn: #f1c45b;
+      --danger: #ff6b7f;
+      --ok: #72df8f;
+      --code: #080c11;
+      --shadow: rgba(0, 0, 0, 0.24);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: var(--warn);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warn);
+      box-shadow: 0 0 14px var(--warn);
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 820px;
+      font-size: clamp(36px, 7vw, 76px);
+      font-weight: 800;
+    }
+
+    h2 {
+      margin-top: 42px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      font-size: clamp(24px, 4vw, 36px);
+    }
+
+    h3 {
+      margin-top: 28px;
+      font-size: 20px;
+    }
+
+    p {
+      max-width: 820px;
+      margin: 14px 0 0;
+      color: var(--muted);
+    }
+
+    .lede {
+      margin-top: 20px;
+      max-width: 900px;
+      color: #c8d6e3;
+      font-size: 19px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: #d7e3ee;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .card {
+      grid-column: span 6;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 14px 38px var(--shadow);
+      padding: 18px;
+    }
+
+    .card.full {
+      grid-column: 1 / -1;
+    }
+
+    .card.third {
+      grid-column: span 4;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .card p {
+      margin-top: 8px;
+    }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 22px 0 8px;
+    }
+
+    nav a {
+      display: block;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    nav a span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    ul {
+      margin: 12px 0 0;
+      padding-left: 22px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    strong {
+      color: var(--ink);
+    }
+
+    table {
+      width: 100%;
+      margin-top: 16px;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--panel-2);
+      color: var(--ink);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    code,
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    code {
+      color: #dff8f0;
+      background: rgba(100, 215, 189, 0.1);
+      border: 1px solid rgba(100, 215, 189, 0.18);
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 16px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--code);
+      color: #dce8f2;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    pre code {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid rgba(241, 196, 91, 0.38);
+      border-radius: 8px;
+      background: rgba(241, 196, 91, 0.08);
+    }
+
+    .callout p {
+      margin: 0;
+      color: #f5deb0;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .danger {
+      color: var(--danger);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .flow div {
+      min-height: 86px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px;
+    }
+
+    .flow b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    .flow span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 840px) {
+      .shell {
+        padding: 28px 16px 48px;
+      }
+
+      .card,
+      .card.third {
+        grid-column: 1 / -1;
+      }
+
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      th,
+      td {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="eyebrow"><span class="status-dot"></span> Alpha development and test only</div>
+      <h1>QuakeKit Platform Overview</h1>
+      <p class="lede">QuakeKit is a Swift-native platform for the DK-Quake / ARIS-68 touch display and control surface. The macOS host is the first implementation target; the repo is organized around device adapters, a runtime core, language-neutral plugin contracts, and host apps.</p>
+      <div class="meta">
+        <span class="pill">Current API version: 0.1</span>
+        <span class="pill">SwiftPM package</span>
+        <span class="pill">macOS 14+</span>
+        <span class="pill">AGPL-3.0-or-later</span>
+        <span class="pill">Non-commercial protocol caveat</span>
+      </div>
+    </header>
+
+    <section id="contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Contents</h2>
+      <nav>
+        <a href="#status">1. Hardware Status<span>What is currently confirmed and what remains cautious.</span></a>
+        <a href="#model">2. Display and HID Model<span>How the panel is rendered and how input arrives.</span></a>
+        <a href="#architecture">3. Platform Layers<span>Device adapters, runtime, plugin API, and hosts.</span></a>
+        <a href="#themes">4. Theme Plugin Contract<span>Presentation tokens, hardware defaults, and options.</span></a>
+        <a href="#functional">5. Functional Plugin Contract<span>Behavior, permissions, actions, streams, and views.</span></a>
+        <a href="#knob-ring">6. Knob-Ring Arbitration<span>Semantic state requests resolved through the active theme.</span></a>
+        <a href="#validation">7. Validation Commands<span>Build, manifest validation, probe, and panel launch commands.</span></a>
+        <a href="#roadmap">8. Near-Term Roadmap<span>What should come next for testers and developers.</span></a>
+      </nav>
+    </section>
+
+    <section id="status" aria-labelledby="status-title">
+      <h2 id="status-title">Hardware Status</h2>
+      <div class="callout">
+        <p><strong>Alpha caveat:</strong> QuakeKit is not ready as an end-user DK-Suite replacement. It is a hardware/platform bring-up tree for developers and early testers.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3 class="ok">Confirmed in the current tree</h3>
+          <ul>
+            <li>HID control input is decoded.</li>
+            <li>HID touch input is decoded.</li>
+            <li>Knob-ring output can be toggled and themed at runtime.</li>
+            <li>The AppKit panel host renders on the physical DK display.</li>
+            <li>The native shell has Home, Widgets, Apps, Themes, and Runtime pages.</li>
+            <li>Plugin and theme manifests build, decode, and validate against current Swift models.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3 class="warn">Still under bring-up</h3>
+          <ul>
+            <li>Out-of-process plugin execution is not the default runtime path yet.</li>
+            <li>Web and native applet rendering beyond manifest tiles is still a next layer.</li>
+            <li>Permission grant UI, persisted plugin registry, and Keychain-backed secrets are roadmap items.</li>
+            <li>Hardware behavior should still be reported with Mac model, macOS version, display mode, and probe output.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="model" aria-labelledby="model-title">
+      <h2 id="model-title">Display and HID Model</h2>
+      <p>The DK-Quake panel is exposed to macOS as a normal external display. QuakeKit does not push framebuffer content through HID. Instead, the macOS host renders a native AppKit window onto the DK screen.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Surface</th>
+            <th>Current model</th>
+            <th>Implementation notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Display</td>
+            <td>Host-owned AppKit window on an external display.</td>
+            <td>The panel host looks for a Quake-like screen size of <code>1920x480</code> or <code>480x1920</code>, then places a full-frame borderless window unless debug mode is requested.</td>
+          </tr>
+          <tr>
+            <td>Control HID</td>
+            <td>Vendor HID interface for control reports, knob events, state responses, safe commands, and knob-ring output.</td>
+            <td>Known control specs include VID/PID <code>0x4158/0x514B</code> and <code>0x5012/0x6817</code> with usage page <code>0xFF60</code>.</td>
+          </tr>
+          <tr>
+            <td>Touch HID</td>
+            <td>Touch reports are decoded into normalized runtime touch points.</td>
+            <td>The supported touch spec is VID/PID <code>0x0712/0x0010</code>; macOS may also expose the touch collection as a standard digitizer usage page <code>0x000D</code>, usage <code>0x0004</code>.</td>
+          </tr>
+          <tr>
+            <td>Safe output</td>
+            <td>Wake, keep-alive, firmware query, mic query, luminance query, brightness, and knob-ring lighting.</td>
+            <td>DFU / firmware-download behavior must remain out of probe commands, UI controls, tests, examples, and plugin APIs.</td>
+          </tr>
+        </tbody>
+      </table>
+      <pre><code># Display-only diagnostics; intentionally disables HID input.
+.build/debug/quake-panel --display-test --no-hid
+
+# Normal hardware mode; opens the DK display and starts HID.
+.build/debug/quake-panel</code></pre>
+    </section>
+
+    <section id="architecture" aria-labelledby="architecture-title">
+      <h2 id="architecture-title">Platform Layers</h2>
+      <div class="flow" aria-label="QuakeKit platform layers">
+        <div><b>Device adapters</b><span>Own transport-specific I/O and normalize device bytes into runtime events.</span></div>
+        <div><b>Runtime core</b><span>Owns pages, tiles, actions, state, routing, events, and knob-ring arbitration.</span></div>
+        <div><b>Plugin API</b><span>Defines language-neutral manifests, capabilities, permissions, and host/plugin messages.</span></div>
+        <div><b>Host apps</b><span>Own macOS windowing, AppKit rendering, HID access, secrets, audio, and app launching.</span></div>
+        <div><b>Packages</b><span>Theme and functional plugin packages supply presentation and behavior metadata.</span></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Module or target</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>QuakeHID</code></td>
+            <td>IOKit HID transport, DK-Quake protocol frames, report decoding, and safe device commands.</td>
+          </tr>
+          <tr>
+            <td><code>QuakeRuntime</code></td>
+            <td>Runtime events, device event models, page/tile/action models, and knob-ring coordination.</td>
+          </tr>
+          <tr>
+            <td><code>QuakePluginAPI</code></td>
+            <td>Codable functional plugin and theme manifests, validators, package loaders, permissions, capabilities, and message types.</td>
+          </tr>
+          <tr>
+            <td><code>quake-probe</code></td>
+            <td>Diagnostic CLI for protocol self-tests, HID enumeration, manifest validation, live event logging, brightness, and knob-ring checks.</td>
+          </tr>
+          <tr>
+            <td><code>quake-panel</code></td>
+            <td>First AppKit panel host with native shell pages, sample plugin/theme discovery, HID touch and knob event routing, and theme persistence.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="themes" aria-labelledby="themes-title">
+      <h2 id="themes-title">Theme Plugin Contract</h2>
+      <p>Theme plugins own presentation, not behavior. A theme package ends in <code>.quakekittheme</code> and contains a required <code>theme.json</code> manifest. Assets are optional and referenced from the manifest.</p>
+      <pre><code>Examples/Themes/focus-dark.quakekittheme/
+  theme.json
+  assets/</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Fields</th>
+            <th>Current expectations</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Identity</td>
+            <td><code>id</code>, <code>name</code>, <code>version</code>, <code>apiVersion</code>, <code>kind</code></td>
+            <td><code>apiVersion</code> is currently <code>0.1</code>; <code>kind</code> must be <code>theme</code>; ids must match <code>^[a-z0-9][a-z0-9_-]*$</code>.</td>
+          </tr>
+          <tr>
+            <td>Palette</td>
+            <td><code>palette.mode</code>, <code>palette.colors</code>, <code>semanticColors</code></td>
+            <td>Colors are literal <code>#RRGGBB</code> or <code>#RRGGBBAA</code>. Semantic colors provide host fallback roles for native controls, widgets, and future web bridges.</td>
+          </tr>
+          <tr>
+            <td>Typography and metrics</td>
+            <td><code>typography</code>, <code>metrics</code></td>
+            <td>Optional font preferences, type scale, corner radius, border width, spacing, and density.</td>
+          </tr>
+          <tr>
+            <td>Components</td>
+            <td><code>tile</code>, <code>tab</code>, <code>statusRow</code>, <code>gauge</code>, <code>chart</code></td>
+            <td>Component styles may reference semantic colors, palette tokens, or literal colors. The host falls back to semantic colors when component styles are absent.</td>
+          </tr>
+          <tr>
+            <td>Hardware presentation</td>
+            <td><code>hardware.knobRing</code></td>
+            <td>Themes map semantic ring states to color, intensity, and animation. Themes do not send HID commands or own device state.</td>
+          </tr>
+          <tr>
+            <td>Options</td>
+            <td><code>options</code></td>
+            <td>Current shell supports persisted overrides for <code>palette.colors.&lt;token&gt;.value</code>, <code>metrics.cornerRadius</code>, <code>metrics.spacing</code>, and <code>metrics.density</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <pre><code>{
+  "id": "focus_dark",
+  "apiVersion": "0.1",
+  "kind": "theme",
+  "palette": {
+    "mode": "dark",
+    "colors": {
+      "accent": { "value": "#7CFFD1", "configurable": true }
+    },
+    "semanticColors": {
+      "accent": "accent"
+    }
+  },
+  "hardware": {
+    "knobRing": {
+      "enabled": true,
+      "focus": { "color": "accent", "intensity": 0.7, "animation": "pulse" }
+    }
+  }
+}</code></pre>
+    </section>
+
+    <section id="functional" aria-labelledby="functional-title">
+      <h2 id="functional-title">Functional Plugin Contract</h2>
+      <p>Functional plugins own behavior: actions, data streams, applet pages, widgets, adapters, and background work. Packaged plugins end in <code>.quakekitplugin</code> and contain <code>manifest.json</code>. Loose JSON manifests are still supported for early validation.</p>
+      <pre><code>Examples/Plugins/weather.quakekitplugin/
+  manifest.json
+  index.html
+  assets/</code></pre>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Contract</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Entrypoint</td>
+            <td><code>entry.transport</code> is one of <code>stdioJSONRPC</code>, <code>websocket</code>, <code>nativeSwift</code>, <code>webView</code>, <code>shell</code>, or <code>php</code>. Optional fields include <code>command</code>, <code>arguments</code>, and <code>url</code>.</td>
+          </tr>
+          <tr>
+            <td>Capabilities</td>
+            <td>Discovery flags: <code>settings</code>, <code>eventPublisher</code>, <code>eventSubscriber</code>, <code>dataProvider</code>, <code>actionProvider</code>, <code>viewProvider</code>, <code>deviceProvider</code>, and <code>backgroundWorker</code>.</td>
+          </tr>
+          <tr>
+            <td>Permissions</td>
+            <td>Explicit declarations for sensitive access: network hosts, named secrets, scoped filesystem paths, input synthesis, audio capture, and local process access.</td>
+          </tr>
+          <tr>
+            <td>Actions</td>
+            <td>Invokable commands with stable ids, titles, and optional ordered argument schemas.</td>
+          </tr>
+          <tr>
+            <td>Data streams</td>
+            <td>Published values with stable ids, titles, and optional value schemas consumed by views, host surfaces, or future plugin bridges.</td>
+          </tr>
+          <tr>
+            <td>Views</td>
+            <td>Applet pages and widgets with optional type, presentation, entry path, backing stream, grid spans, and preferred dimensions.</td>
+          </tr>
+        </tbody>
+      </table>
+      <pre><code>{
+  "id": "weather",
+  "apiVersion": "0.1",
+  "entry": { "transport": "webView", "url": "index.html" },
+  "capabilities": ["dataProvider", "viewProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.weather.gov", "api.open-meteo.com"] } }
+  ],
+  "actions": [
+    { "id": "weather.refresh", "title": "Refresh Forecast" }
+  ],
+  "dataStreams": [
+    { "id": "weather.current", "title": "Current Weather" }
+  ],
+  "views": [
+    {
+      "id": "weather.canvas",
+      "type": "webCanvas",
+      "presentation": "pageAndWidget",
+      "entryPath": "index.html",
+      "dataStreamID": "weather.current"
+    }
+  ]
+}</code></pre>
+    </section>
+
+    <section id="knob-ring" aria-labelledby="knob-ring-title">
+      <h2 id="knob-ring-title">Knob-Ring Runtime Arbitration</h2>
+      <p>The knob ring is treated as a shared physical indicator. Functional plugins and host subsystems should request semantic states, not raw LED colors. The runtime resolves competing requests, then maps the winning semantic state through the active theme.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Source</th>
+            <th>Typical use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>0</code></td>
+            <td><code>idle</code></td>
+            <td>Theme default when no active request exists.</td>
+          </tr>
+          <tr>
+            <td><code>20</code></td>
+            <td><code>focus</code></td>
+            <td>Touch, knob movement, selected controls, or active navigation.</td>
+          </tr>
+          <tr>
+            <td><code>40</code></td>
+            <td><code>pluginStatus</code></td>
+            <td>Normal plugin status such as healthy, loaded, or refreshed.</td>
+          </tr>
+          <tr>
+            <td><code>60</code></td>
+            <td><code>warning</code></td>
+            <td>Attention states that should not fully interrupt the user.</td>
+          </tr>
+          <tr>
+            <td><code>80</code></td>
+            <td><code>danger</code></td>
+            <td>Urgent plugin or host conditions.</td>
+          </tr>
+          <tr>
+            <td><code>100</code></td>
+            <td><code>systemCritical</code></td>
+            <td>Host-critical conditions that should override lower-priority requests.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Resolution rules are deterministic: expired requests are pruned, higher priority wins, and newer requests win ties. If no request is active, the runtime uses the theme's <code>idle</code> state. If the active theme disables the ring or does not define a usable state, the host turns the ring off.</p>
+      <pre><code>// Current runtime shape.
+KnobRingRequest(
+  source: "weather",
+  state: .warning,
+  priority: .warning,
+  ttl: 2.5
+)</code></pre>
+    </section>
+
+    <section id="validation" aria-labelledby="validation-title">
+      <h2 id="validation-title">Validation Commands</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Build and self-test</h3>
+          <pre><code>swift build
+swift run quake-probe --self-test
+swift run quake-test</code></pre>
+        </article>
+        <article class="card">
+          <h3>Enumerate HID</h3>
+          <pre><code>swift run quake-probe
+.build/debug/quake-probe --all-hid</code></pre>
+        </article>
+        <article class="card">
+          <h3>Validate functional plugins</h3>
+          <pre><code>swift run quake-probe --validate-plugin Examples/Plugins/echo-plugin.json
+
+for f in Examples/Plugins/*.json Examples/Plugins/*.quakekitplugin/manifest.json; do
+  swift run quake-probe --validate-plugin "$f"
+done</code></pre>
+        </article>
+        <article class="card">
+          <h3>Run plugin actions</h3>
+          <pre><code>swift run quake-probe --run-plugin-action Examples/Plugins/system-monitor.quakekitplugin/manifest.json system.refresh
+swift run quake-probe --run-plugin-action Examples/Plugins/echo-plugin.json echo.say</code></pre>
+        </article>
+        <article class="card">
+          <h3>Validate themes</h3>
+          <pre><code>for f in Examples/Themes/*.quakekittheme/theme.json; do
+  swift run quake-probe --validate-theme "$f"
+done</code></pre>
+        </article>
+        <article class="card">
+          <h3>Safe live hardware checks</h3>
+          <pre><code>swift run quake-probe --listen --wake
+.build/debug/quake-probe --led-on
+.build/debug/quake-probe --led-off
+.build/debug/quake-probe --brightness 128</code></pre>
+        </article>
+        <article class="card">
+          <h3>Panel launch modes</h3>
+          <pre><code>.build/debug/quake-panel
+.build/debug/quake-panel --no-hid
+.build/debug/quake-panel --debug-window
+.build/debug/quake-panel --display-test --no-hid</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="roadmap" aria-labelledby="roadmap-title">
+      <h2 id="roadmap-title">Near-Term Roadmap</h2>
+      <div class="grid">
+        <article class="card third">
+          <h3>Phase 1: Host runtime</h3>
+          <ul>
+            <li>Keep hardening AppKit placement on the DK display.</li>
+            <li>Connect runtime event bus paths cleanly to HID touch and knob events.</li>
+            <li>Broaden page model rendering and local action dispatch.</li>
+            <li>Add a Keychain-backed secret store abstraction.</li>
+          </ul>
+        </article>
+        <article class="card third">
+          <h3>Phase 2: Plugin runtime</h3>
+          <ul>
+            <li>Persist a plugin registry in Application Support.</li>
+            <li>Add trusted in-process Swift adapters for first-party integrations.</li>
+            <li>Implement out-of-process JSON-RPC over stdio.</li>
+            <li>Add permission grant UI, persisted grants, and data subscriptions.</li>
+          </ul>
+        </article>
+        <article class="card third">
+          <h3>Phase 3: Control center</h3>
+          <ul>
+            <li>Embed dashboard pages with <code>WKWebView</code>.</li>
+            <li>Build native settings and editor UI.</li>
+            <li>Move integrations such as Home Assistant, music, metrics, and calendar through the plugin surfaces.</li>
+            <li>Document OS-agnostic protocol behavior for future Windows and Linux hosts.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">
+        <p><strong>Tester focus:</strong> the most useful reports still include <code>quake-probe --all-hid</code> output, physical display mode and rotation, confirmation of touch/knob/LED behavior, and whether the rendered panel is visible on the DK screen.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Generated as a single-file developer overview from the current QuakeKit repository structure, source contracts, and docs. This file uses inline CSS only and no external assets.</p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -178,3 +178,14 @@ for f in Examples/Plugins/*.json Examples/Plugins/*.quakekitplugin/manifest.json
   swift run quake-probe --validate-plugin "$f"
 done
 ```
+
+Run a local executable action with:
+
+```bash
+swift run quake-probe --run-plugin-action Examples/Plugins/system-monitor.quakekitplugin/manifest.json system.refresh
+```
+
+The first runtime host supports packaged `shell`, `php`, and `stdioJSONRPC`
+commands with a synchronous JSON request/response envelope. Web applet rendering,
+long-lived stream subscriptions, and permission prompts are still active
+implementation areas.

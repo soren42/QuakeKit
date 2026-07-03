@@ -17,6 +17,7 @@ Confirmed:
 - HID touch input works.
 - Knob-ring output works.
 - The plugin manifest/API skeleton builds and validates sample manifests.
+- Local shell/PHP/stdio-style plugin actions can be invoked through the runtime host.
 - The AppKit panel UI renders on the DK physical display.
 - The native shell supports Home, Widgets, Apps, Themes, and Runtime pages.
 
@@ -44,6 +45,7 @@ Run protocol checks without hardware:
 
 ```bash
 swift run quake-probe --self-test
+swift run quake-test
 ```
 
 Test confirmed HID output to the knob ring:
@@ -57,6 +59,12 @@ Validate a sample plugin manifest:
 
 ```bash
 swift run quake-probe --validate-plugin Examples/Plugins/echo-plugin.json
+```
+
+Run a sample plugin action without hardware:
+
+```bash
+swift run quake-probe --run-plugin-action Examples/Plugins/system-monitor.quakekitplugin/manifest.json system.refresh
 ```
 
 Validate all bundled example manifests:
@@ -106,8 +114,10 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 
 - `QuakeHID`: IOKit HID transport plus DK-Quake protocol frames.
 - `QuakeRuntime`: device events, page/tile/action models, runtime event envelope.
+- `PluginExecutionHost`: local plugin action execution for packaged shell, PHP, and stdio-style adapters.
 - `QuakePluginAPI`: Codable functional plugin and theme manifests, permissions, capabilities, package loading, and host/plugin message types.
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
+- `quake-test`: portable regression target for protocol, plugin, and runtime checks.
 - `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
 
 ## Current Hardware Notes

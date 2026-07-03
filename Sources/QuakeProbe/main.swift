@@ -38,6 +38,15 @@ if let validateIndex = rawArguments.firstIndex(of: "--validate-theme") {
     exit(0)
 }
 
+if let runIndex = rawArguments.firstIndex(of: "--run-plugin-action") {
+    guard rawArguments.indices.contains(runIndex + 2) else {
+        fputs("--run-plugin-action requires <manifest-path> <action-id>\n", stderr)
+        exit(64)
+    }
+    runPluginAction(manifestPath: rawArguments[runIndex + 1], actionID: rawArguments[runIndex + 2])
+    exit(0)
+}
+
 if ledOn || ledOff || ledTest || brightnessValue != nil {
     let quake = QuakeDevice { event in
         print(format(event))
@@ -95,6 +104,7 @@ guard listen else {
     print("Run with --self-test to verify protocol encoding/decoding without hardware.")
     print("Run with --validate-plugin <path> to decode and validate a plugin manifest.")
     print("Run with --validate-theme <path> to decode and validate a theme manifest.")
+    print("Run with --run-plugin-action <manifest-path> <action-id> to invoke a local plugin action.")
     print("Run with --all-hid to dump every related HID collection without usage-page filtering.")
     print("Run with --led-on, --led-off, or --led-test to test knob ring output reports.")
     print("Run with --brightness <0-255> to set and query screen luminance.")
@@ -199,9 +209,10 @@ func parseBrightness(from arguments: [String]) -> UInt8? {
 
 func validatePluginManifest(at path: String) {
     do {
-        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let manifestURL = URL(fileURLWithPath: path)
+        let data = try Data(contentsOf: manifestURL)
         let manifest = try JSONDecoder().decode(PluginManifest.self, from: data)
-        let result = PluginManifestValidator.validate(manifest)
+        let result = PluginManifestValidator.validatePackage(manifest, baseURL: manifestURL.deletingLastPathComponent())
         if result.isValid {
             print("Plugin manifest valid: \(manifest.id) (\(manifest.name))")
         } else {
@@ -245,6 +256,49 @@ func validateThemeManifest(at path: String) {
         fputs("Could not validate theme manifest: \(error)\n", stderr)
         exit(65)
     }
+}
+
+func runPluginAction(manifestPath: String, actionID: String) {
+    do {
+        let manifestURL = URL(fileURLWithPath: manifestPath)
+        let data = try Data(contentsOf: manifestURL)
+        let manifest = try JSONDecoder().decode(PluginManifest.self, from: data)
+        let validation = PluginManifestValidator.validate(manifest)
+        guard validation.isValid else {
+            fputs("Plugin manifest invalid: \(validation.errors.joined(separator: "; "))\n", stderr)
+            exit(65)
+        }
+        let package = PluginPackage(
+            manifest: manifest,
+            baseURL: manifestURL.deletingLastPathComponent(),
+            manifestURL: manifestURL
+        )
+        let result = PluginExecutionHost(packages: [package]).invokeAction(pluginID: manifest.id, actionID: actionID)
+        print("Plugin action \(manifest.id).\(actionID): \(result.response.ok ? "ok" : "failed")")
+        if let resultValue = result.response.result {
+            print("result: \(pretty(resultValue))")
+        }
+        if let error = result.response.error {
+            print("error: \(error)")
+        }
+        if !result.stderr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            print("stderr: \(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))")
+        }
+        print("duration: \(String(format: "%.3f", result.duration))s")
+        exit(result.response.ok ? 0 : 2)
+    } catch {
+        fputs("Could not run plugin action: \(error)\n", stderr)
+        exit(65)
+    }
+}
+
+func pretty(_ value: JSONValue) -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    if let data = try? encoder.encode(value), let string = String(data: data, encoding: .utf8) {
+        return string
+    }
+    return String(describing: value)
 }
 
 func runLEDTransportTest(_ quake: QuakeDevice) {
