@@ -109,6 +109,7 @@ public enum PluginPermission: Codable, Equatable, Sendable {
     case filesystem(paths: [String], write: Bool)
     case inputSynthesis
     case audioCapture
+    case audioPlayback
     case localProcess
 }
 

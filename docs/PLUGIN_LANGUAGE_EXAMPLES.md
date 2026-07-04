@@ -131,6 +131,12 @@ matches the service boundary:
 - Hotkey Grid: local action provider for macro buttons and command palettes.
 - Music companion: local or networked provider for Spotify, Apple Music, or
   other now-playing sources.
+- Voice AI and Meeting Notes: microphone/speaker-capable harnesses that hand off
+  to Wispr Flow, local `whisper`, Apple Speech, or official model APIs as the
+  user configures credentials and capture policy.
+- LLM provider harnesses: ChatGPT, Claude, Grok, Gemini, DeepSeek, and Cursor
+  companion stubs. These use official API/local companion boundaries and avoid
+  consumer UI scraping or browser automation.
 
 For service-shaped payloads, prefer `dataDriven` views backed by a data stream.
 The host can render common row, device, scoreboard, and ticker payloads through

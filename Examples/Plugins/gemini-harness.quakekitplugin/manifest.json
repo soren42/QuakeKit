@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "gemini_harness",
+  "name": "Gemini Harness",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "gemini-harness.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["generativelanguage.googleapis.com"] } },
+    { "secrets": { "keys": ["GEMINI_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "model", "title": "Model", "type": "choice", "defaultValue": "gemini-pro", "choices": ["gemini-pro", "gemini-flash"], "environment": "QUAKEKIT_GEMINI_MODEL", "help": "Gemini API model alias." },
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "assistant", "choices": ["assistant", "meeting_summary", "research"], "environment": "QUAKEKIT_GEMINI_MODE", "help": "Prompt/workflow preset." }
+  ],
+  "actions": [
+    { "id": "gemini.refresh", "title": "Refresh Gemini", "argumentSchema": [] },
+    { "id": "gemini.sendPrompt", "title": "Send Prompt", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "gemini.session", "title": "Gemini Session", "valueSchema": [] }],
+  "views": [
+    { "id": "gemini.panel", "title": "Gemini", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "gemini.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

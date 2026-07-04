@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "deepseek_harness",
+  "name": "DeepSeek Harness",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "deepseek-harness.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.deepseek.com"] } },
+    { "secrets": { "keys": ["DEEPSEEK_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "model", "title": "Model", "type": "choice", "defaultValue": "deepseek-chat", "choices": ["deepseek-chat", "deepseek-reasoner"], "environment": "QUAKEKIT_DEEPSEEK_MODEL", "help": "DeepSeek API model alias." },
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "assistant", "choices": ["assistant", "reasoning", "coding"], "environment": "QUAKEKIT_DEEPSEEK_MODE", "help": "Prompt/workflow preset." }
+  ],
+  "actions": [
+    { "id": "deepseek.refresh", "title": "Refresh DeepSeek", "argumentSchema": [] },
+    { "id": "deepseek.sendPrompt", "title": "Send Prompt", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "deepseek.session", "title": "DeepSeek Session", "valueSchema": [] }],
+  "views": [
+    { "id": "deepseek.panel", "title": "DeepSeek", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "deepseek.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

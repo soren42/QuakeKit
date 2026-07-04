@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "grok_harness",
+  "name": "Grok Harness",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "grok-harness.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.x.ai"] } },
+    { "secrets": { "keys": ["XAI_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "model", "title": "Model", "type": "choice", "defaultValue": "grok", "choices": ["grok", "grok-mini"], "environment": "QUAKEKIT_GROK_MODEL", "help": "xAI API model alias." },
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "assistant", "choices": ["assistant", "research", "briefing"], "environment": "QUAKEKIT_GROK_MODE", "help": "Prompt/workflow preset." }
+  ],
+  "actions": [
+    { "id": "grok.refresh", "title": "Refresh Grok", "argumentSchema": [] },
+    { "id": "grok.sendPrompt", "title": "Send Prompt", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "grok.session", "title": "Grok Session", "valueSchema": [] }],
+  "views": [
+    { "id": "grok.panel", "title": "Grok", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "grok.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

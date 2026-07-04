@@ -42,7 +42,8 @@ let package = Package(
                 .process("Resources")
             ],
             linkerSettings: [
-                .linkedFramework("AppKit")
+                .linkedFramework("AppKit"),
+                .linkedFramework("AVFoundation")
             ]
         ),
         .executableTarget(

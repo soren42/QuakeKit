@@ -1,5 +1,62 @@
 #!/bin/sh
 set -eu
 
-cat >/dev/null
-printf '{"agent":"stub","status":"ready","message":"AI agent adapter placeholder is reachable."}\n'
+request="$(cat)"
+method="$(printf '%s' "$request" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+provider="${QUAKEKIT_AGENT_PROVIDER:-openai}"
+backend="${QUAKEKIT_AGENT_TRANSCRIBE_BACKEND:-wispr_flow}"
+audio_file="${QUAKEKIT_AGENT_AUDIO_FILE:-}"
+summary_style="${QUAKEKIT_AGENT_SUMMARY_STYLE:-meeting_notes}"
+speaker_output="${QUAKEKIT_AGENT_SPEAKER_OUTPUT:-false}"
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g'
+}
+
+transcript="No transcript has been captured yet."
+transcription_state="stub"
+transcription_detail="Configure an audio file or connect a live recorder."
+
+if [ -n "$audio_file" ] && [ -f "$audio_file" ]; then
+  if command -v whisper >/dev/null 2>&1; then
+    text_file="$(mktemp -t quakekit-whisper).txt"
+    if whisper "$audio_file" --model tiny --output_format txt --output_dir "$(dirname "$text_file")" >/dev/null 2>&1; then
+      candidate="$(dirname "$text_file")/$(basename "$audio_file" | sed 's/\.[^.]*$//').txt"
+      if [ -f "$candidate" ]; then
+        transcript="$(sed -n '1,12p' "$candidate" | tr '\n' ' ')"
+        transcription_state="transcribed"
+        transcription_detail="local whisper"
+      fi
+    fi
+    rm -f "$text_file"
+  elif [ "$backend" = "wispr_flow" ]; then
+    transcript="Wispr Flow is selected. Use the installed app to dictate into the active text destination; QuakeKit will consume saved text in a future bridge."
+    transcription_state="external"
+    transcription_detail="wispr flow selected"
+  fi
+fi
+
+case "$method" in
+  action.agent.listen)
+    state="listening"
+    ;;
+  action.agent.stop)
+    state="stopped"
+    ;;
+  action.agent.transcribe)
+    state="$transcription_state"
+    ;;
+  action.agent.summarize)
+    state="summarized"
+    ;;
+  action.agent.speak)
+    state="speaker ${speaker_output}"
+    ;;
+  *)
+    state="ready"
+    ;;
+esac
+
+printf '{"status":"%s","provider":"%s","backend":"%s","summaryStyle":"%s","speakerOutput":%s,"rows":[{"title":"Provider","value":"%s","detail":"official API/local endpoint only"},{"title":"Transcription","value":"%s","detail":"%s"},{"title":"Summary","value":"%s","detail":"meeting and brainstorming notes"},{"title":"Transcript","value":"Ready","detail":"%s"}],"source":"ai-agent-adapter"}\n' \
+  "$(json_escape "$state")" "$(json_escape "$provider")" "$(json_escape "$backend")" "$(json_escape "$summary_style")" "$speaker_output" \
+  "$(json_escape "$provider")" "$(json_escape "$backend")" "$(json_escape "$transcription_detail")" "$(json_escape "$summary_style")" "$(json_escape "$transcript")"

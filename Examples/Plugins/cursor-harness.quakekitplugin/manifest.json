@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "cursor_harness",
+  "name": "Cursor Harness",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "cursor-harness.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "filesystem": { "paths": ["~/Code", "~/Documents"], "write": false } },
+    { "localProcess": {} }
+  ],
+  "settings": [
+    { "id": "workspace", "title": "Workspace", "type": "string", "defaultValue": "~/Code", "environment": "QUAKEKIT_CURSOR_WORKSPACE", "help": "Workspace path for future Cursor companion status." },
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "status", "choices": ["status", "tasks", "handoff"], "environment": "QUAKEKIT_CURSOR_MODE", "help": "Companion workflow preset." }
+  ],
+  "actions": [
+    { "id": "cursor.refresh", "title": "Refresh Cursor", "argumentSchema": [] },
+    { "id": "cursor.openWorkspace", "title": "Open Workspace", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "cursor.status", "title": "Cursor Status", "valueSchema": [] }],
+  "views": [
+    { "id": "cursor.panel", "title": "Cursor", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "cursor.status", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

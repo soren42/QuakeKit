@@ -11,7 +11,14 @@ host validates each `manifest.json` against
 | `markets.quakekitplugin` | PHP | `php` | Market ticker provider with environment-backed settings. |
 | `obs-stream-controls.quakekitplugin` | POSIX shell | `shell` | OBS stream scene and control stubs. |
 | `octoprint-printer.quakekitplugin` | POSIX shell | `shell` | OctoPrint printer status and control stubs. |
-| `ai-agent.quakekitplugin` | HTML plus stdio adapter | `stdioJSONRPC` | Web document surface for an agent adapter. |
+| `ai-agent.quakekitplugin` | HTML plus stdio adapter | `stdioJSONRPC` | Voice-capable agent surface with transcription and summary settings. |
+| `meeting-notes.quakekitplugin` | POSIX shell | `shell` | Meeting recorder, transcription, summary, and export harness. |
+| `chatgpt-harness.quakekitplugin` | POSIX shell | `shell` | ChatGPT/OpenAI API companion stub. |
+| `claude-harness.quakekitplugin` | POSIX shell | `shell` | Claude/Anthropic API companion stub. |
+| `grok-harness.quakekitplugin` | POSIX shell | `shell` | Grok/xAI API companion stub. |
+| `cursor-harness.quakekitplugin` | POSIX shell | `shell` | Cursor local companion and workspace status stub. |
+| `gemini-harness.quakekitplugin` | POSIX shell | `shell` | Gemini API companion stub. |
+| `deepseek-harness.quakekitplugin` | POSIX shell | `shell` | DeepSeek API companion stub. |
 | `sports.quakekitplugin` | Executable stdio adapter | `stdioJSONRPC` | Scoreboard data provider. |
 | `discord-companion.quakekitplugin` | POSIX shell | `shell` | Discord presence, voice, and webhook companion stub. |
 | `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS scene, stream, and recording controls stub. |
@@ -34,6 +41,12 @@ service-specific bridges are implemented. They still declare realistic settings,
 permissions, actions, data streams, and `dataDriven` views so the host can load
 them, render them through the generic native data board, and expose their
 settings from the tray configuration window.
+
+LLM and voice harnesses use official API, local CLI, local companion, or
+user-configured endpoint boundaries. They should not scrape or automate vendor
+consumer interfaces. The first pass supports Wispr Flow handoff, local
+`whisper` CLI transcription of configured audio files, and declared host
+permissions for future microphone/speaker capture.
 
 The native Swift example is intentionally manifest-only. It documents the
 `nativeSwift` transport without adding runtime Swift source, package targets, or

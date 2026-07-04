@@ -78,6 +78,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var pointerGuardTimer: Timer?
     private var lastRingOutput: KnobRingResolvedOutput?
     private var displaySleepAssertionID: IOPMAssertionID = 0
+    private let audioService = QuakeAudioService()
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
@@ -125,6 +126,10 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Open Settings...", action: #selector(openSettingsWindow), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Show Panel", action: #selector(showPanelWindow), keyEquivalent: ""))
         menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Request Microphone Access", action: #selector(requestMicrophoneAccess), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Record 30s Meeting Clip", action: #selector(recordMeetingClip), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Speak Test Phrase", action: #selector(speakTestPhrase), keyEquivalent: ""))
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit QuakeKit", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items {
             item.target = self
@@ -162,6 +167,32 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showPanelWindow() {
         window?.orderFrontRegardless()
+    }
+
+    @objc private func requestMicrophoneAccess() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let granted = await audioService.requestCapturePermission()
+            let status = granted ? "Microphone authorized" : "Microphone denied"
+            log("audio \(status) current=\(audioService.capturePermissionDescription)")
+            panelView?.status = status
+        }
+    }
+
+    @objc private func recordMeetingClip() {
+        do {
+            let url = try audioService.startMeetingClip(duration: 30)
+            log("audio recording started \(url.path)")
+            panelView?.status = "Recording 30s meeting clip"
+        } catch {
+            log("audio recording failed: \(error)")
+            panelView?.status = "Audio record failed: \(error)"
+        }
+    }
+
+    @objc private func speakTestPhrase() {
+        audioService.speak("QuakeKit voice output is ready.")
+        panelView?.status = "Speaker test sent"
     }
 
     @objc private func openSettingsWindow() {

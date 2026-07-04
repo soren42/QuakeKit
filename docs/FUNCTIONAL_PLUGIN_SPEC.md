@@ -99,6 +99,7 @@ exactly one permission.
 | `filesystem` | `{ "filesystem": { "paths": ["~/Data"], "write": false } }` | Allows scoped file access. |
 | `inputSynthesis` | `{ "inputSynthesis": {} }` | Allows synthetic input events. |
 | `audioCapture` | `{ "audioCapture": {} }` | Allows microphone/audio capture. |
+| `audioPlayback` | `{ "audioPlayback": {} }` | Allows speaker or system audio playback. |
 | `localProcess` | `{ "localProcess": {} }` | Allows local process inspection or execution. |
 
 Permissions should be narrow and declarative. A plugin should request the minimum

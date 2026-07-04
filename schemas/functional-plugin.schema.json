@@ -232,6 +232,9 @@
           "$ref": "#/$defs/emptyPermission/audioCapture"
         },
         {
+          "$ref": "#/$defs/emptyPermission/audioPlayback"
+        },
+        {
           "$ref": "#/$defs/emptyPermission/localProcess"
         }
       ]
@@ -258,6 +261,19 @@
         ],
         "properties": {
           "audioCapture": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "audioPlayback": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "audioPlayback"
+        ],
+        "properties": {
+          "audioPlayback": {
             "type": "object",
             "additionalProperties": false
           }

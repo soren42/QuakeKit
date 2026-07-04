@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "claude_harness",
+  "name": "Claude Harness",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "claude-harness.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.anthropic.com"] } },
+    { "secrets": { "keys": ["ANTHROPIC_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "model", "title": "Model", "type": "choice", "defaultValue": "claude-sonnet", "choices": ["claude-opus", "claude-sonnet", "claude-haiku"], "environment": "QUAKEKIT_CLAUDE_MODEL", "help": "Anthropic API model family or locally mapped alias." },
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "assistant", "choices": ["assistant", "code_review", "meeting_summary"], "environment": "QUAKEKIT_CLAUDE_MODE", "help": "Prompt/workflow preset." }
+  ],
+  "actions": [
+    { "id": "claude.refresh", "title": "Refresh Claude", "argumentSchema": [] },
+    { "id": "claude.sendPrompt", "title": "Send Prompt", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "claude.session", "title": "Claude Session", "valueSchema": [] }],
+  "views": [
+    { "id": "claude.panel", "title": "Claude", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "claude.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

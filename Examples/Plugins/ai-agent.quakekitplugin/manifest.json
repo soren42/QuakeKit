@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "ai_agent",
-  "name": "AI Agent",
-  "version": "0.1.0",
+  "name": "Voice AI Agent",
+  "version": "0.2.0",
   "apiVersion": "0.1",
   "entry": {
     "transport": "stdioJSONRPC",
@@ -11,18 +11,39 @@
   },
   "capabilities": [
     "actionProvider",
+    "dataProvider",
+    "settings",
     "viewProvider",
-    "eventSubscriber"
+    "eventSubscriber",
+    "backgroundWorker"
   ],
   "permissions": [
     {
       "audioCapture": {}
     },
     {
+      "audioPlayback": {}
+    },
+    {
+      "localProcess": {}
+    },
+    {
+      "filesystem": {
+        "paths": [
+          "~/Documents",
+          "~/Desktop",
+          "~/Downloads"
+        ],
+        "write": true
+      }
+    },
+    {
       "network": {
         "hosts": [
           "api.openai.com",
-          "api.anthropic.com"
+          "api.anthropic.com",
+          "generativelanguage.googleapis.com",
+          "api.deepseek.com"
         ]
       }
     },
@@ -30,9 +51,56 @@
       "secrets": {
         "keys": [
           "OPENAI_API_KEY",
-          "ANTHROPIC_API_KEY"
+          "ANTHROPIC_API_KEY",
+          "GEMINI_API_KEY",
+          "DEEPSEEK_API_KEY"
         ]
       }
+    }
+  ],
+  "settings": [
+    {
+      "id": "llm_provider",
+      "title": "LLM Provider",
+      "type": "choice",
+      "defaultValue": "openai",
+      "choices": ["openai", "anthropic", "gemini", "deepseek", "local"],
+      "environment": "QUAKEKIT_AGENT_PROVIDER",
+      "help": "Official API or local provider used by future agent execution."
+    },
+    {
+      "id": "transcription_backend",
+      "title": "Transcription Backend",
+      "type": "choice",
+      "defaultValue": "wispr_flow",
+      "choices": ["wispr_flow", "whisper_cli", "apple_speech", "openai_whisper", "manual_file"],
+      "environment": "QUAKEKIT_AGENT_TRANSCRIBE_BACKEND",
+      "help": "Preferred transcription path. The stub only transcribes configured files through local whisper when available."
+    },
+    {
+      "id": "audio_file",
+      "title": "Audio File",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_AGENT_AUDIO_FILE",
+      "help": "Optional local audio file to transcribe for meeting/brainstorm summaries."
+    },
+    {
+      "id": "summary_style",
+      "title": "Summary Style",
+      "type": "choice",
+      "defaultValue": "meeting_notes",
+      "choices": ["meeting_notes", "brainstorm", "action_items", "executive_summary"],
+      "environment": "QUAKEKIT_AGENT_SUMMARY_STYLE",
+      "help": "Preferred structure for generated summaries."
+    },
+    {
+      "id": "speaker_output",
+      "title": "Speaker Output",
+      "type": "boolean",
+      "defaultValue": false,
+      "environment": "QUAKEKIT_AGENT_SPEAKER_OUTPUT",
+      "help": "Whether future adapters may use spoken responses."
     }
   ],
   "actions": [
@@ -45,18 +113,53 @@
       "id": "agent.stop",
       "title": "Stop Listening",
       "argumentSchema": []
+    },
+    {
+      "id": "agent.transcribe",
+      "title": "Transcribe Audio",
+      "argumentSchema": []
+    },
+    {
+      "id": "agent.summarize",
+      "title": "Summarize Session",
+      "argumentSchema": []
+    },
+    {
+      "id": "agent.speak",
+      "title": "Speak Response",
+      "argumentSchema": []
     }
   ],
-  "dataStreams": [],
+  "dataStreams": [
+    {
+      "id": "agent.session",
+      "title": "Agent Session",
+      "valueSchema": []
+    }
+  ],
   "views": [
     {
       "id": "agent.conversation",
       "title": "Agent Console",
       "type": "webDocument",
-      "presentation": "page",
+      "presentation": "pageAndWidget",
       "entryPath": "index.html",
+      "dataStreamID": "agent.session",
+      "columnSpan": 3,
+      "rowSpan": 2,
       "preferredWidth": 1920,
       "preferredHeight": 480
+    },
+    {
+      "id": "agent.session",
+      "title": "Meeting Notes",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "agent.session",
+      "columnSpan": 3,
+      "rowSpan": 1,
+      "preferredWidth": 960,
+      "preferredHeight": 240
     }
   ]
 }
