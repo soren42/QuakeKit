@@ -1779,15 +1779,22 @@ final class PanelView: NSView {
             return [("Plugin View", "missing")]
         }
 
-        var rows = [
+        let entrypoint = view.entryPath
+            ?? package.manifest.entry.url?.relativeString
+            ?? package.manifest.entry.command
+            ?? "-"
+        let preferredWidth = view.preferredWidth ?? 0
+        let preferredHeight = view.preferredHeight ?? 0
+
+        var rows: [(title: String, value: String)] = [
             ("Plugin", package.manifest.name),
             ("View", view.title),
             ("Type", view.type?.rawValue ?? "unspecified"),
             ("Presentation", view.presentation?.rawValue ?? "page"),
             ("Layout", view.layout?.rawValue ?? "host default"),
-            ("Entrypoint", view.entryPath ?? package.manifest.entry.url?.relativeString ?? package.manifest.entry.command ?? "-"),
+            ("Entrypoint", entrypoint),
             ("Data Stream", view.dataStreamID ?? "-"),
-            ("Preferred Size", "\(view.preferredWidth ?? 0)x\(view.preferredHeight ?? 0)"),
+            ("Preferred Size", "\(preferredWidth)x\(preferredHeight)"),
             ("Package", package.baseURL.lastPathComponent)
         ]
 
