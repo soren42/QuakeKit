@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "app_context",
+  "name": "App Context",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "app-context.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "localProcess": {} }
+  ],
+  "settings": [
+    { "id": "profile_mode", "title": "Profile Mode", "type": "choice", "defaultValue": "auto", "choices": ["auto", "manual"], "environment": "QUAKEKIT_CONTEXT_PROFILE_MODE", "help": "Auto detects the frontmost application when macOS automation permits it.", "group": "Detection", "order": 10, "uiControl": "segmented" },
+    { "id": "manual_app", "title": "Manual App", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_CONTEXT_MANUAL_APP", "help": "Optional app name used when auto detection is unavailable.", "group": "Detection", "order": 20, "uiControl": "textField" },
+    { "id": "poll_interval", "title": "Poll Interval", "type": "choice", "defaultValue": 2, "choices": [1, 2, 5, 10], "environment": "QUAKEKIT_CONTEXT_POLL_SECONDS", "help": "Preferred context refresh cadence.", "group": "Detection", "order": 30, "uiControl": "popup" }
+  ],
+  "actions": [
+    { "id": "context.refresh", "title": "Refresh Context", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "context.frontmost", "title": "Frontmost App", "valueSchema": [
+      { "id": "appName", "title": "App Name", "type": "string", "required": false },
+      { "id": "windowTitle", "title": "Window Title", "type": "string", "required": false },
+      { "id": "profile", "title": "Profile", "type": "string", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "context.panel", "title": "App Context", "type": "dataDriven", "presentation": "widget", "dataStreamID": "context.frontmost", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 520, "preferredHeight": 220 }
+  ]
+}

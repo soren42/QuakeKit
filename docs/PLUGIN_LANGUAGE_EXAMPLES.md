@@ -131,6 +131,16 @@ matches the service boundary:
 - Hotkey Grid: local action provider for macro buttons and command palettes.
 - Music companion: local or networked provider for Spotify, Apple Music, or
   other now-playing sources.
+- App Context: frontmost app/window detection for routing companion panels and
+  hotkey grids. Keep detection best-effort and provide manual/env fallbacks
+  because macOS automation permissions vary by launch surface.
+- Creative and terminal companions: Affinity Photo 2, Warp AI, Terminus,
+  Terminus Beta, and general terminal workflows should publish context,
+  key/action plans, and dry-run status before synthesizing input.
+- AI Workbench companions: Claude, Claude Code, ChatGPT, Codex, Gemini, and
+  Antigravity panels should surface project path, active agent count, token
+  estimates, and remaining work limits through deterministic local settings or
+  status files before any provider-specific bridge is added.
 - Voice AI and Meeting Notes: microphone/speaker-capable harnesses that hand off
   to Wispr Flow, local `whisper`, Apple Speech, or official model APIs as the
   user configures credentials and capture policy.

@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "ai_workbench",
+  "name": "AI Workbench",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "ai-workbench.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "filesystem": { "paths": ["~/Code", "~/.codex", "~/.claude"], "write": false } },
+    { "localProcess": {} }
+  ],
+  "settings": [
+    { "id": "project_path", "title": "Project Path", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AI_PROJECT_PATH", "help": "Project path displayed on the workbench panel.", "group": "Project", "order": 10, "uiControl": "textField" },
+    { "id": "agent_count", "title": "Agent Count", "type": "integer", "defaultValue": 1, "minimum": 0, "maximum": 32, "environment": "QUAKEKIT_AI_AGENT_COUNT", "help": "Optional override for active agent count.", "group": "Session", "order": 20, "uiControl": "stepper" },
+    { "id": "tokens_used", "title": "Tokens Used", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 10000000, "environment": "QUAKEKIT_AI_TOKENS_USED", "help": "Current task token estimate.", "group": "Session", "order": 30, "uiControl": "stepper" },
+    { "id": "tokens_remaining", "title": "Tokens Remaining", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 10000000, "environment": "QUAKEKIT_AI_TOKENS_REMAINING", "help": "Remaining token/work budget estimate.", "group": "Session", "order": 40, "uiControl": "stepper" },
+    { "id": "status_file", "title": "Status File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AI_STATUS_FILE", "help": "Optional pipe-delimited provider|project|agents|used|remaining|limit status file.", "group": "Advanced", "order": 50, "uiControl": "filePicker" }
+  ],
+  "actions": [
+    { "id": "ai.refresh", "title": "Refresh AI Workbench", "argumentSchema": [] },
+    { "id": "ai.pauseAgents", "title": "Pause Agents", "argumentSchema": [] },
+    { "id": "ai.copySummary", "title": "Copy Summary", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "ai.session", "title": "AI Session", "valueSchema": [
+      { "id": "provider", "title": "Provider", "type": "string", "required": false },
+      { "id": "project", "title": "Project", "type": "string", "required": false },
+      { "id": "agents", "title": "Agents", "type": "integer", "required": false },
+      { "id": "tokensUsed", "title": "Tokens Used", "type": "integer", "required": false },
+      { "id": "tokensRemaining", "title": "Tokens Remaining", "type": "integer", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "ai.panel", "title": "AI Workbench", "type": "dataDriven", "presentation": "pageAndWidget", "layout": "halfAndGrid", "dataStreamID": "ai.session", "columnSpan": 3, "rowSpan": 1, "preferredWidth": 960, "preferredHeight": 240 }
+  ]
+}

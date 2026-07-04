@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "affinity_photo2",
+  "name": "Affinity Photo 2 Companion",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "affinity-photo2.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "localProcess": {} },
+    { "inputSynthesis": {} }
+  ],
+  "settings": [
+    { "id": "persona", "title": "Persona", "type": "choice", "defaultValue": "auto", "choices": ["auto", "photo", "develop", "liquify", "export"], "environment": "QUAKEKIT_AFFINITY_PERSONA", "help": "Persona-specific action set shown on the panel.", "group": "Context", "order": 10, "uiControl": "segmented" },
+    { "id": "document_name", "title": "Document Name", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AFFINITY_DOCUMENT", "help": "Optional document title override.", "group": "Context", "order": 20, "uiControl": "textField" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_AFFINITY_DRY_RUN", "help": "Actions are key plans until dry-run is disabled by the user.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "affinity.refresh", "title": "Refresh Affinity", "argumentSchema": [] },
+    { "id": "affinity.brush", "title": "Brush", "argumentSchema": [] },
+    { "id": "affinity.inpaint", "title": "Inpaint", "argumentSchema": [] },
+    { "id": "affinity.curves", "title": "Curves", "argumentSchema": [] },
+    { "id": "affinity.export", "title": "Export", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "affinity.context", "title": "Affinity Context", "valueSchema": [
+      { "id": "document", "title": "Document", "type": "string", "required": false },
+      { "id": "persona", "title": "Persona", "type": "string", "required": false },
+      { "id": "frontmost", "title": "Frontmost", "type": "boolean", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "affinity.panel", "title": "Affinity Photo 2", "type": "dataDriven", "presentation": "pageAndWidget", "layout": "grid", "dataStreamID": "affinity.context", "columnSpan": 2, "rowSpan": 2, "preferredWidth": 640, "preferredHeight": 360 }
+  ]
+}

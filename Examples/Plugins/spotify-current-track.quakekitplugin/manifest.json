@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "spotify_current_track",
+  "name": "Spotify Current Track",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "spotify-current-track.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.spotify.com"] } },
+    { "secrets": { "keys": ["SPOTIFY_ACCESS_TOKEN"] } }
+  ],
+  "settings": [
+    { "id": "track_file", "title": "Track File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_SPOTIFY_TRACK_FILE", "help": "Optional local pipe-delimited file: title|artist|album|state|position|duration|device|volume.", "group": "Source", "order": 10, "uiControl": "filePicker" },
+    { "id": "device", "title": "Device", "type": "string", "defaultValue": "Studio Speakers", "environment": "QUAKEKIT_SPOTIFY_DEVICE", "help": "Playback device label shown in offline-safe responses.", "group": "Playback", "order": 20, "uiControl": "textField" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_SPOTIFY_DRY_RUN", "help": "When true, playback controls are acknowledged without Spotify API calls.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "spotify.refresh", "title": "Refresh Track", "argumentSchema": [] },
+    { "id": "spotify.playPause", "title": "Play/Pause", "argumentSchema": [] },
+    { "id": "spotify.next", "title": "Next Track", "argumentSchema": [] },
+    { "id": "spotify.previous", "title": "Previous Track", "argumentSchema": [] },
+    { "id": "spotify.setVolume", "title": "Set Volume", "argumentSchema": [
+      { "id": "level", "title": "Level", "type": "integer", "required": false, "defaultValue": 60 }
+    ] }
+  ],
+  "dataStreams": [{ "id": "spotify.track", "title": "Spotify Track", "valueSchema": [
+    { "id": "playing", "title": "Playing", "type": "boolean", "required": false },
+    { "id": "title", "title": "Title", "type": "string", "required": false },
+    { "id": "artist", "title": "Artist", "type": "string", "required": false },
+    { "id": "album", "title": "Album", "type": "string", "required": false },
+    { "id": "progressSeconds", "title": "Progress Seconds", "type": "integer", "required": false },
+    { "id": "durationSeconds", "title": "Duration Seconds", "type": "integer", "required": false }
+  ] }],
+  "views": [
+    { "id": "spotify.panel", "title": "Spotify", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "spotify.track", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

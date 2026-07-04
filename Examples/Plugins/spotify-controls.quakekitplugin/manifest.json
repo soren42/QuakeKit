@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "spotify_controls",
+  "name": "Spotify Controls",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "spotify-controls.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "localProcess": {} },
+    { "network": { "hosts": ["api.spotify.com"] } },
+    { "secrets": { "keys": ["SPOTIFY_ACCESS_TOKEN"] } }
+  ],
+  "settings": [
+    { "id": "metadata_source", "title": "Metadata Source", "type": "choice", "defaultValue": "auto", "choices": ["auto", "spotify_app", "local_file", "fixture"], "environment": "QUAKEKIT_SPOTIFY_SOURCE", "help": "Spotify app metadata is used when AppleScript automation is available.", "group": "Source", "order": 10, "uiControl": "segmented" },
+    { "id": "metadata_file", "title": "Metadata File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_SPOTIFY_METADATA_FILE", "help": "Optional title|artist|album|state|position|duration metadata file.", "group": "Source", "order": 20, "uiControl": "filePicker" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_SPOTIFY_DRY_RUN", "help": "When true, media actions return a request plan without controlling Spotify.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "spotify.refresh", "title": "Refresh Spotify", "argumentSchema": [] },
+    { "id": "spotify.playPause", "title": "Play/Pause", "argumentSchema": [] },
+    { "id": "spotify.next", "title": "Next Track", "argumentSchema": [] },
+    { "id": "spotify.previous", "title": "Previous Track", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "spotify.track", "title": "Spotify Track", "valueSchema": [
+      { "id": "title", "title": "Title", "type": "string", "required": false },
+      { "id": "artist", "title": "Artist", "type": "string", "required": false },
+      { "id": "album", "title": "Album", "type": "string", "required": false },
+      { "id": "playing", "title": "Playing", "type": "boolean", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "spotify.panel", "title": "Spotify", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "spotify.track", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

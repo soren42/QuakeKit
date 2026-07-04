@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "affinity_photo_hotkeys",
+  "name": "Affinity Photo 2 Hotkeys",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "affinity-photo-hotkeys.sh", "arguments": [] },
+  "capabilities": ["actionProvider", "dataProvider", "settings", "viewProvider"],
+  "permissions": [
+    { "inputSynthesis": {} }
+  ],
+  "settings": [
+    { "id": "persona", "title": "Persona", "type": "choice", "defaultValue": "photo", "choices": ["photo", "liquify", "develop", "tone_mapping", "export"], "environment": "QUAKEKIT_AFFINITY_PERSONA", "help": "Affinity Photo 2 persona represented by the hotkey grid.", "group": "Context", "order": 10, "uiControl": "segmented" },
+    { "id": "columns", "title": "Columns", "type": "integer", "defaultValue": 4, "minimum": 2, "maximum": 6, "environment": "QUAKEKIT_AFFINITY_COLUMNS", "help": "Preferred column count for hosts that render the grid.", "group": "Layout", "order": 20, "uiControl": "stepper" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_AFFINITY_DRY_RUN", "help": "When true, commands return planned keystrokes without synthesizing input.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "affinity.triggerHotkey", "title": "Trigger Hotkey", "argumentSchema": [
+      { "id": "hotkey_id", "title": "Hotkey ID", "type": "string", "required": false }
+    ] },
+    { "id": "affinity.switchPersona", "title": "Switch Persona", "argumentSchema": [
+      { "id": "persona", "title": "Persona", "type": "string", "required": false }
+    ] }
+  ],
+  "dataStreams": [{ "id": "affinity.hotkeys", "title": "Affinity Hotkeys", "valueSchema": [
+    { "id": "persona", "title": "Persona", "type": "string", "required": false },
+    { "id": "columns", "title": "Columns", "type": "integer", "required": false },
+    { "id": "dryRun", "title": "Dry Run", "type": "boolean", "required": false }
+  ] }],
+  "views": [
+    { "id": "affinity.grid", "title": "Affinity Photo 2", "type": "dataDriven", "presentation": "pageAndWidget", "layout": "grid", "dataStreamID": "affinity.hotkeys", "columnSpan": 2, "rowSpan": 2, "preferredWidth": 520, "preferredHeight": 360 }
+  ]
+}

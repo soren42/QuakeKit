@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "ai_agent_companions",
+  "name": "AI Agent Companions",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "ai-agent-companions.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "filesystem": { "paths": ["~/Code", "~/Documents"], "write": false } },
+    { "localProcess": {} },
+    { "network": { "hosts": ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com"] } },
+    { "secrets": { "keys": ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "agent", "title": "Agent", "type": "choice", "defaultValue": "codex", "choices": ["claude", "claude_code", "chatgpt", "codex", "gemini", "antigravity"], "environment": "QUAKEKIT_AI_AGENT", "help": "AI companion represented by the panel.", "group": "Agent", "order": 10, "uiControl": "segmented" },
+    { "id": "workflow", "title": "Workflow", "type": "choice", "defaultValue": "handoff", "choices": ["handoff", "review", "implementation", "research"], "environment": "QUAKEKIT_AI_WORKFLOW", "help": "Deterministic workflow preset shown by the companion.", "group": "Agent", "order": 20, "uiControl": "popup" },
+    { "id": "context_file", "title": "Context File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AI_CONTEXT_FILE", "help": "Optional local pipe-delimited file: task|branch|status|nextStep.", "group": "Source", "order": 30, "uiControl": "filePicker" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_AI_DRY_RUN", "help": "When true, launch and prompt actions return plans only.", "group": "Safety", "order": 40, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "agent.refresh", "title": "Refresh Agent", "argumentSchema": [] },
+    { "id": "agent.openCompanion", "title": "Open Companion", "argumentSchema": [] },
+    { "id": "agent.sendPrompt", "title": "Send Prompt", "argumentSchema": [
+      { "id": "prompt", "title": "Prompt", "type": "string", "required": false }
+    ] }
+  ],
+  "dataStreams": [{ "id": "agent.companion", "title": "Agent Companion", "valueSchema": [
+    { "id": "agent", "title": "Agent", "type": "string", "required": false },
+    { "id": "workflow", "title": "Workflow", "type": "string", "required": false },
+    { "id": "status", "title": "Status", "type": "string", "required": false }
+  ] }],
+  "views": [
+    { "id": "agent.panel", "title": "AI Agent", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "agent.companion", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

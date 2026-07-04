@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "youtube_media_companion",
+  "name": "YouTube Media Companion",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "youtube-media-companion.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "settings": [
+    { "id": "context", "title": "Context", "type": "choice", "defaultValue": "watch", "choices": ["watch", "playlist", "live", "shorts"], "environment": "QUAKEKIT_YOUTUBE_CONTEXT", "help": "Media workflow represented by the companion.", "group": "Source", "order": 10, "uiControl": "segmented" },
+    { "id": "metadata_file", "title": "Metadata File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_YOUTUBE_METADATA_FILE", "help": "Optional local pipe-delimited file: title|channel|state|position|duration|url.", "group": "Source", "order": 20, "uiControl": "filePicker" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_YOUTUBE_DRY_RUN", "help": "When true, transport controls return planned media actions only.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+  ],
+  "actions": [
+    { "id": "youtube.refresh", "title": "Refresh Media", "argumentSchema": [] },
+    { "id": "youtube.playPause", "title": "Play/Pause", "argumentSchema": [] },
+    { "id": "youtube.skipBack", "title": "Skip Back", "argumentSchema": [] },
+    { "id": "youtube.skipForward", "title": "Skip Forward", "argumentSchema": [] },
+    { "id": "youtube.openURL", "title": "Open URL", "argumentSchema": [
+      { "id": "url", "title": "URL", "type": "string", "required": false }
+    ] }
+  ],
+  "dataStreams": [{ "id": "youtube.media", "title": "YouTube Media", "valueSchema": [
+    { "id": "title", "title": "Title", "type": "string", "required": false },
+    { "id": "channel", "title": "Channel", "type": "string", "required": false },
+    { "id": "playing", "title": "Playing", "type": "boolean", "required": false },
+    { "id": "progressSeconds", "title": "Progress Seconds", "type": "integer", "required": false },
+    { "id": "durationSeconds", "title": "Duration Seconds", "type": "integer", "required": false }
+  ] }],
+  "views": [
+    { "id": "youtube.panel", "title": "YouTube", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "youtube.media", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

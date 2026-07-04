@@ -25,14 +25,28 @@
       "id": "profile",
       "title": "Profile",
       "type": "choice",
-      "defaultValue": "default",
+      "defaultValue": "auto",
       "choices": [
+        "auto",
         "default",
         "editing",
-        "streaming"
+        "streaming",
+        "affinity_photo",
+        "terminal",
+        "ai_workbench",
+        "youtube",
+        "spotify"
       ],
       "environment": "QUAKEKIT_HOTKEY_GRID_PROFILE",
       "help": "Hotkey profile represented by the grid."
+    },
+    {
+      "id": "frontmost_app",
+      "title": "Frontmost App",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_FRONTMOST_APP",
+      "help": "Optional app name override. Leave blank for best-effort local detection."
     },
     {
       "id": "columns",
@@ -100,6 +114,12 @@
           "id": "dryRun",
           "title": "Dry Run",
           "type": "boolean",
+          "required": false
+        },
+        {
+          "id": "frontmostApp",
+          "title": "Frontmost App",
+          "type": "string",
           "required": false
         }
       ]
