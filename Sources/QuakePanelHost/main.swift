@@ -544,6 +544,7 @@ enum PanelPluginLoader {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let directories = [
             root.appendingPathComponent("Examples/Plugins", isDirectory: true),
+            Bundle.main.resourceURL?.appendingPathComponent("Examples/Plugins", isDirectory: true),
             try? QuakePackageLocations.installedPluginDirectory()
         ].compactMap { $0 }
         var packagesByID: [String: PluginPackage] = [:]
@@ -573,6 +574,7 @@ enum PanelThemeLoader {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let directories = [
             root.appendingPathComponent("Examples/Themes", isDirectory: true),
+            Bundle.main.resourceURL?.appendingPathComponent("Examples/Themes", isDirectory: true),
             try? QuakePackageLocations.installedThemeDirectory()
         ].compactMap { $0 }
         var packagesByID: [String: ThemePackage] = [:]

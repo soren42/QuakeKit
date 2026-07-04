@@ -11,16 +11,29 @@
     { "secrets": { "keys": ["OBS_WEBSOCKET_PASSWORD"] } }
   ],
   "settings": [
-    { "id": "websocket_url", "title": "WebSocket URL", "type": "string", "defaultValue": "ws://127.0.0.1:4455", "environment": "QUAKEKIT_OBS_WEBSOCKET_URL", "help": "OBS WebSocket endpoint." },
-    { "id": "profile", "title": "Profile", "type": "choice", "defaultValue": "stream", "choices": ["stream", "record", "studio"], "environment": "QUAKEKIT_OBS_PROFILE", "help": "Control preset shown on the panel." }
+    { "id": "websocket_url", "title": "WebSocket URL", "type": "string", "defaultValue": "ws://127.0.0.1:4455", "environment": "QUAKEKIT_OBS_WEBSOCKET_URL", "help": "OBS WebSocket endpoint.", "group": "Connection", "order": 10, "uiControl": "textField" },
+    { "id": "profile", "title": "Profile", "type": "choice", "defaultValue": "stream", "choices": ["stream", "record", "studio"], "environment": "QUAKEKIT_OBS_PROFILE", "help": "Control preset shown on the panel.", "group": "Controls", "order": 20, "uiControl": "segmented" },
+    { "id": "scene_collection", "title": "Scene Collection", "type": "string", "defaultValue": "Default", "environment": "QUAKEKIT_OBS_SCENE_COLLECTION", "help": "Collection name shown in the deterministic status payload.", "group": "Controls", "order": 30, "uiControl": "textField" },
+    { "id": "default_scene", "title": "Default Scene", "type": "string", "defaultValue": "Starting Soon", "environment": "QUAKEKIT_OBS_DEFAULT_SCENE", "help": "Scene highlighted by scene-switch actions.", "group": "Controls", "order": 40, "uiControl": "textField" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_OBS_DRY_RUN", "help": "When true, actions only return planned OBS websocket requests.", "group": "Safety", "order": 50, "uiControl": "toggle" }
   ],
   "actions": [
     { "id": "obs.refresh", "title": "Refresh OBS", "argumentSchema": [] },
     { "id": "obs.toggleStream", "title": "Toggle Stream", "argumentSchema": [] },
     { "id": "obs.toggleRecord", "title": "Toggle Recording", "argumentSchema": [] },
-    { "id": "obs.nextScene", "title": "Next Scene", "argumentSchema": [] }
+    { "id": "obs.nextScene", "title": "Next Scene", "argumentSchema": [] },
+    { "id": "obs.setScene", "title": "Set Scene", "argumentSchema": [
+      { "id": "sceneName", "title": "Scene Name", "type": "string", "required": false, "defaultValue": "Starting Soon" }
+    ] }
   ],
-  "dataStreams": [{ "id": "obs.status", "title": "OBS Status", "valueSchema": [] }],
+  "dataStreams": [{ "id": "obs.status", "title": "OBS Status", "valueSchema": [
+    { "id": "connected", "title": "Connected", "type": "boolean", "required": false },
+    { "id": "profile", "title": "Profile", "type": "string", "required": false },
+    { "id": "currentScene", "title": "Current Scene", "type": "string", "required": false },
+    { "id": "streaming", "title": "Streaming", "type": "boolean", "required": false },
+    { "id": "recording", "title": "Recording", "type": "boolean", "required": false },
+    { "id": "droppedFrames", "title": "Dropped Frames", "type": "integer", "required": false }
+  ] }],
   "views": [
     { "id": "obs.panel", "title": "OBS", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "obs.status", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
   ]

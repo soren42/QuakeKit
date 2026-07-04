@@ -26,6 +26,7 @@ public enum QuakePackageInstallError: Error, CustomStringConvertible, Sendable {
     case archiveExtractionFailed(String)
     case validationFailed([String])
     case installFailed(String)
+    case removeFailed(String)
 
     public var description: String {
         switch self {
@@ -41,6 +42,8 @@ public enum QuakePackageInstallError: Error, CustomStringConvertible, Sendable {
             return "Package validation failed: \(errors.joined(separator: "; "))"
         case .installFailed(let message):
             return "Package install failed: \(message)"
+        case .removeFailed(let message):
+            return "Package remove failed: \(message)"
         }
     }
 }
@@ -105,6 +108,30 @@ public enum QuakePackageInstaller {
             throw error
         } catch {
             throw QuakePackageInstallError.installFailed(String(describing: error))
+        }
+    }
+
+    public static func removeInstalledPackage(kind: QuakePackageKind, id: String, fileManager: FileManager = .default) throws {
+        let directory: URL
+        let packageName: String
+        switch kind {
+        case .plugin:
+            directory = try QuakePackageLocations.installedPluginDirectory(fileManager: fileManager)
+            packageName = "\(id).quakekitplugin"
+        case .theme:
+            directory = try QuakePackageLocations.installedThemeDirectory(fileManager: fileManager)
+            packageName = "\(id).quakekittheme"
+        }
+
+        let destination = directory.appendingPathComponent(packageName, isDirectory: true)
+        guard fileManager.fileExists(atPath: destination.path) else {
+            throw QuakePackageInstallError.sourceMissing(destination)
+        }
+
+        do {
+            try fileManager.removeItem(at: destination)
+        } catch {
+            throw QuakePackageInstallError.removeFailed(String(describing: error))
         }
     }
 

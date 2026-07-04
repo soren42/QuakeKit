@@ -11,15 +11,30 @@
     { "secrets": { "keys": ["SPOTIFY_ACCESS_TOKEN"] } }
   ],
   "settings": [
-    { "id": "provider", "title": "Provider", "type": "choice", "defaultValue": "spotify", "choices": ["spotify", "apple_music", "local"], "environment": "QUAKEKIT_MUSIC_PROVIDER", "help": "Preferred now-playing provider." },
-    { "id": "refresh_interval", "title": "Refresh Interval", "type": "choice", "defaultValue": 5, "choices": [2, 5, 10, 30], "environment": "QUAKEKIT_MUSIC_REFRESH_SECONDS", "help": "Preferred refresh cadence in seconds." }
+    { "id": "provider", "title": "Provider", "type": "choice", "defaultValue": "spotify", "choices": ["spotify", "apple_music", "local"], "environment": "QUAKEKIT_MUSIC_PROVIDER", "help": "Preferred now-playing provider.", "group": "Source", "order": 10, "uiControl": "segmented" },
+    { "id": "refresh_interval", "title": "Refresh Interval", "type": "choice", "defaultValue": 5, "choices": [2, 5, 10, 30], "environment": "QUAKEKIT_MUSIC_REFRESH_SECONDS", "help": "Preferred refresh cadence in seconds.", "group": "Source", "order": 20, "uiControl": "popup" },
+    { "id": "device_name", "title": "Device Name", "type": "string", "defaultValue": "Studio Speakers", "environment": "QUAKEKIT_MUSIC_DEVICE", "help": "Playback device label shown in offline-safe responses.", "group": "Playback", "order": 30, "uiControl": "textField" },
+    { "id": "now_playing_file", "title": "Now Playing File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_MUSIC_NOW_PLAYING_FILE", "help": "Optional local pipe-delimited file: title|artist|album|state|position|duration.", "group": "Source", "order": 40, "uiControl": "filePicker" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_MUSIC_DRY_RUN", "help": "When true, playback controls are acknowledged without sending provider API requests.", "group": "Safety", "order": 50, "uiControl": "toggle" }
   ],
   "actions": [
     { "id": "music.refresh", "title": "Refresh Track", "argumentSchema": [] },
     { "id": "music.playPause", "title": "Play/Pause", "argumentSchema": [] },
-    { "id": "music.next", "title": "Next Track", "argumentSchema": [] }
+    { "id": "music.next", "title": "Next Track", "argumentSchema": [] },
+    { "id": "music.previous", "title": "Previous Track", "argumentSchema": [] },
+    { "id": "music.setVolume", "title": "Set Volume", "argumentSchema": [
+      { "id": "level", "title": "Level", "type": "integer", "required": false, "defaultValue": 60 }
+    ] }
   ],
-  "dataStreams": [{ "id": "music.track", "title": "Current Track", "valueSchema": [] }],
+  "dataStreams": [{ "id": "music.track", "title": "Current Track", "valueSchema": [
+    { "id": "provider", "title": "Provider", "type": "string", "required": false },
+    { "id": "playing", "title": "Playing", "type": "boolean", "required": false },
+    { "id": "title", "title": "Title", "type": "string", "required": false },
+    { "id": "artist", "title": "Artist", "type": "string", "required": false },
+    { "id": "album", "title": "Album", "type": "string", "required": false },
+    { "id": "progressSeconds", "title": "Progress Seconds", "type": "integer", "required": false },
+    { "id": "durationSeconds", "title": "Duration Seconds", "type": "integer", "required": false }
+  ] }],
   "views": [
     { "id": "music.panel", "title": "Now Playing", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "music.track", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
   ]

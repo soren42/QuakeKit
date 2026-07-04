@@ -23,6 +23,8 @@ Confirmed:
 - The native shell supports Home, Widgets, Apps, Themes, and Runtime pages.
 - Grid pages paginate overflow with knob boundary navigation and touch arrow pads.
 - The native shell supports global settings, plugin settings, and package installation from directories or tar bundles.
+- Installed plugin and theme packages can be removed from the primary settings window.
+- A basic `.app` bundle can be assembled for non-terminal launch testing.
 
 ## First Tangible Target
 
@@ -113,6 +115,17 @@ Launch the first native panel host:
 .build/debug/quake-panel
 ```
 
+Build a local app bundle for launch testing:
+
+```bash
+./scripts/build-app-bundle.sh
+open .build/QuakeKit.app
+```
+
+The generated app is a menu-bar accessory (`LSUIElement`) with bundled example
+plugins/themes copied into `Contents/Resources/Examples`. It is intended for
+local testing before a signed release artifact exists.
+
 Launch modes:
 
 ```bash
@@ -153,6 +166,7 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 - `quake-probe`: CLI smoke target for enumeration and hardware input decoding.
 - `quake-test`: portable regression target for protocol, plugin, and runtime checks.
 - `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
+- `scripts/build-app-bundle.sh`: local `.app` assembler for menu-bar launch testing.
 
 Bundled plugin adapters are intentionally keyless and tolerant of offline use.
 Weather uses Open-Meteo and now defaults to Charlotte, NC through its declared

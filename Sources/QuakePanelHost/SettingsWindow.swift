@@ -247,6 +247,16 @@ final class QuakeSettingsWindowView: NSView {
                 }
             ))
         }
+        rows.append(contentsOf: themePackages.map { package in
+            RowSpec(
+                title: package.manifest.name,
+                value: installedPackageLabel(package.baseURL, suffix: "quakekittheme"),
+                detail: package.baseURL.path,
+                control: isInstalledPackage(package.baseURL, suffix: "quakekittheme") ? button("Remove") { [weak self] in
+                    self?.removeInstalledPackage(kind: .theme, id: package.manifest.id, name: package.manifest.name)
+                } : nil
+            )
+        })
         return rows
     }
 
@@ -319,6 +329,16 @@ final class QuakeSettingsWindowView: NSView {
                     }
                 )
             ]
+            if isInstalledPackage(package.baseURL, suffix: "quakekitplugin") {
+                rows.append(RowSpec(
+                    title: "\(package.manifest.name): Installed Package",
+                    value: "Installed",
+                    detail: package.baseURL.path,
+                    control: button("Remove") { [weak self] in
+                        self?.removeInstalledPackage(kind: .plugin, id: package.manifest.id, name: package.manifest.name)
+                    }
+                ))
+            }
             rows.append(contentsOf: package.manifest.settings.sorted { ($0.order ?? 0, $0.title) < ($1.order ?? 0, $1.title) }.map { setting in
                 RowSpec(
                     title: "\(package.manifest.name): \(setting.title)",
@@ -329,6 +349,33 @@ final class QuakeSettingsWindowView: NSView {
             })
             return rows
         }
+    }
+
+    private func removeInstalledPackage(kind: QuakePackageKind, id: String, name: String) {
+        do {
+            try QuakePackageInstaller.removeInstalledPackage(kind: kind, id: id)
+            showAlert(title: "Removed \(kind.rawValue)", message: "\(name) was removed. Restart QuakeKit to refresh loaded packages.")
+            onConfigurationChanged()
+            rebuildRows()
+        } catch {
+            showAlert(title: "Remove Failed", message: String(describing: error))
+        }
+    }
+
+    private func isInstalledPackage(_ url: URL, suffix: String) -> Bool {
+        guard url.pathExtension == suffix else { return false }
+        let installedRoot: URL?
+        if suffix == "quakekitplugin" {
+            installedRoot = try? QuakePackageLocations.installedPluginDirectory()
+        } else {
+            installedRoot = try? QuakePackageLocations.installedThemeDirectory()
+        }
+        guard let installedRoot else { return false }
+        return url.standardizedFileURL.path.hasPrefix(installedRoot.standardizedFileURL.path + "/")
+    }
+
+    private func installedPackageLabel(_ url: URL, suffix: String) -> String {
+        isInstalledPackage(url, suffix: suffix) ? "Installed" : "Bundled"
     }
 
     private func aboutRows() -> [RowSpec] {

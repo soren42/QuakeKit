@@ -11,15 +11,30 @@
     { "secrets": { "keys": ["OCTOPRINT_API_KEY"] } }
   ],
   "settings": [
-    { "id": "printer_url", "title": "Printer URL", "type": "string", "defaultValue": "http://octopi.local", "environment": "QUAKEKIT_OCTOPRINT_URL", "help": "OctoPrint API base URL." },
-    { "id": "printer_name", "title": "Printer Name", "type": "string", "defaultValue": "Voron", "environment": "QUAKEKIT_OCTOPRINT_NAME", "help": "Friendly printer name." }
+    { "id": "printer_url", "title": "Printer URL", "type": "string", "defaultValue": "http://octopi.local", "environment": "QUAKEKIT_OCTOPRINT_URL", "help": "OctoPrint API base URL.", "group": "Connection", "order": 10, "uiControl": "textField" },
+    { "id": "printer_name", "title": "Printer Name", "type": "string", "defaultValue": "Voron", "environment": "QUAKEKIT_OCTOPRINT_NAME", "help": "Friendly printer name.", "group": "Printer", "order": 20, "uiControl": "textField" },
+    { "id": "default_job", "title": "Default Job", "type": "string", "defaultValue": "Calibration Cube", "environment": "QUAKEKIT_OCTOPRINT_JOB", "help": "Job name shown when no live OctoPrint response is available.", "group": "Printer", "order": 30, "uiControl": "textField" },
+    { "id": "filament_material", "title": "Filament Material", "type": "choice", "defaultValue": "PLA", "choices": ["PLA", "PETG", "ABS", "TPU"], "environment": "QUAKEKIT_OCTOPRINT_MATERIAL", "help": "Material profile used by the deterministic status payload.", "group": "Printer", "order": 40, "uiControl": "popup" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_OCTOPRINT_DRY_RUN", "help": "When true, printer commands are acknowledged without sending API requests.", "group": "Safety", "order": 50, "uiControl": "toggle" }
   ],
   "actions": [
     { "id": "octoprint.refresh", "title": "Refresh Printer", "argumentSchema": [] },
     { "id": "octoprint.pause", "title": "Pause Print", "argumentSchema": [] },
-    { "id": "octoprint.resume", "title": "Resume Print", "argumentSchema": [] }
+    { "id": "octoprint.resume", "title": "Resume Print", "argumentSchema": [] },
+    { "id": "octoprint.cancel", "title": "Cancel Print", "argumentSchema": [] },
+    { "id": "octoprint.setTemperature", "title": "Set Temperature", "argumentSchema": [
+      { "id": "tool", "title": "Tool", "type": "integer", "required": false, "defaultValue": 0 },
+      { "id": "target", "title": "Target", "type": "number", "required": false, "defaultValue": 215 }
+    ] }
   ],
-  "dataStreams": [{ "id": "octoprint.job", "title": "Print Job", "valueSchema": [] }],
+  "dataStreams": [{ "id": "octoprint.job", "title": "Print Job", "valueSchema": [
+    { "id": "connected", "title": "Connected", "type": "boolean", "required": false },
+    { "id": "printer", "title": "Printer", "type": "string", "required": false },
+    { "id": "state", "title": "State", "type": "string", "required": false },
+    { "id": "progress", "title": "Progress", "type": "number", "required": false },
+    { "id": "nozzleTemperature", "title": "Nozzle Temperature", "type": "number", "required": false },
+    { "id": "bedTemperature", "title": "Bed Temperature", "type": "number", "required": false }
+  ] }],
   "views": [
     { "id": "octoprint.panel", "title": "3D Printer", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "octoprint.job", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
   ]

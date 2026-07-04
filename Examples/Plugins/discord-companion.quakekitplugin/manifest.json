@@ -26,7 +26,8 @@
     {
       "secrets": {
         "keys": [
-          "DISCORD_BOT_TOKEN"
+          "DISCORD_BOT_TOKEN",
+          "DISCORD_WEBHOOK_URL"
         ]
       }
     }
@@ -38,7 +39,10 @@
       "type": "string",
       "defaultValue": "example-guild",
       "environment": "QUAKEKIT_DISCORD_GUILD_ID",
-      "help": "Discord guild identifier used by real adapters."
+      "help": "Discord guild identifier used by real adapters.",
+      "group": "Connection",
+      "order": 10,
+      "uiControl": "textField"
     },
     {
       "id": "status_channel",
@@ -46,7 +50,10 @@
       "type": "string",
       "defaultValue": "stream-room",
       "environment": "QUAKEKIT_DISCORD_STATUS_CHANNEL",
-      "help": "Channel name displayed by the companion panel."
+      "help": "Channel name displayed by the companion panel.",
+      "group": "Connection",
+      "order": 20,
+      "uiControl": "textField"
     },
     {
       "id": "presence_mode",
@@ -59,7 +66,38 @@
         "do_not_disturb"
       ],
       "environment": "QUAKEKIT_DISCORD_PRESENCE_MODE",
-      "help": "Presence state that would be announced by an authenticated adapter."
+      "help": "Presence state that would be announced by an authenticated adapter.",
+      "group": "Presence",
+      "order": 30,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "activity_template",
+      "title": "Activity Template",
+      "type": "choice",
+      "defaultValue": "streaming",
+      "choices": [
+        "streaming",
+        "coding",
+        "meeting",
+        "offline"
+      ],
+      "environment": "QUAKEKIT_DISCORD_ACTIVITY_TEMPLATE",
+      "help": "Deterministic activity card used when no bot token is configured.",
+      "group": "Presence",
+      "order": 40,
+      "uiControl": "popup"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_DISCORD_DRY_RUN",
+      "help": "When true, post and presence actions return planned Discord calls only.",
+      "group": "Safety",
+      "order": 50,
+      "uiControl": "toggle"
     }
   ],
   "actions": [
@@ -86,6 +124,19 @@
           "required": false
         }
       ]
+    },
+    {
+      "id": "discord.openVoice",
+      "title": "Open Voice",
+      "argumentSchema": [
+        {
+          "id": "channel",
+          "title": "Channel",
+          "type": "string",
+          "required": false,
+          "defaultValue": "stream-room"
+        }
+      ]
     }
   ],
   "dataStreams": [
@@ -109,6 +160,18 @@
           "id": "presence",
           "title": "Presence",
           "type": "string",
+          "required": false
+        },
+        {
+          "id": "voiceMembers",
+          "title": "Voice Members",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "webhookConfigured",
+          "title": "Webhook Configured",
+          "type": "boolean",
           "required": false
         }
       ]

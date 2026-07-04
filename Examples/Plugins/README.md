@@ -20,13 +20,13 @@ host validates each `manifest.json` against
 | `gemini-harness.quakekitplugin` | POSIX shell | `shell` | Gemini API companion stub. |
 | `deepseek-harness.quakekitplugin` | POSIX shell | `shell` | DeepSeek API companion stub. |
 | `sports.quakekitplugin` | Executable stdio adapter | `stdioJSONRPC` | Scoreboard data provider. |
-| `discord-companion.quakekitplugin` | POSIX shell | `shell` | Discord presence, voice, and webhook companion stub. |
-| `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS scene, stream, and recording controls stub. |
+| `discord-companion.quakekitplugin` | POSIX shell | `shell` | Discord presence, voice, webhook planning, and activity companion fixture. |
+| `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS scene, stream, recording, and request-plan controls fixture. |
 | `home-assistant.quakekitplugin` | POSIX shell | `shell` | Home Assistant entity dashboard stub. |
-| `octoprint.quakekitplugin` | POSIX shell | `shell` | 3D printer status and job controls stub. |
+| `octoprint.quakekitplugin` | POSIX shell | `shell` | 3D printer status, temperature profile, and job controls fixture. |
 | `ubiquiti-network.quakekitplugin` | POSIX shell | `shell` | UniFi network health dashboard stub. |
 | `hotkey-grid.quakekitplugin` | POSIX shell | `shell` | Focus-aware macro and status grid stub. |
-| `music-now-playing.quakekitplugin` | POSIX shell | `shell` | Spotify/Apple Music/local now-playing companion stub. |
+| `music-now-playing.quakekitplugin` | POSIX shell | `shell` | Spotify/Apple Music/local now-playing companion fixture with optional local file input. |
 | `native-status.quakekitplugin` | Swift | `nativeSwift` | Manifest-only native Swift documentation sample. |
 | `echo-plugin.json` | Executable stdio adapter | `stdioJSONRPC` | Loose manifest fixture for early validation. |
 
@@ -36,11 +36,14 @@ stay package-local and reference their manifest view through `entryPath`.
 
 ## Integration Stub Categories
 
-The integration stubs are intentionally deterministic until their credential and
-service-specific bridges are implemented. They still declare realistic settings,
-permissions, actions, data streams, and `dataDriven` views so the host can load
-them, render them through the generic native data board, and expose their
-settings from the tray configuration window.
+The integration fixtures are intentionally deterministic until their credential
+and service-specific bridges are implemented. They still declare realistic
+settings, permissions, actions, data streams, and `dataDriven` views so the host
+can load them, render them through the generic native data board, and expose
+their settings from the tray configuration window. Several adapters honor
+optional `QUAKEKIT_*` environment variables, and the music fixture can read a
+local `title|artist|album|state|position|duration` file when
+`QUAKEKIT_MUSIC_NOW_PLAYING_FILE` is set.
 
 LLM and voice harnesses use official API, local CLI, local companion, or
 user-configured endpoint boundaries. They should not scrape or automate vendor

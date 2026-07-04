@@ -97,6 +97,25 @@ run("validator rejects dangling stream references") {
     expect(!PluginManifestValidator.validate(manifest).isValid, "dangling view stream was accepted")
 }
 
+run("package install remove cycle") {
+    let tempRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("QuakeKitPackageTest-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+    setenv("QUAKEKIT_APPLICATION_SUPPORT", tempRoot.path, 1)
+    let source = packagesURL.appendingPathComponent("native-status.quakekitplugin", isDirectory: true)
+    do {
+        let installed = try QuakePackageInstaller.installPackage(from: source)
+        expect(installed.kind == .plugin, "installed package kind mismatch")
+        expect(FileManager.default.fileExists(atPath: installed.url.path), "installed package missing")
+        try QuakePackageInstaller.removeInstalledPackage(kind: .plugin, id: installed.id)
+        expect(!FileManager.default.fileExists(atPath: installed.url.path), "removed package still exists")
+    } catch {
+        expect(false, "install/remove cycle failed: \(error)")
+    }
+    unsetenv("QUAKEKIT_APPLICATION_SUPPORT")
+}
+
 if failures.isEmpty {
     print("QuakeKit tests passed.")
 } else {
