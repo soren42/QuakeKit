@@ -111,7 +111,14 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
 
     private func configureStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "QK"
+        if let icon = statusIconImage() {
+            item.length = 62
+            item.button?.image = icon
+            item.button?.imagePosition = .imageOnly
+            item.button?.imageScaling = .scaleProportionallyDown
+        } else {
+            item.button?.title = "QK"
+        }
         item.button?.toolTip = "QuakeKit"
 
         let menu = NSMenu()
@@ -124,6 +131,16 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         }
         item.menu = menu
         statusItem = item
+    }
+
+    private func statusIconImage() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "StatusIcon", withExtension: "png"),
+              let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+        image.size = NSSize(width: 55, height: 20)
+        image.isTemplate = false
+        return image
     }
 
     private func startPointerGuard() {

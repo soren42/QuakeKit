@@ -38,6 +38,9 @@ let package = Package(
         .executableTarget(
             name: "QuakePanelHost",
             dependencies: ["QuakeHID", "QuakeRuntime"],
+            resources: [
+                .process("Resources")
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit")
             ]
