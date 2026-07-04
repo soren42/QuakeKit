@@ -131,6 +131,10 @@ public struct PluginSetting: Codable, Equatable, Identifiable, Sendable {
     public var maximum: Double?
     public var environment: String?
     public var help: String?
+    public var group: String?
+    public var order: Int?
+    public var uiControl: String?
+    public var restartRequired: Bool
 
     public init(
         id: String,
@@ -141,7 +145,11 @@ public struct PluginSetting: Codable, Equatable, Identifiable, Sendable {
         minimum: Double? = nil,
         maximum: Double? = nil,
         environment: String? = nil,
-        help: String? = nil
+        help: String? = nil,
+        group: String? = nil,
+        order: Int? = nil,
+        uiControl: String? = nil,
+        restartRequired: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -152,6 +160,10 @@ public struct PluginSetting: Codable, Equatable, Identifiable, Sendable {
         self.maximum = maximum
         self.environment = environment
         self.help = help
+        self.group = group
+        self.order = order
+        self.uiControl = uiControl
+        self.restartRequired = restartRequired
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -164,6 +176,10 @@ public struct PluginSetting: Codable, Equatable, Identifiable, Sendable {
         case maximum
         case environment
         case help
+        case group
+        case order
+        case uiControl
+        case restartRequired
     }
 
     public init(from decoder: Decoder) throws {
@@ -177,6 +193,10 @@ public struct PluginSetting: Codable, Equatable, Identifiable, Sendable {
         maximum = try container.decodeIfPresent(Double.self, forKey: .maximum)
         environment = try container.decodeIfPresent(String.self, forKey: .environment)
         help = try container.decodeIfPresent(String.self, forKey: .help)
+        group = try container.decodeIfPresent(String.self, forKey: .group)
+        order = try container.decodeIfPresent(Int.self, forKey: .order)
+        uiControl = try container.decodeIfPresent(String.self, forKey: .uiControl)
+        restartRequired = try container.decodeIfPresent(Bool.self, forKey: .restartRequired) ?? false
     }
 }
 
@@ -226,6 +246,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         case halfTrailing
         case halfAndGrid
         case twoHalves
+        case thirds
         case quarters
     }
 

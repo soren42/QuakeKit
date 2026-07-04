@@ -337,6 +337,7 @@ public enum ThemePageStyle: String, Codable, Equatable, Sendable {
     case fullScreen
     case halfAndGrid
     case twoHalves
+    case thirds
     case quarters
 }
 

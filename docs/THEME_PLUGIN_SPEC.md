@@ -203,7 +203,7 @@ designed around without forcing every plugin to draw a whole page.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `defaultPageStyle` | string | `grid`, `fullScreen`, `halfAndGrid`, `twoHalves`, or `quarters`. |
+| `defaultPageStyle` | string | `grid`, `fullScreen`, `halfAndGrid`, `twoHalves`, `thirds`, or `quarters`. |
 | `widgetGrid` | object | Preferred widget grid dimensions. |
 | `appletGrid` | object | Preferred applet grid dimensions. |
 | `splitRatio` | number | Desired split ratio from `0.2` to `0.8`. |

@@ -180,7 +180,13 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             width: size.width,
             height: size.height
         )
-        let view = SettingsPlaceholderView(frame: NSRect(origin: .zero, size: size))
+        let view = QuakeSettingsWindowView(
+            frame: NSRect(origin: .zero, size: size),
+            pluginPackages: pluginPackages,
+            themePackages: themePackages,
+            settings: QuakeSettingsStore.load(),
+            themeConfiguration: ThemeConfigurationStore.load()
+        )
         let settingsWindow = NSWindow(
             contentRect: rect,
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -586,6 +592,7 @@ enum PanelPageLayout: Equatable {
     case fullScreen
     case halfAndGrid
     case twoHalves
+    case thirds
     case quarters
 }
 
@@ -978,6 +985,8 @@ enum ShellCatalog {
             return .halfAndGrid
         case .twoHalves:
             return .twoHalves
+        case .thirds:
+            return .thirds
         case .quarters:
             return .quarters
         case .grid, .none:
@@ -1158,6 +1167,7 @@ final class PanelView: NSView {
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
     private var systemDashboardView: SystemMonitorDashboardView?
+    private var weatherDashboardView: WeatherDashboardView?
     private var pageLabels: [NSTextField] = []
     private let themeBackgroundView = ThemeBackgroundImageView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
@@ -1405,9 +1415,11 @@ final class PanelView: NSView {
         tileViews.forEach { $0.removeFromSuperview() }
         runtimeRows.forEach { $0.removeFromSuperview() }
         systemDashboardView?.removeFromSuperview()
+        weatherDashboardView?.removeFromSuperview()
         tileViews.removeAll()
         runtimeRows.removeAll()
         systemDashboardView = nil
+        weatherDashboardView = nil
         previousGridPad.isHidden = true
         nextGridPad.isHidden = true
 
@@ -1433,6 +1445,11 @@ final class PanelView: NSView {
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 systemDashboardView = view
+            } else if pluginID == "weather", viewID == "weather.canvas" {
+                let view = WeatherDashboardView(snapshot: weatherSnapshot(), theme: activeTheme)
+                view.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(view)
+                weatherDashboardView = view
             } else {
                 runtimeRows = pluginViewRows(pluginID: pluginID, viewID: viewID).map { row in
                     let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
@@ -1470,6 +1487,10 @@ final class PanelView: NSView {
             systemDashboardView.frame = contentRect
             return
         }
+        if let weatherDashboardView {
+            weatherDashboardView.frame = contentRect
+            return
+        }
         if currentPage.kind == .runtimeStatus || isPluginView(currentPage.kind) {
             layoutRuntimeRows(in: contentRect)
             return
@@ -1494,6 +1515,8 @@ final class PanelView: NSView {
             layoutHalfAndGrid(in: rect)
         case .twoHalves:
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 1)
+        case .thirds:
+            layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 3, rows: 1)
         case .quarters:
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 2)
         }
@@ -1578,6 +1601,7 @@ final class PanelView: NSView {
         tileViews.forEach { $0.theme = activeTheme }
         runtimeRows.forEach { $0.theme = activeTheme }
         systemDashboardView?.theme = activeTheme
+        weatherDashboardView?.theme = activeTheme
         previousGridPad.theme = activeTheme
         nextGridPad.theme = activeTheme
     }
@@ -1605,6 +1629,8 @@ final class PanelView: NSView {
             return 7
         case .twoHalves:
             return 2
+        case .thirds:
+            return 3
         case .quarters:
             return 4
         }
@@ -1722,6 +1748,13 @@ final class PanelView: NSView {
             return .placeholder
         }
         return SystemMonitorSnapshot(value: snapshot.payload, timestamp: snapshot.timestamp)
+    }
+
+    private func weatherSnapshot() -> WeatherSnapshot {
+        guard let snapshot = pluginDataStore.snapshot(pluginID: "weather", streamID: "weather.current") else {
+            return .placeholder
+        }
+        return WeatherSnapshot(value: snapshot.payload, timestamp: snapshot.timestamp)
     }
 
     private func refreshData(for view: PluginView, package: PluginPackage) {
@@ -2165,6 +2198,8 @@ final class PanelView: NSView {
             return .halfAndGrid
         case .twoHalves:
             return .twoHalves
+        case .thirds:
+            return .thirds
         case .quarters:
             return .quarters
         case .grid, .none:

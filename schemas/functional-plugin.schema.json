@@ -325,6 +325,33 @@
         },
         "help": {
           "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "description": "Optional settings section name used by richer host settings surfaces."
+        },
+        "order": {
+          "type": "integer",
+          "description": "Optional stable sort key within a settings group."
+        },
+        "uiControl": {
+          "type": "string",
+          "enum": [
+            "textField",
+            "stepper",
+            "slider",
+            "toggle",
+            "segmented",
+            "popup",
+            "filePicker",
+            "secureField"
+          ],
+          "description": "Preferred editor control. Hosts may substitute an equivalent native control."
+        },
+        "restartRequired": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether changes require plugin reload or application restart."
         }
       },
       "allOf": [
@@ -439,6 +466,7 @@
             "halfTrailing",
             "halfAndGrid",
             "twoHalves",
+            "thirds",
             "quarters"
           ],
           "description": "Host layout hint for page-style renderers. Widgets still use columnSpan/rowSpan."

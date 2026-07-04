@@ -414,6 +414,7 @@
             "fullScreen",
             "halfAndGrid",
             "twoHalves",
+            "thirds",
             "quarters"
           ],
           "default": "grid"

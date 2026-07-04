@@ -2,7 +2,7 @@
   "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "weather",
   "name": "Weather",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "apiVersion": "0.1",
   "entry": {
     "transport": "shell",
@@ -12,13 +12,13 @@
   "capabilities": [
     "dataProvider",
     "settings",
-    "viewProvider"
+    "viewProvider",
+    "backgroundWorker"
   ],
   "permissions": [
     {
       "network": {
         "hosts": [
-          "api.weather.gov",
           "api.open-meteo.com"
         ]
       }
@@ -26,8 +26,21 @@
   ],
   "settings": [
     {
-      "id": "location",
-      "title": "Location",
+      "id": "layout",
+      "title": "Layout",
+      "type": "choice",
+      "defaultValue": "single_fullscreen",
+      "choices": [
+        "single_fullscreen",
+        "two_location_halves",
+        "multi_location_widgets"
+      ],
+      "environment": "QUAKEKIT_WEATHER_LAYOUT",
+      "help": "Native panel layout: one full-screen forecast, two half-screen locations, or compact multi-location widgets."
+    },
+    {
+      "id": "primary_location",
+      "title": "Primary Location",
       "type": "choice",
       "defaultValue": "Charlotte, NC",
       "choices": [
@@ -37,8 +50,37 @@
         "San Francisco, CA",
         "Custom"
       ],
-      "environment": "QUAKEKIT_WEATHER_LOCATION",
-      "help": "Preset city used by the weather data provider."
+      "environment": "QUAKEKIT_WEATHER_PRIMARY_LOCATION",
+      "help": "Primary city for full-screen and two-location layouts."
+    },
+    {
+      "id": "secondary_location",
+      "title": "Secondary Location",
+      "type": "choice",
+      "defaultValue": "Raleigh, NC",
+      "choices": [
+        "Charlotte, NC",
+        "Raleigh, NC",
+        "New York, NY",
+        "San Francisco, CA",
+        "Custom"
+      ],
+      "environment": "QUAKEKIT_WEATHER_SECONDARY_LOCATION",
+      "help": "Second city for two-location layouts."
+    },
+    {
+      "id": "location_set",
+      "title": "Location Set",
+      "type": "choice",
+      "defaultValue": "carolinas",
+      "choices": [
+        "carolinas",
+        "travel",
+        "coasts",
+        "custom"
+      ],
+      "environment": "QUAKEKIT_WEATHER_LOCATION_SET",
+      "help": "Location group used by the compact multi-location widget layout."
     },
     {
       "id": "units",
@@ -51,6 +93,40 @@
       ],
       "environment": "QUAKEKIT_WEATHER_UNITS",
       "help": "Temperature unit requested from Open-Meteo."
+    },
+    {
+      "id": "forecast_days",
+      "title": "Forecast Days",
+      "type": "choice",
+      "defaultValue": 5,
+      "choices": [
+        3,
+        5
+      ],
+      "environment": "QUAKEKIT_WEATHER_FORECAST_DAYS",
+      "help": "Number of daily forecast rows rendered in compact layouts."
+    },
+    {
+      "id": "refresh_interval",
+      "title": "Refresh Interval",
+      "type": "choice",
+      "defaultValue": 15,
+      "choices": [
+        5,
+        15,
+        30,
+        60
+      ],
+      "environment": "QUAKEKIT_WEATHER_REFRESH_MINUTES",
+      "help": "Preferred refresh cadence in minutes for hosts that run background streams."
+    },
+    {
+      "id": "show_radar",
+      "title": "Show Radar",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_WEATHER_SHOW_RADAR",
+      "help": "Shows the radar/map panel in the full-screen layout."
     }
   ],
   "actions": [
@@ -64,21 +140,41 @@
     {
       "id": "weather.current",
       "title": "Current Weather",
-      "valueSchema": []
+      "valueSchema": [
+        {
+          "id": "layout",
+          "title": "Layout",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "locations",
+          "title": "Locations",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "updatedAt",
+          "title": "Updated",
+          "type": "string",
+          "required": false
+        }
+      ]
     }
   ],
   "views": [
     {
       "id": "weather.canvas",
-      "title": "Weather Canvas",
-      "type": "webCanvas",
+      "title": "Weather",
+      "type": "dataDriven",
       "presentation": "pageAndWidget",
+      "layout": "fullScreen",
       "entryPath": "index.html",
       "dataStreamID": "weather.current",
-      "columnSpan": 2,
-      "rowSpan": 1,
-      "preferredWidth": 480,
-      "preferredHeight": 200
+      "columnSpan": 3,
+      "rowSpan": 2,
+      "preferredWidth": 1920,
+      "preferredHeight": 480
     }
   ]
 }

@@ -187,7 +187,7 @@ offer full applet pages, compact widgets, or a view that supports both modes.
 | `title` | string | yes | Human-readable view title. |
 | `type` | string | no | `native`, `webCanvas`, `webDocument`, `text`, or `dataDriven`. |
 | `presentation` | string | no | `page`, `widget`, or `pageAndWidget`. |
-| `layout` | string | no | Page layout hint: `grid`, `fullScreen`, `halfLeading`, `halfTrailing`, `halfAndGrid`, `twoHalves`, or `quarters`. |
+| `layout` | string | no | Page layout hint: `grid`, `fullScreen`, `halfLeading`, `halfTrailing`, `halfAndGrid`, `twoHalves`, `thirds`, or `quarters`. |
 | `entryPath` | string | no | Local asset entrypoint such as `index.html`. |
 | `dataStreamID` | string | no | Data stream backing the view. |
 | `columnSpan` | integer | no | Widget grid width hint. |
@@ -197,7 +197,7 @@ offer full applet pages, compact widgets, or a view that supports both modes.
 
 The host decides final layout. Plugins provide hints, not absolute control of
 the display. Widget views still use `columnSpan` and `rowSpan`; page views may
-use `layout` to request a non-grid shell such as split-screen or quarters.
+use `layout` to request a non-grid shell such as split-screen, thirds, or quarters.
 
 ## Theme And Hardware Boundaries
 
