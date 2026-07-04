@@ -295,11 +295,6 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             if launchOptions.simpleFullscreen {
                 panelWindow.toggleFullScreen(nil)
             }
-            Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak panelWindow] _ in
-                Task { @MainActor in
-                    panelWindow?.level = .floating
-                }
-            }
         } else {
             panelWindow.level = .normal
         }
@@ -334,6 +329,10 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             : NSPoint(x: frame.midX - logicalSize.width / 2, y: frame.midY - logicalSize.height / 2)
         let rect = NSRect(origin: origin, size: logicalSize)
         panelWindow.setFrame(rect, display: true)
+        if quakeLike && !launchOptions.debugWindow {
+            panelWindow.level = .screenSaver
+            applyPanelPresentationOptions()
+        }
         panelWindow.orderFrontRegardless()
         log("window reframed=\(format(panelWindow.frame)) target=\(format(frame))")
     }
