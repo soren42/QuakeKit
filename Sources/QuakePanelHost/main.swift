@@ -185,7 +185,10 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
             pluginPackages: pluginPackages,
             themePackages: themePackages,
             settings: QuakeSettingsStore.load(),
-            themeConfiguration: ThemeConfigurationStore.load()
+            themeConfiguration: ThemeConfigurationStore.load(),
+            onConfigurationChanged: { [weak self] in
+                self?.panelView?.reloadConfigurationsFromDisk()
+            }
         )
         let settingsWindow = NSWindow(
             contentRect: rect,
@@ -1309,6 +1312,23 @@ final class PanelView: NSView {
 
     func nextPage() {
         openPage((currentPageIndex + 1) % pages.count)
+    }
+
+    func reloadConfigurationsFromDisk() {
+        themeConfiguration = ThemeConfigurationStore.load()
+        settingsConfiguration = QuakeSettingsStore.load()
+        if let activeThemeID = themeConfiguration.activeThemeID,
+           let index = themePackages.firstIndex(where: { $0.manifest.id == activeThemeID }) {
+            activeThemeIndex = index
+        }
+        activeTheme = themePackages.indices.contains(activeThemeIndex)
+            ? PanelTheme.from(themePackages[activeThemeIndex].manifest, overrides: themeConfiguration.overrides)
+            : .fallback
+        rebuildPages()
+        currentPageIndex = min(max(0, currentPageIndex), max(0, pages.count - 1))
+        status = "Settings reloaded"
+        restartCarousel()
+        rebuildPageContent()
     }
 
     func recordConnection(_ interface: String) {

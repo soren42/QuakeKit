@@ -380,10 +380,14 @@ final class WeatherDashboardView: NSView {
     }
 
     private func drawSymbol(_ name: String, in rect: NSRect, size: CGFloat, color: NSColor) {
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
-        image?.isTemplate = true
-        color.set()
-        image?.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+        guard let image = NSImage(systemSymbolName: name, accessibilityDescription: nil) else { return }
+        let tinted = NSImage(size: image.size)
+        tinted.lockFocus()
+        image.draw(at: .zero, from: NSRect(origin: .zero, size: image.size), operation: .sourceOver, fraction: 1)
+        color.setFill()
+        NSRect(origin: .zero, size: image.size).fill(using: .sourceAtop)
+        tinted.unlockFocus()
+        tinted.draw(in: rect, from: NSRect(origin: .zero, size: tinted.size), operation: .sourceOver, fraction: 1)
     }
 
     private func iconColor(_ icon: String) -> NSColor {

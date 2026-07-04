@@ -25,15 +25,16 @@ final class QuakeSettingsWindowView: NSView {
 
     private let pluginPackages: [PluginPackage]
     private let themePackages: [ThemePackage]
-    private let settings: QuakeSettingsConfiguration
-    private let themeConfiguration: ThemeUserConfiguration
+    private var settings: QuakeSettingsConfiguration
+    private var themeConfiguration: ThemeUserConfiguration
+    private let onConfigurationChanged: () -> Void
     private let titleLabel = NSTextField(labelWithString: "QuakeKit Settings")
     private let sectionControl = NSSegmentedControl(labels: Section.allCases.map(\.title), trackingMode: .selectOne, target: nil, action: nil)
     private let scrollView = NSScrollView()
     private let documentView = NSView()
     private let installPluginButton = NSButton(title: "Install Plugin...", target: nil, action: nil)
     private let installThemeButton = NSButton(title: "Install Theme...", target: nil, action: nil)
-    private var rowViews: [NSView] = []
+    private var rowViews: [SettingsRowView] = []
     private var activeSection: Section = .global
 
     init(
@@ -41,12 +42,14 @@ final class QuakeSettingsWindowView: NSView {
         pluginPackages: [PluginPackage],
         themePackages: [ThemePackage],
         settings: QuakeSettingsConfiguration,
-        themeConfiguration: ThemeUserConfiguration
+        themeConfiguration: ThemeUserConfiguration,
+        onConfigurationChanged: @escaping () -> Void
     ) {
         self.pluginPackages = pluginPackages
         self.themePackages = themePackages
         self.settings = settings
         self.themeConfiguration = themeConfiguration
+        self.onConfigurationChanged = onConfigurationChanged
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
@@ -129,8 +132,8 @@ final class QuakeSettingsWindowView: NSView {
     private func rebuildRows() {
         rowViews.forEach { $0.removeFromSuperview() }
         rowViews.removeAll()
-        for row in rowsForActiveSection() {
-            let view = SettingsRowView(title: row.title, value: row.value, detail: row.detail)
+        for row in rowSpecs() {
+            let view = SettingsRowView(title: row.title, value: row.value, detail: row.detail, control: row.control)
             documentView.addSubview(view)
             rowViews.append(view)
         }
@@ -138,8 +141,8 @@ final class QuakeSettingsWindowView: NSView {
     }
 
     private func layoutRows() {
-        let width = max(400, scrollView.bounds.width - 18)
-        let rowHeight: CGFloat = 72
+        let width = max(520, scrollView.bounds.width - 18)
+        let rowHeight: CGFloat = 78
         let gap: CGFloat = 10
         let totalHeight = CGFloat(rowViews.count) * rowHeight + CGFloat(max(0, rowViews.count - 1)) * gap + 8
         documentView.frame = NSRect(x: 0, y: 0, width: width, height: max(scrollView.bounds.height, totalHeight))
@@ -149,63 +152,398 @@ final class QuakeSettingsWindowView: NSView {
         }
     }
 
-    private func rowsForActiveSection() -> [(title: String, value: String, detail: String)] {
+    private func saveSettings(rebuild: Bool = true) {
+        QuakeSettingsStore.save(settings)
+        onConfigurationChanged()
+        if rebuild { rebuildRows() }
+    }
+
+    private func saveThemeConfiguration(rebuild: Bool = true) {
+        ThemeConfigurationStore.save(themeConfiguration)
+        onConfigurationChanged()
+        if rebuild { rebuildRows() }
+    }
+
+    private struct RowSpec {
+        var title: String
+        var value: String
+        var detail: String
+        var control: NSView?
+    }
+
+    private func rowSpecs() -> [RowSpec] {
         switch activeSection {
         case .global:
-            return [
-                ("Launch Mode", "Menu Bar Accessory", "Release builds run without a Dock tile or application menu by default."),
-                ("Default Panel Page", "Page \(settings.defaultPageIndex + 1)", "Controlled from the on-device Settings page today; this window is the release target for richer editing."),
-                ("Display Ownership", "Screen-saver level panel", "Panel window hides the menu bar and guards pointer entry on the DK-QUAKE display."),
-                ("Package Install Path", "~/Library/Application Support/QuakeKit", "Themes and plugins installed from this window are copied into the user support folder.")
-            ]
+            return globalRows()
         case .themes:
-            return themePackages.map { package in
-                let active = package.manifest.id == themeConfiguration.activeThemeID || (themeConfiguration.activeThemeID == nil && package.manifest.id == themePackages.first?.manifest.id)
-                return (
-                    package.manifest.name + (active ? " *" : ""),
-                    package.manifest.id,
-                    "\(package.manifest.palette.colors.count) colors · \(package.manifest.options.count) options · \(package.baseURL.lastPathComponent)"
-                )
-            }
+            return themeRows()
         case .widgets:
-            return pluginPackages.flatMap { package in
-                package.manifest.views.map { view in
-                    (
-                        view.title,
-                        package.manifest.name,
-                        "\(view.presentation?.rawValue ?? "page") · \(view.layout?.rawValue ?? "host layout") · \(view.type?.rawValue ?? package.manifest.entry.transport.rawValue)"
-                    )
-                }
-            }
+            return widgetRows()
         case .carousel:
-            let refs = pluginPackages.flatMap { package in
-                package.manifest.views.compactMap { view -> String? in
-                    let presentation = view.presentation ?? .page
-                    guard presentation == .widget || presentation == .pageAndWidget else { return nil }
-                    let id = "\(package.manifest.id):\(view.id)"
-                    let included = settings.carousel.widgetIDs.isEmpty || settings.carousel.widgetIDs.contains(id)
-                    return "\(included ? "*" : "-") \(view.title) (\(package.manifest.name))"
-                }
-            }
-            return [
-                ("Enabled", settings.carousel.enabled ? "On" : "Off", "Current rotation interval is \(settings.carousel.intervalSeconds) seconds."),
-                ("Selected Widgets", "\(refs.filter { $0.hasPrefix("*") }.count)", refs.joined(separator: "   "))
-            ]
+            return carouselRows()
         case .plugins:
-            return pluginPackages.map { package in
-                (
-                    package.manifest.name,
-                    package.manifest.id,
-                    "\(package.manifest.capabilities.map(\.rawValue).joined(separator: ", ")) · \(package.manifest.settings.count) settings · \(package.manifest.actions.count) actions"
+            return pluginRows()
+        case .about:
+            return aboutRows()
+        }
+    }
+
+    private func globalRows() -> [RowSpec] {
+        [
+            RowSpec(
+                title: "Default Panel Page",
+                value: pageTitle(settings.defaultPageIndex),
+                detail: "Panel opens to this page after launch.",
+                control: popup(
+                    values: Array(0..<7).map { "\($0)" },
+                    titles: Array(0..<7).map { pageTitle($0) },
+                    selectedValue: "\(settings.defaultPageIndex)"
+                ) { [weak self] value in
+                    guard let self, let page = Int(value) else { return }
+                    self.settings.defaultPageIndex = page
+                    self.saveSettings()
+                }
+            ),
+            RowSpec(title: "Launch Mode", value: "Menu Bar Accessory", detail: "Release-style launch hides Dock and app menu unless --foreground is used.", control: nil),
+            RowSpec(title: "Display Ownership", value: "Enabled", detail: "Panel window runs above the menu bar and pointer guard keeps the cursor off the device.", control: nil),
+            RowSpec(title: "Package Directory", value: "~/Library/Application Support/QuakeKit", detail: "Installed plugin and theme packages are copied here.", control: nil)
+        ]
+    }
+
+    private func themeRows() -> [RowSpec] {
+        var rows: [RowSpec] = [
+            RowSpec(
+                title: "Active Theme",
+                value: activeThemeName(),
+                detail: "Changes apply immediately to the panel shell.",
+                control: popup(
+                    values: themePackages.map(\.manifest.id),
+                    titles: themePackages.map(\.manifest.name),
+                    selectedValue: themeConfiguration.activeThemeID ?? themePackages.first?.manifest.id ?? ""
+                ) { [weak self] id in
+                    self?.themeConfiguration.activeThemeID = id
+                    self?.themeConfiguration.overrides.removeAll()
+                    self?.saveThemeConfiguration()
+                }
+            )
+        ]
+
+        if let active = activeThemeManifest() {
+            rows.append(contentsOf: active.options.map { option in
+                RowSpec(
+                    title: option.title,
+                    value: displayJSON(themeConfiguration.overrides[option.target] ?? option.defaultValue),
+                    detail: option.target,
+                    control: control(for: option)
+                )
+            })
+            rows.append(RowSpec(
+                title: "Reset Theme Overrides",
+                value: "\(themeConfiguration.overrides.count) overrides",
+                detail: "Restore the selected theme's packaged defaults.",
+                control: button("Reset") { [weak self] in
+                    self?.themeConfiguration.overrides.removeAll()
+                    self?.saveThemeConfiguration()
+                }
+            ))
+        }
+        return rows
+    }
+
+    private func widgetRows() -> [RowSpec] {
+        pluginPackages.flatMap { package in
+            package.manifest.views.map { view in
+                RowSpec(
+                    title: view.title,
+                    value: package.manifest.name,
+                    detail: "\(view.presentation?.rawValue ?? "page") · \(view.layout?.rawValue ?? "host layout") · \(view.type?.rawValue ?? package.manifest.entry.transport.rawValue)",
+                    control: button("Open App Settings") { [weak self] in
+                        self?.activeSection = .plugins
+                        self?.sectionControl.selectedSegment = Section.plugins.rawValue
+                        self?.rebuildRows()
+                    }
                 )
             }
-        case .about:
-            return [
-                ("QuakeKit", "Native DK-QUAKE control center", "Swift/AppKit host, HID wake/keep-alive, theme packages, functional plugin packages, and native panel rendering."),
-                ("Hardware", "DK-QUAKE touch display", "Display ownership, touch, knob, microphone toggle, and knob LED ring arbitration are managed by the native app."),
-                ("Next Settings Work", "Editable controls", "Persist live changes from this window, reload packages without restart, and add permission review flows.")
-            ]
         }
+    }
+
+    private func carouselRows() -> [RowSpec] {
+        var rows = [
+            RowSpec(
+                title: "Enabled",
+                value: settings.carousel.enabled ? "On" : "Off",
+                detail: "Automatically rotates selected page/widget views on the panel.",
+                control: checkbox(isOn: settings.carousel.enabled) { [weak self] enabled in
+                    self?.settings.carousel.enabled = enabled
+                    self?.saveSettings()
+                }
+            ),
+            RowSpec(
+                title: "Duration",
+                value: "\(settings.carousel.intervalSeconds)s",
+                detail: "How long each carousel view stays on-screen.",
+                control: popup(
+                    values: ["5", "10", "15", "30", "60"],
+                    titles: ["5 seconds", "10 seconds", "15 seconds", "30 seconds", "60 seconds"],
+                    selectedValue: "\(settings.carousel.intervalSeconds)"
+                ) { [weak self] value in
+                    self?.settings.carousel.intervalSeconds = Int(value) ?? 15
+                    self?.saveSettings()
+                }
+            )
+        ]
+
+        rows.append(contentsOf: carouselRefs().map { ref in
+            RowSpec(
+                title: ref.title,
+                value: ref.pluginName,
+                detail: ref.id,
+                control: checkbox(isOn: carouselIncluded(id: ref.id)) { [weak self] enabled in
+                    self?.setCarousel(id: ref.id, included: enabled)
+                }
+            )
+        })
+        return rows
+    }
+
+    private func pluginRows() -> [RowSpec] {
+        pluginPackages.flatMap { package -> [RowSpec] in
+            var rows: [RowSpec] = [
+                RowSpec(
+                    title: package.manifest.name,
+                    value: package.manifest.id,
+                    detail: "\(package.manifest.capabilities.map(\.rawValue).joined(separator: ", ")) · \(package.manifest.settings.count) settings",
+                    control: package.manifest.settings.isEmpty ? nil : button("Reset Settings") { [weak self] in
+                        self?.settings.pluginSettings[package.manifest.id] = nil
+                        self?.saveSettings()
+                    }
+                )
+            ]
+            rows.append(contentsOf: package.manifest.settings.sorted { ($0.order ?? 0, $0.title) < ($1.order ?? 0, $1.title) }.map { setting in
+                RowSpec(
+                    title: "\(package.manifest.name): \(setting.title)",
+                    value: displayJSON(settingValue(setting, pluginID: package.manifest.id)),
+                    detail: setting.help ?? setting.environment ?? setting.id,
+                    control: control(for: setting, pluginID: package.manifest.id)
+                )
+            })
+            return rows
+        }
+    }
+
+    private func aboutRows() -> [RowSpec] {
+        [
+            RowSpec(title: "QuakeKit", value: "Native DK-QUAKE control center", detail: "Swift/AppKit host with HID wake, keep-alive, panel ownership, themes, plugins, and settings.", control: nil),
+            RowSpec(title: "Loaded Plugins", value: "\(pluginPackages.count)", detail: pluginPackages.map(\.manifest.name).joined(separator: ", "), control: nil),
+            RowSpec(title: "Loaded Themes", value: "\(themePackages.count)", detail: themePackages.map(\.manifest.name).joined(separator: ", "), control: nil),
+            RowSpec(title: "Reload Note", value: "Live settings", detail: "Most preference changes apply immediately; package install/remove still requires restart.", control: nil)
+        ]
+    }
+
+    private func control(for option: ThemeOption) -> NSView? {
+        let current = themeConfiguration.overrides[option.target] ?? option.defaultValue
+        switch option.type {
+        case .boolean:
+            return checkbox(isOn: current.boolValue ?? false) { [weak self] enabled in
+                self?.themeConfiguration.overrides[option.target] = .bool(enabled)
+                self?.saveThemeConfiguration()
+            }
+        case .choice:
+            return popup(values: option.choices.map { displayJSON($0) }, titles: option.choices.map { displayJSON($0) }, selectedValue: displayJSON(current)) { [weak self] value in
+                guard let self, let choice = option.choices.first(where: { self.displayJSON($0) == value }) else { return }
+                self.themeConfiguration.overrides[option.target] = choice
+                self.saveThemeConfiguration()
+            }
+        case .color:
+            return popup(values: colorSwatches(for: option), titles: colorSwatches(for: option), selectedValue: current.stringValue ?? "") { [weak self] value in
+                self?.themeConfiguration.overrides[option.target] = .string(value)
+                self?.saveThemeConfiguration()
+            }
+        case .number:
+            return stepper(value: current.doubleValue ?? option.defaultValue.doubleValue ?? 0, minimum: option.minimum ?? 0, maximum: option.maximum ?? 100, increment: 1) { [weak self] value in
+                self?.themeConfiguration.overrides[option.target] = .double(value)
+                self?.saveThemeConfiguration()
+            }
+        }
+    }
+
+    private func control(for setting: PluginSetting, pluginID: String) -> NSView? {
+        let current = settingValue(setting, pluginID: pluginID)
+        switch setting.type {
+        case .boolean:
+            return checkbox(isOn: current.boolValue ?? false) { [weak self] enabled in
+                self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .bool(enabled))
+            }
+        case .choice:
+            return popup(values: setting.choices.map { displayJSON($0) }, titles: setting.choices.map { displayJSON($0) }, selectedValue: displayJSON(current)) { [weak self] value in
+                guard let self, let choice = setting.choices.first(where: { self.displayJSON($0) == value }) else { return }
+                self.setPluginSetting(pluginID: pluginID, setting: setting, value: choice)
+            }
+        case .integer:
+            return stepper(value: Double(current.integerValue ?? 0), minimum: setting.minimum ?? 0, maximum: setting.maximum ?? 100, increment: 1) { [weak self] value in
+                self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .integer(Int(value.rounded())))
+            }
+        case .number:
+            return stepper(value: current.doubleValue ?? 0, minimum: setting.minimum ?? 0, maximum: setting.maximum ?? 100, increment: 1) { [weak self] value in
+                self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .double(value))
+            }
+        case .string:
+            return textField(value: current.stringValue ?? "") { [weak self] value in
+                self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .string(value))
+            }
+        case .secret:
+            return nil
+        }
+    }
+
+    private func setPluginSetting(pluginID: String, setting: PluginSetting, value: JSONValue) {
+        settings.pluginSettings[pluginID, default: [:]][setting.id] = value
+        saveSettings()
+    }
+
+    private func setCarousel(id: String, included: Bool) {
+        if settings.carousel.widgetIDs.isEmpty {
+            settings.carousel.widgetIDs = carouselRefs().map(\.id)
+        }
+        if included {
+            if !settings.carousel.widgetIDs.contains(id) {
+                settings.carousel.widgetIDs.append(id)
+            }
+        } else {
+            settings.carousel.widgetIDs.removeAll { $0 == id }
+        }
+        saveSettings()
+    }
+
+    private func carouselIncluded(id: String) -> Bool {
+        settings.carousel.widgetIDs.isEmpty || settings.carousel.widgetIDs.contains(id)
+    }
+
+    private func carouselRefs() -> [CarouselWidgetRef] {
+        pluginPackages.flatMap { package in
+            package.manifest.views.compactMap { view in
+                let presentation = view.presentation ?? .page
+                guard presentation == .widget || presentation == .pageAndWidget else { return nil }
+                return CarouselWidgetRef(
+                    id: "\(package.manifest.id):\(view.id)",
+                    pluginID: package.manifest.id,
+                    pluginName: package.manifest.name,
+                    viewID: view.id,
+                    title: view.title
+                )
+            }
+        }
+    }
+
+    private func settingValue(_ setting: PluginSetting, pluginID: String) -> JSONValue {
+        settings.pluginSettings[pluginID]?[setting.id] ?? setting.defaultValue
+    }
+
+    private func activeThemeManifest() -> ThemeManifest? {
+        if let id = themeConfiguration.activeThemeID {
+            return themePackages.first { $0.manifest.id == id }?.manifest
+        }
+        return themePackages.first?.manifest
+    }
+
+    private func activeThemeName() -> String {
+        activeThemeManifest()?.name ?? "Fallback"
+    }
+
+    private func pageTitle(_ index: Int) -> String {
+        switch index {
+        case 0: return "1 Home"
+        case 1: return "2 Widgets"
+        case 2: return "3 Apps"
+        case 3: return "4 Themes"
+        case 4: return "5 Settings"
+        case 5: return "6 Runtime"
+        case 6: return "7 Plugin APIs"
+        default: return "Page \(index + 1)"
+        }
+    }
+
+    private func colorSwatches(for option: ThemeOption) -> [String] {
+        let defaultColor = option.defaultValue.stringValue ?? "#7CFFD1"
+        return [defaultColor, "#39F5FF", "#FF5CDB", "#A7FF57", "#FFE66D", "#FF6B5C", "#FFFFFF"]
+    }
+
+    private func displayJSON(_ value: JSONValue) -> String {
+        switch value {
+        case .string(let value):
+            return value
+        case .integer(let value):
+            return "\(value)"
+        case .double(let value):
+            return value.rounded() == value ? String(format: "%.0f", value) : String(format: "%.2f", value)
+        case .bool(let value):
+            return value ? "on" : "off"
+        case .null:
+            return "-"
+        case .array(let values):
+            return "\(values.count) values"
+        case .object(let object):
+            return "\(object.count) fields"
+        }
+    }
+
+    private func popup(values: [String], titles: [String], selectedValue: String, onChange: @escaping (String) -> Void) -> NSView {
+        let popup = ClosurePopUpButton()
+        for (index, value) in values.enumerated() {
+            popup.addItem(withTitle: titles.indices.contains(index) ? titles[index] : value)
+            popup.item(at: index)?.representedObject = value
+        }
+        if let index = values.firstIndex(of: selectedValue) {
+            popup.selectItem(at: index)
+        }
+        popup.onChange = {
+            guard let value = popup.selectedItem?.representedObject as? String else { return }
+            onChange(value)
+        }
+        return popup
+    }
+
+    private func checkbox(isOn: Bool, onChange: @escaping (Bool) -> Void) -> NSView {
+        let box = ClosureCheckbox(title: "")
+        box.state = isOn ? .on : .off
+        box.onChange = { onChange(box.state == .on) }
+        return box
+    }
+
+    private func button(_ title: String, action: @escaping () -> Void) -> NSView {
+        let button = ClosureButton(title: title)
+        button.onPress = action
+        return button
+    }
+
+    private func stepper(value: Double, minimum: Double, maximum: Double, increment: Double, onChange: @escaping (Double) -> Void) -> NSView {
+        let container = NSView()
+        let field = NSTextField(labelWithString: String(format: "%.0f", value))
+        let stepper = ClosureStepper()
+        stepper.minValue = minimum
+        stepper.maxValue = maximum
+        stepper.increment = increment
+        stepper.doubleValue = min(max(value, minimum), maximum)
+        field.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .medium)
+        field.alignment = .right
+        field.backgroundColor = .clear
+        stepper.onChange = {
+            field.stringValue = String(format: "%.0f", stepper.doubleValue)
+            onChange(stepper.doubleValue)
+        }
+        container.addSubview(field)
+        container.addSubview(stepper)
+        container.wantsLayer = true
+        container.frame = NSRect(x: 0, y: 0, width: 128, height: 28)
+        field.frame = NSRect(x: 0, y: 4, width: 72, height: 20)
+        stepper.frame = NSRect(x: 80, y: 0, width: 28, height: 28)
+        return container
+    }
+
+    private func textField(value: String, onCommit: @escaping (String) -> Void) -> NSView {
+        let field = ClosureTextField(string: value)
+        field.onCommit = { onCommit(field.stringValue) }
+        return field
     }
 }
 
@@ -213,8 +551,10 @@ private final class SettingsRowView: NSView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let valueLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(labelWithString: "")
+    private let control: NSView?
 
-    init(title: String, value: String, detail: String) {
+    init(title: String, value: String, detail: String, control: NSView?) {
+        self.control = control
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 8
@@ -240,6 +580,10 @@ private final class SettingsRowView: NSView {
         detailLabel.backgroundColor = .clear
         detailLabel.lineBreakMode = .byTruncatingTail
         addSubview(detailLabel)
+
+        if let control {
+            addSubview(control)
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -248,8 +592,110 @@ private final class SettingsRowView: NSView {
 
     override func layout() {
         super.layout()
-        titleLabel.frame = NSRect(x: 16, y: bounds.height - 30, width: bounds.width * 0.48, height: 20)
-        valueLabel.frame = NSRect(x: bounds.width * 0.52, y: bounds.height - 30, width: bounds.width * 0.48 - 16, height: 20)
-        detailLabel.frame = NSRect(x: 16, y: 14, width: bounds.width - 32, height: 20)
+        let controlWidth: CGFloat = control == nil ? 0 : 190
+        titleLabel.frame = NSRect(x: 16, y: bounds.height - 30, width: bounds.width * 0.42, height: 20)
+        valueLabel.frame = NSRect(x: bounds.width * 0.44, y: bounds.height - 30, width: bounds.width - bounds.width * 0.44 - controlWidth - 28, height: 20)
+        detailLabel.frame = NSRect(x: 16, y: 14, width: bounds.width - controlWidth - 44, height: 20)
+        control?.frame = NSRect(x: bounds.width - controlWidth - 16, y: 22, width: controlWidth, height: 30)
+    }
+}
+
+private final class ClosureButton: NSButton {
+    var onPress: (() -> Void)?
+
+    init(title: String) {
+        super.init(frame: .zero)
+        self.title = title
+        bezelStyle = .rounded
+        target = self
+        action = #selector(pressed)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func pressed() {
+        onPress?()
+    }
+}
+
+private final class ClosureCheckbox: NSButton {
+    var onChange: (() -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setButtonType(.switch)
+        target = self
+        action = #selector(changed)
+    }
+
+    convenience init(title: String) {
+        self.init(frame: .zero)
+        self.title = title
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func changed() {
+        onChange?()
+    }
+}
+
+private final class ClosurePopUpButton: NSPopUpButton {
+    var onChange: (() -> Void)?
+
+    init() {
+        super.init(frame: .zero, pullsDown: false)
+        target = self
+        action = #selector(changed)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func changed() {
+        onChange?()
+    }
+}
+
+private final class ClosureStepper: NSStepper {
+    var onChange: (() -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        target = self
+        action = #selector(changed)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func changed() {
+        onChange?()
+    }
+}
+
+private final class ClosureTextField: NSTextField, NSTextFieldDelegate {
+    var onCommit: (() -> Void)?
+
+    init(string: String) {
+        super.init(frame: .zero)
+        stringValue = string
+        isBezeled = true
+        isEditable = true
+        delegate = self
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        onCommit?()
     }
 }
