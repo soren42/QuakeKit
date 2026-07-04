@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "timers",
+  "name": "Timers",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "timers.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [],
+  "settings": [
+    { "id": "mode", "title": "Mode", "type": "choice", "defaultValue": "pomodoro", "choices": ["pomodoro", "break", "countdown", "stopwatch"], "environment": "QUAKEKIT_TIMER_MODE", "help": "Timer mode rendered by the panel.", "group": "Timer", "order": 10, "uiControl": "segmented" },
+    { "id": "duration_minutes", "title": "Duration", "type": "integer", "defaultValue": 25, "minimum": 1, "maximum": 180, "environment": "QUAKEKIT_TIMER_DURATION_MINUTES", "help": "Timer duration in minutes.", "group": "Timer", "order": 20, "uiControl": "stepper" },
+    { "id": "remaining_seconds", "title": "Remaining", "type": "integer", "defaultValue": 1500, "minimum": 0, "maximum": 10800, "environment": "QUAKEKIT_TIMER_REMAINING_SECONDS", "help": "Optional remaining seconds override.", "group": "Timer", "order": 30, "uiControl": "stepper" }
+  ],
+  "actions": [
+    { "id": "timer.start", "title": "Start", "argumentSchema": [] },
+    { "id": "timer.pause", "title": "Pause", "argumentSchema": [] },
+    { "id": "timer.reset", "title": "Reset", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "timer.state", "title": "Timer", "valueSchema": [
+      { "id": "mode", "title": "Mode", "type": "string", "required": false },
+      { "id": "remainingSeconds", "title": "Remaining", "type": "integer", "required": false },
+      { "id": "progress", "title": "Progress", "type": "number", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "timer.panel", "title": "Timers", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "timer.state", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 520, "preferredHeight": 220 }
+  ]
+}

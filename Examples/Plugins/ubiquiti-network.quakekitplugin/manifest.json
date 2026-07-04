@@ -40,7 +40,10 @@
       "type": "string",
       "defaultValue": "https://unifi.local",
       "environment": "QUAKEKIT_UNIFI_CONTROLLER_URL",
-      "help": "UniFi Network controller URL used by real adapters."
+      "help": "UniFi Network controller URL used by real adapters.",
+      "group": "Connection",
+      "order": 10,
+      "uiControl": "textField"
     },
     {
       "id": "site",
@@ -48,7 +51,10 @@
       "type": "string",
       "defaultValue": "default",
       "environment": "QUAKEKIT_UNIFI_SITE",
-      "help": "UniFi site name summarized by the panel."
+      "help": "UniFi site name summarized by the panel.",
+      "group": "Connection",
+      "order": 20,
+      "uiControl": "textField"
     },
     {
       "id": "client_filter",
@@ -61,10 +67,62 @@
         "wireless"
       ],
       "environment": "QUAKEKIT_UNIFI_CLIENT_FILTER",
-      "help": "Client group highlighted in the deterministic response."
+      "help": "Client group highlighted in the deterministic response.",
+      "group": "Network",
+      "order": 30,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "security_mode",
+      "title": "Security Mode",
+      "type": "choice",
+      "defaultValue": "home",
+      "choices": [
+        "home",
+        "away",
+        "night",
+        "privacy"
+      ],
+      "environment": "QUAKEKIT_UNIFI_SECURITY_MODE",
+      "help": "Protect camera/security mode represented by the widget.",
+      "group": "Security",
+      "order": 40,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "camera_group",
+      "title": "Camera Group",
+      "type": "choice",
+      "defaultValue": "perimeter",
+      "choices": [
+        "perimeter",
+        "interior",
+        "all"
+      ],
+      "environment": "QUAKEKIT_UNIFI_CAMERA_GROUP",
+      "help": "Camera group summarized in the security card.",
+      "group": "Security",
+      "order": 50,
+      "uiControl": "popup"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_UNIFI_DRY_RUN",
+      "help": "When true, network and security actions return request plans only.",
+      "group": "Safety",
+      "order": 60,
+      "uiControl": "toggle"
     }
   ],
   "actions": [
+    {
+      "id": "unifi.refresh",
+      "title": "Refresh UniFi",
+      "argumentSchema": []
+    },
     {
       "id": "unifi.restartAccessPoint",
       "title": "Restart Access Point",
@@ -86,6 +144,32 @@
           "title": "Client ID",
           "type": "string",
           "required": false
+        }
+      ]
+    },
+    {
+      "id": "unifi.setProtectMode",
+      "title": "Set Protect Mode",
+      "argumentSchema": [
+        {
+          "id": "mode",
+          "title": "Mode",
+          "type": "string",
+          "required": false,
+          "defaultValue": "home"
+        }
+      ]
+    },
+    {
+      "id": "unifi.openCamera",
+      "title": "Open Camera",
+      "argumentSchema": [
+        {
+          "id": "camera_id",
+          "title": "Camera ID",
+          "type": "string",
+          "required": false,
+          "defaultValue": "driveway"
         }
       ]
     }
@@ -111,6 +195,18 @@
           "id": "uptimePercent",
           "title": "Uptime Percent",
           "type": "number",
+          "required": false
+        },
+        {
+          "id": "securityMode",
+          "title": "Security Mode",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "cameraAlerts",
+          "title": "Camera Alerts",
+          "type": "integer",
           "required": false
         }
       ]

@@ -89,6 +89,39 @@
       "uiControl": "popup"
     },
     {
+      "id": "stream_title",
+      "title": "Stream Title",
+      "type": "string",
+      "defaultValue": "Working session",
+      "environment": "QUAKEKIT_DISCORD_STREAM_TITLE",
+      "help": "Title used by stream helper status and announcement plans.",
+      "group": "Stream",
+      "order": 45,
+      "uiControl": "textField"
+    },
+    {
+      "id": "go_live_url",
+      "title": "Go Live URL",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_DISCORD_GO_LIVE_URL",
+      "help": "Optional stream URL included in dry-run announcement payloads.",
+      "group": "Stream",
+      "order": 46,
+      "uiControl": "textField"
+    },
+    {
+      "id": "mention_role",
+      "title": "Mention Role",
+      "type": "string",
+      "defaultValue": "@stream",
+      "environment": "QUAKEKIT_DISCORD_MENTION_ROLE",
+      "help": "Role text included in announcement previews.",
+      "group": "Stream",
+      "order": 47,
+      "uiControl": "textField"
+    },
+    {
       "id": "dry_run",
       "title": "Dry Run",
       "type": "boolean",
@@ -96,7 +129,7 @@
       "environment": "QUAKEKIT_DISCORD_DRY_RUN",
       "help": "When true, post and presence actions return planned Discord calls only.",
       "group": "Safety",
-      "order": 50,
+      "order": 60,
       "uiControl": "toggle"
     }
   ],
@@ -137,6 +170,30 @@
           "defaultValue": "stream-room"
         }
       ]
+    },
+    {
+      "id": "discord.announceStream",
+      "title": "Announce Stream",
+      "argumentSchema": [
+        {
+          "id": "title",
+          "title": "Title",
+          "type": "string",
+          "required": false,
+          "defaultValue": "Working session"
+        },
+        {
+          "id": "url",
+          "title": "URL",
+          "type": "url",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "discord.clearMentions",
+      "title": "Clear Mentions",
+      "argumentSchema": []
     }
   ],
   "dataStreams": [
@@ -172,6 +229,12 @@
           "id": "webhookConfigured",
           "title": "Webhook Configured",
           "type": "boolean",
+          "required": false
+        },
+        {
+          "id": "streamTitle",
+          "title": "Stream Title",
+          "type": "string",
           "required": false
         }
       ]

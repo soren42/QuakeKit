@@ -40,7 +40,10 @@
       "type": "string",
       "defaultValue": "http://homeassistant.local:8123",
       "environment": "QUAKEKIT_HOME_ASSISTANT_URL",
-      "help": "Home Assistant base URL used by real adapters."
+      "help": "Home Assistant base URL used by real adapters.",
+      "group": "Connection",
+      "order": 10,
+      "uiControl": "textField"
     },
     {
       "id": "dashboard_area",
@@ -54,7 +57,38 @@
         "Garage"
       ],
       "environment": "QUAKEKIT_HOME_ASSISTANT_AREA",
-      "help": "Area summarized by the example dashboard."
+      "help": "Area summarized by the example dashboard.",
+      "group": "Dashboard",
+      "order": 20,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "scene_profile",
+      "title": "Scene Profile",
+      "type": "choice",
+      "defaultValue": "evening",
+      "choices": [
+        "morning",
+        "workday",
+        "evening",
+        "away"
+      ],
+      "environment": "QUAKEKIT_HOME_ASSISTANT_SCENE_PROFILE",
+      "help": "Scene set highlighted by quick scene controls.",
+      "group": "Scenes",
+      "order": 30,
+      "uiControl": "popup"
+    },
+    {
+      "id": "favorite_scene",
+      "title": "Favorite Scene",
+      "type": "string",
+      "defaultValue": "scene.living_room_evening",
+      "environment": "QUAKEKIT_HOME_ASSISTANT_FAVORITE_SCENE",
+      "help": "Default scene used by Run Scene when no argument is supplied.",
+      "group": "Scenes",
+      "order": 40,
+      "uiControl": "textField"
     },
     {
       "id": "include_climate",
@@ -62,10 +96,46 @@
       "type": "boolean",
       "defaultValue": true,
       "environment": "QUAKEKIT_HOME_ASSISTANT_INCLUDE_CLIMATE",
-      "help": "Shows climate entities in the deterministic response."
+      "help": "Shows climate entities in the deterministic response.",
+      "group": "Dashboard",
+      "order": 50,
+      "uiControl": "toggle"
+    },
+    {
+      "id": "security_mode",
+      "title": "Security Mode",
+      "type": "choice",
+      "defaultValue": "home",
+      "choices": [
+        "disarmed",
+        "home",
+        "away",
+        "night"
+      ],
+      "environment": "QUAKEKIT_HOME_ASSISTANT_SECURITY_MODE",
+      "help": "Alarm panel mode shown by the offline-safe security card.",
+      "group": "Security",
+      "order": 60,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_HOME_ASSISTANT_DRY_RUN",
+      "help": "When true, service calls return local request plans only.",
+      "group": "Safety",
+      "order": 70,
+      "uiControl": "toggle"
     }
   ],
   "actions": [
+    {
+      "id": "homeassistant.refresh",
+      "title": "Refresh Dashboard",
+      "argumentSchema": []
+    },
     {
       "id": "homeassistant.toggleEntity",
       "title": "Toggle Entity",
@@ -87,6 +157,39 @@
           "title": "Scene ID",
           "type": "string",
           "required": false
+        }
+      ]
+    },
+    {
+      "id": "homeassistant.setClimate",
+      "title": "Set Climate",
+      "argumentSchema": [
+        {
+          "id": "entity_id",
+          "title": "Entity ID",
+          "type": "string",
+          "required": false,
+          "defaultValue": "climate.main_floor"
+        },
+        {
+          "id": "temperature",
+          "title": "Temperature",
+          "type": "number",
+          "required": false,
+          "defaultValue": 72
+        }
+      ]
+    },
+    {
+      "id": "homeassistant.armSecurity",
+      "title": "Arm Security",
+      "argumentSchema": [
+        {
+          "id": "mode",
+          "title": "Mode",
+          "type": "string",
+          "required": false,
+          "defaultValue": "home"
         }
       ]
     }
@@ -112,6 +215,18 @@
           "id": "temperature",
           "title": "Temperature",
           "type": "number",
+          "required": false
+        },
+        {
+          "id": "sceneProfile",
+          "title": "Scene Profile",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "securityMode",
+          "title": "Security Mode",
+          "type": "string",
           "required": false
         }
       ]

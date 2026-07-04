@@ -15,12 +15,21 @@
     { "id": "agent_count", "title": "Agent Count", "type": "integer", "defaultValue": 1, "minimum": 0, "maximum": 32, "environment": "QUAKEKIT_AI_AGENT_COUNT", "help": "Optional override for active agent count.", "group": "Session", "order": 20, "uiControl": "stepper" },
     { "id": "tokens_used", "title": "Tokens Used", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 10000000, "environment": "QUAKEKIT_AI_TOKENS_USED", "help": "Current task token estimate.", "group": "Session", "order": 30, "uiControl": "stepper" },
     { "id": "tokens_remaining", "title": "Tokens Remaining", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 10000000, "environment": "QUAKEKIT_AI_TOKENS_REMAINING", "help": "Remaining token/work budget estimate.", "group": "Session", "order": 40, "uiControl": "stepper" },
-    { "id": "status_file", "title": "Status File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AI_STATUS_FILE", "help": "Optional pipe-delimited provider|project|agents|used|remaining|limit status file.", "group": "Advanced", "order": 50, "uiControl": "filePicker" }
+    { "id": "queue_depth", "title": "Queue Depth", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 100, "environment": "QUAKEKIT_AI_QUEUE_DEPTH", "help": "Number of pending agent tasks shown in the status view.", "group": "Session", "order": 50, "uiControl": "stepper" },
+    { "id": "health_mode", "title": "Health Mode", "type": "choice", "defaultValue": "normal", "choices": ["normal", "focus", "limited", "blocked"], "environment": "QUAKEKIT_AI_HEALTH_MODE", "help": "Status preset for workbench health and suggested action cards.", "group": "Session", "order": 60, "uiControl": "segmented" },
+    { "id": "status_file", "title": "Status File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AI_STATUS_FILE", "help": "Optional pipe-delimited provider|project|agents|used|remaining|limit|queue|health status file.", "group": "Advanced", "order": 70, "uiControl": "filePicker" },
+    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_AI_DRY_RUN", "help": "When true, workbench actions return plans without controlling agent processes.", "group": "Safety", "order": 80, "uiControl": "toggle" }
   ],
   "actions": [
     { "id": "ai.refresh", "title": "Refresh AI Workbench", "argumentSchema": [] },
     { "id": "ai.pauseAgents", "title": "Pause Agents", "argumentSchema": [] },
-    { "id": "ai.copySummary", "title": "Copy Summary", "argumentSchema": [] }
+    { "id": "ai.copySummary", "title": "Copy Summary", "argumentSchema": [] },
+    { "id": "ai.openProject", "title": "Open Project", "argumentSchema": [
+      { "id": "path", "title": "Path", "type": "string", "required": false }
+    ] },
+    { "id": "ai.setFocusMode", "title": "Set Focus Mode", "argumentSchema": [
+      { "id": "enabled", "title": "Enabled", "type": "boolean", "required": false, "defaultValue": true }
+    ] }
   ],
   "dataStreams": [
     { "id": "ai.session", "title": "AI Session", "valueSchema": [
@@ -28,7 +37,9 @@
       { "id": "project", "title": "Project", "type": "string", "required": false },
       { "id": "agents", "title": "Agents", "type": "integer", "required": false },
       { "id": "tokensUsed", "title": "Tokens Used", "type": "integer", "required": false },
-      { "id": "tokensRemaining", "title": "Tokens Remaining", "type": "integer", "required": false }
+      { "id": "tokensRemaining", "title": "Tokens Remaining", "type": "integer", "required": false },
+      { "id": "queueDepth", "title": "Queue Depth", "type": "integer", "required": false },
+      { "id": "healthMode", "title": "Health Mode", "type": "string", "required": false }
     ] }
   ],
   "views": [

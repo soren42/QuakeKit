@@ -34,6 +34,16 @@ Build:
 swift build
 ```
 
+Run the full non-hardware release validation sweep:
+
+```bash
+./scripts/validate-release.sh
+```
+
+This builds Swift targets, runs package tests, validates bundled plugin and
+theme manifests, checks process-adapter JSON output, and assembles the local
+`.app` bundle.
+
 Enumerate supported DK-Quake HID interfaces:
 
 ```bash
@@ -167,6 +177,7 @@ The live probe only sends safe wake, keep-alive, firmware, mic, and brightness q
 - `quake-test`: portable regression target for protocol, plugin, and runtime checks.
 - `quake-panel`: first AppKit panel host with native shell pages, theme selection, and HID knob/touch events.
 - `scripts/build-app-bundle.sh`: local `.app` assembler for menu-bar launch testing.
+- `scripts/validate-release.sh`: non-hardware release validation sweep for Swift targets, packages, adapters, and app bundle assembly.
 
 Bundled plugin adapters are intentionally keyless and tolerant of offline use.
 Weather uses Open-Meteo and now defaults to Charlotte, NC through its declared

@@ -8,6 +8,9 @@ host validates each `manifest.json` against
 | --- | --- | --- | --- |
 | `system-monitor.quakekitplugin` | POSIX shell | `shell` | Local system metrics action and data stream. |
 | `weather.quakekitplugin` | POSIX shell plus HTML | `shell` | Weather data provider with an HTML canvas view. |
+| `agenda.quakekitplugin` | POSIX shell | `shell` | Calendar/agenda fixture with optional local file input. |
+| `timers.quakekitplugin` | POSIX shell | `shell` | Pomodoro, break, countdown, and stopwatch status fixture. |
+| `clipboard-notes.quakekitplugin` | POSIX shell | `shell` | Scratchpad and privacy-gated clipboard preview fixture. |
 | `markets.quakekitplugin` | PHP | `php` | Market ticker provider with environment-backed settings. |
 | `obs-stream-controls.quakekitplugin` | POSIX shell | `shell` | OBS stream scene and control stubs. |
 | `octoprint-printer.quakekitplugin` | POSIX shell | `shell` | OctoPrint printer status and control stubs. |
@@ -25,6 +28,7 @@ host validates each `manifest.json` against
 | `home-assistant.quakekitplugin` | POSIX shell | `shell` | Home Assistant entity dashboard stub. |
 | `octoprint.quakekitplugin` | POSIX shell | `shell` | 3D printer status, temperature profile, and job controls fixture. |
 | `ubiquiti-network.quakekitplugin` | POSIX shell | `shell` | UniFi network health dashboard stub. |
+| `security-cameras.quakekitplugin` | POSIX shell | `shell` | UniFi/Ring/Eufy-style camera and security-mode fixture. |
 | `app-context.quakekitplugin` | POSIX shell | `shell` | Frontmost app/window context detector and companion profile router. |
 | `hotkey-grid.quakekitplugin` | POSIX shell | `shell` | Context-aware macro and status grid fixture. |
 | `music-now-playing.quakekitplugin` | POSIX shell | `shell` | Spotify/Apple Music/local now-playing companion fixture with optional local file input. |
@@ -71,6 +75,11 @@ terminal, Affinity, and AI agent companions expose optional `QUAKEKIT_*_FILE`
 or explicit `QUAKEKIT_*` inputs for deterministic local metadata while keeping
 live provider calls, app automation, and input synthesis behind declared
 permissions and dry-run settings.
+
+Utility widgets such as Agenda, Timers, Clipboard Notes, and Security Cameras
+use the same pattern: deterministic fixture data by default, optional local
+files or environment settings for real local context, and explicit permissions
+for any future external bridge.
 
 Validate all bundled plugin manifests from the repository root:
 

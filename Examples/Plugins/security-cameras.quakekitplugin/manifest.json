@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "security_cameras",
+  "name": "Security Cameras",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "security-cameras.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["localhost", "unifi.local", "ring.com", "eufy.com"] } },
+    { "secrets": { "keys": ["UNIFI_API_KEY", "RING_TOKEN", "EUFY_TOKEN"] } }
+  ],
+  "settings": [
+    { "id": "provider", "title": "Provider", "type": "choice", "defaultValue": "unifi", "choices": ["unifi", "ring", "eufy", "fixture"], "environment": "QUAKEKIT_CAMERA_PROVIDER", "help": "Camera provider represented by the fixture.", "group": "Source", "order": 10, "uiControl": "segmented" },
+    { "id": "camera_file", "title": "Camera File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_CAMERA_FILE", "help": "Optional pipe-delimited file: name|state|motion per line.", "group": "Source", "order": 20, "uiControl": "filePicker" },
+    { "id": "arm_mode", "title": "Arm Mode", "type": "choice", "defaultValue": "home", "choices": ["home", "away", "disarmed"], "environment": "QUAKEKIT_CAMERA_ARM_MODE", "help": "Security mode shown on the panel.", "group": "Security", "order": 30, "uiControl": "segmented" }
+  ],
+  "actions": [
+    { "id": "camera.refresh", "title": "Refresh Cameras", "argumentSchema": [] },
+    { "id": "camera.armHome", "title": "Arm Home", "argumentSchema": [] },
+    { "id": "camera.armAway", "title": "Arm Away", "argumentSchema": [] },
+    { "id": "camera.openLive", "title": "Open Live View", "argumentSchema": [] }
+  ],
+  "dataStreams": [
+    { "id": "camera.status", "title": "Camera Status", "valueSchema": [
+      { "id": "provider", "title": "Provider", "type": "string", "required": false },
+      { "id": "cameraCount", "title": "Camera Count", "type": "integer", "required": false },
+      { "id": "motionCount", "title": "Motion Count", "type": "integer", "required": false }
+    ] }
+  ],
+  "views": [
+    { "id": "camera.panel", "title": "Security", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "camera.status", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}
