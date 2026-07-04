@@ -59,6 +59,13 @@ let packages = loadResults.compactMap { result -> PluginPackage? in
     return nil
 }
 
+func commandExists(_ command: String) -> Bool {
+    let paths = ProcessInfo.processInfo.environment["PATH"]?.split(separator: ":").map(String.init) ?? []
+    return paths.contains { path in
+        FileManager.default.isExecutableFile(atPath: URL(fileURLWithPath: path).appendingPathComponent(command).path)
+    }
+}
+
 run("bundled plugin package validation") {
     expect(packages.count >= 6, "expected at least six bundled plugin packages")
     expect(loadResults.allSatisfy { result in
@@ -73,7 +80,11 @@ run("plugin action execution") {
     expect(host.invokeAction(pluginID: "system_monitor", actionID: "system.refresh").response.ok, "system refresh action failed")
     expect(host.invokeAction(pluginID: "ai_agent", actionID: "agent.listen").response.ok, "agent listen action failed")
     expect(host.invokeAction(pluginID: "weather", actionID: "weather.refresh").response.ok, "weather refresh action failed")
-    expect(host.invokeAction(pluginID: "markets", actionID: "markets.refresh").response.ok, "markets refresh action failed")
+    if commandExists("php") {
+        expect(host.invokeAction(pluginID: "markets", actionID: "markets.refresh").response.ok, "markets refresh action failed")
+    } else {
+        print("skip markets refresh action: php unavailable")
+    }
     expect(host.invokeAction(pluginID: "sports_scores", actionID: "sports.refresh").response.ok, "sports refresh action failed")
 }
 

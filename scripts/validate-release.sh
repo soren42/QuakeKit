@@ -44,7 +44,11 @@ for f in Examples/Plugins/*/*.sh Examples/Plugins/ai-agent.quakekitplugin/ai-age
     exit 1
   }
 done
-printf '{}\n' | php Examples/Plugins/markets.quakekitplugin/markets.php | python3 -m json.tool >/dev/null
+if command -v php >/dev/null 2>&1; then
+  printf '{}\n' | php Examples/Plugins/markets.quakekitplugin/markets.php | python3 -m json.tool >/dev/null
+else
+  echo "skip php adapter JSON check: php unavailable"
+fi
 
 echo "== app bundle"
 ./scripts/build-app-bundle.sh >/tmp/quakekit-bundle-path.txt
