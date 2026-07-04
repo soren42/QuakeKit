@@ -95,6 +95,13 @@ Bundled examples:
 
 - `Examples/Plugins/system-monitor.quakekitplugin/system-monitor.sh`
 - `Examples/Plugins/weather.quakekitplugin/weather.sh`
+- `Examples/Plugins/discord-companion.quakekitplugin/discord-companion.sh`
+- `Examples/Plugins/obs-controls.quakekitplugin/obs-controls.sh`
+- `Examples/Plugins/home-assistant.quakekitplugin/home-assistant.sh`
+- `Examples/Plugins/octoprint.quakekitplugin/octoprint.sh`
+- `Examples/Plugins/ubiquiti-network.quakekitplugin/ubiquiti-network.sh`
+- `Examples/Plugins/hotkey-grid.quakekitplugin/hotkey-grid.sh`
+- `Examples/Plugins/music-now-playing.quakekitplugin/music-now-playing.sh`
 
 Manifest shape:
 
@@ -107,6 +114,28 @@ Manifest shape:
   }
 }
 ```
+
+## Integration Stub Categories
+
+Integration stubs stay manifest-first and choose the smallest transport that
+matches the service boundary:
+
+- Discord: `stdioJSONRPC` or `shell` adapter for presence, webhook, and bot
+  action experiments.
+- OBS: `stdioJSONRPC` adapter for scene, source, and recording controls.
+- Home Assistant: networked data provider for entity state boards and control
+  actions.
+- OctoPrint: networked data provider for printer status, job progress, and
+  pause/resume actions.
+- Ubiquiti: networked data provider for device, client, and site health rows.
+- Hotkey Grid: local action provider for macro buttons and command palettes.
+- Music companion: local or networked provider for Spotify, Apple Music, or
+  other now-playing sources.
+
+For service-shaped payloads, prefer `dataDriven` views backed by a data stream.
+The host can render common row, device, scoreboard, and ticker payloads through
+the generic native data board renderer without requiring every stub to ship a
+custom web view.
 
 ## Validation
 

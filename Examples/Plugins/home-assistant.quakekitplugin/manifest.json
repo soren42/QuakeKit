@@ -1,0 +1,134 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "home_assistant",
+  "name": "Home Assistant",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "shell",
+    "command": "home-assistant.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "deviceProvider"
+  ],
+  "permissions": [
+    {
+      "network": {
+        "hosts": [
+          "homeassistant.local",
+          "localhost"
+        ]
+      }
+    },
+    {
+      "secrets": {
+        "keys": [
+          "HOME_ASSISTANT_TOKEN"
+        ]
+      }
+    }
+  ],
+  "settings": [
+    {
+      "id": "base_url",
+      "title": "Base URL",
+      "type": "string",
+      "defaultValue": "http://homeassistant.local:8123",
+      "environment": "QUAKEKIT_HOME_ASSISTANT_URL",
+      "help": "Home Assistant base URL used by real adapters."
+    },
+    {
+      "id": "dashboard_area",
+      "title": "Dashboard Area",
+      "type": "choice",
+      "defaultValue": "Living Room",
+      "choices": [
+        "Living Room",
+        "Kitchen",
+        "Office",
+        "Garage"
+      ],
+      "environment": "QUAKEKIT_HOME_ASSISTANT_AREA",
+      "help": "Area summarized by the example dashboard."
+    },
+    {
+      "id": "include_climate",
+      "title": "Include Climate",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_HOME_ASSISTANT_INCLUDE_CLIMATE",
+      "help": "Shows climate entities in the deterministic response."
+    }
+  ],
+  "actions": [
+    {
+      "id": "homeassistant.toggleEntity",
+      "title": "Toggle Entity",
+      "argumentSchema": [
+        {
+          "id": "entity_id",
+          "title": "Entity ID",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "homeassistant.runScene",
+      "title": "Run Scene",
+      "argumentSchema": [
+        {
+          "id": "scene_id",
+          "title": "Scene ID",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "homeassistant.area",
+      "title": "Area Summary",
+      "valueSchema": [
+        {
+          "id": "area",
+          "title": "Area",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "lightsOn",
+          "title": "Lights On",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "temperature",
+          "title": "Temperature",
+          "type": "number",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "homeassistant.dashboard",
+      "title": "Home Dashboard",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "layout": "grid",
+      "dataStreamID": "homeassistant.area",
+      "columnSpan": 2,
+      "rowSpan": 2,
+      "preferredWidth": 520,
+      "preferredHeight": 360
+    }
+  ]
+}

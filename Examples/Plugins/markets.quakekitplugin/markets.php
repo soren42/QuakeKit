@@ -1,6 +1,7 @@
 <?php
 $stdin = stream_get_contents(STDIN);
 $symbols = getenv("QUAKEKIT_MARKET_SYMBOLS") ?: "AAPL,NVDA,MSFT";
+$displayMode = getenv("QUAKEKIT_MARKET_DISPLAY_MODE") ?: "compact";
 $rows = [];
 
 foreach (array_slice(array_map("trim", explode(",", $symbols)), 0, 6) as $symbol) {
@@ -20,7 +21,9 @@ foreach (array_slice(array_map("trim", explode(",", $symbols)), 0, 6) as $symbol
             $rows[] = [
                 "symbol" => strtoupper($symbol),
                 "price" => round($price, 2),
-                "change" => $change
+                "change" => $change,
+                "currency" => $meta["currency"] ?? "USD",
+                "exchange" => $meta["exchangeName"] ?? ""
             ];
             continue;
         }
@@ -29,12 +32,15 @@ foreach (array_slice(array_map("trim", explode(",", $symbols)), 0, 6) as $symbol
 
 if (!$rows) {
     $rows = [
-        ["symbol" => "AAPL", "price" => 214.12, "change" => 0.8],
-        ["symbol" => "NVDA", "price" => 158.24, "change" => -0.4]
+        ["symbol" => "AAPL", "price" => 214.12, "change" => 0.8, "currency" => "USD", "exchange" => "NASDAQ"],
+        ["symbol" => "NVDA", "price" => 158.24, "change" => -0.4, "currency" => "USD", "exchange" => "NASDAQ"],
+        ["symbol" => "MSFT", "price" => 497.48, "change" => 1.22, "currency" => "USD", "exchange" => "NASDAQ"]
     ];
 }
 
 echo json_encode([
     "symbols" => $rows,
+    "mode" => $displayMode,
+    "updatedAt" => gmdate("c"),
     "source" => count($rows) ? "markets.php" : "fallback"
 ]) . PHP_EOL;

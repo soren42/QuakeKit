@@ -1171,6 +1171,7 @@ final class PanelView: NSView {
     private var runtimeRows: [StatusRowView] = []
     private var systemDashboardView: SystemMonitorDashboardView?
     private var weatherDashboardView: WeatherDashboardView?
+    private var dataBoardView: DataBoardView?
     private var pageLabels: [NSTextField] = []
     private let themeBackgroundView = ThemeBackgroundImageView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
@@ -1436,10 +1437,12 @@ final class PanelView: NSView {
         runtimeRows.forEach { $0.removeFromSuperview() }
         systemDashboardView?.removeFromSuperview()
         weatherDashboardView?.removeFromSuperview()
+        dataBoardView?.removeFromSuperview()
         tileViews.removeAll()
         runtimeRows.removeAll()
         systemDashboardView = nil
         weatherDashboardView = nil
+        dataBoardView = nil
         previousGridPad.isHidden = true
         nextGridPad.isHidden = true
 
@@ -1470,6 +1473,11 @@ final class PanelView: NSView {
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 weatherDashboardView = view
+            } else if let dataBoard = dataBoardSnapshot(pluginID: pluginID, viewID: viewID) {
+                let view = DataBoardView(snapshot: dataBoard, theme: activeTheme)
+                view.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(view)
+                dataBoardView = view
             } else {
                 runtimeRows = pluginViewRows(pluginID: pluginID, viewID: viewID).map { row in
                     let view = StatusRowView(title: row.title, value: row.value, theme: activeTheme)
@@ -1509,6 +1517,10 @@ final class PanelView: NSView {
         }
         if let weatherDashboardView {
             weatherDashboardView.frame = contentRect
+            return
+        }
+        if let dataBoardView {
+            dataBoardView.frame = contentRect
             return
         }
         if currentPage.kind == .runtimeStatus || isPluginView(currentPage.kind) {
@@ -1622,6 +1634,7 @@ final class PanelView: NSView {
         runtimeRows.forEach { $0.theme = activeTheme }
         systemDashboardView?.theme = activeTheme
         weatherDashboardView?.theme = activeTheme
+        dataBoardView?.theme = activeTheme
         previousGridPad.theme = activeTheme
         nextGridPad.theme = activeTheme
     }
@@ -1775,6 +1788,21 @@ final class PanelView: NSView {
             return .placeholder
         }
         return WeatherSnapshot(value: snapshot.payload, timestamp: snapshot.timestamp)
+    }
+
+    private func dataBoardSnapshot(pluginID: String, viewID: String) -> DataBoardSnapshot? {
+        guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }),
+              let view = package.manifest.views.first(where: { $0.id == viewID }),
+              view.type == .dataDriven || view.dataStreamID != nil else {
+            return nil
+        }
+        let snapshot = view.dataStreamID.flatMap { pluginDataStore.snapshot(pluginID: pluginID, streamID: $0) }
+        return DataBoardSnapshot(
+            pluginName: package.manifest.name,
+            viewTitle: view.title,
+            value: snapshot?.payload,
+            timestamp: snapshot?.timestamp
+        )
     }
 
     private func refreshData(for view: PluginView, package: PluginPackage) {

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "octoprint",
+  "name": "OctoPrint",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "octoprint.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["octopi.local", "localhost"] } },
+    { "secrets": { "keys": ["OCTOPRINT_API_KEY"] } }
+  ],
+  "settings": [
+    { "id": "printer_url", "title": "Printer URL", "type": "string", "defaultValue": "http://octopi.local", "environment": "QUAKEKIT_OCTOPRINT_URL", "help": "OctoPrint API base URL." },
+    { "id": "printer_name", "title": "Printer Name", "type": "string", "defaultValue": "Voron", "environment": "QUAKEKIT_OCTOPRINT_NAME", "help": "Friendly printer name." }
+  ],
+  "actions": [
+    { "id": "octoprint.refresh", "title": "Refresh Printer", "argumentSchema": [] },
+    { "id": "octoprint.pause", "title": "Pause Print", "argumentSchema": [] },
+    { "id": "octoprint.resume", "title": "Resume Print", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "octoprint.job", "title": "Print Job", "valueSchema": [] }],
+  "views": [
+    { "id": "octoprint.panel", "title": "3D Printer", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "octoprint.job", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

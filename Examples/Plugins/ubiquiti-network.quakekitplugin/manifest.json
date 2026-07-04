@@ -1,0 +1,133 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "ubiquiti_network",
+  "name": "Ubiquiti Network",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "shell",
+    "command": "ubiquiti-network.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "deviceProvider"
+  ],
+  "permissions": [
+    {
+      "network": {
+        "hosts": [
+          "unifi.local",
+          "localhost"
+        ]
+      }
+    },
+    {
+      "secrets": {
+        "keys": [
+          "UNIFI_API_TOKEN"
+        ]
+      }
+    }
+  ],
+  "settings": [
+    {
+      "id": "controller_url",
+      "title": "Controller URL",
+      "type": "string",
+      "defaultValue": "https://unifi.local",
+      "environment": "QUAKEKIT_UNIFI_CONTROLLER_URL",
+      "help": "UniFi Network controller URL used by real adapters."
+    },
+    {
+      "id": "site",
+      "title": "Site",
+      "type": "string",
+      "defaultValue": "default",
+      "environment": "QUAKEKIT_UNIFI_SITE",
+      "help": "UniFi site name summarized by the panel."
+    },
+    {
+      "id": "client_filter",
+      "title": "Client Filter",
+      "type": "choice",
+      "defaultValue": "all",
+      "choices": [
+        "all",
+        "wired",
+        "wireless"
+      ],
+      "environment": "QUAKEKIT_UNIFI_CLIENT_FILTER",
+      "help": "Client group highlighted in the deterministic response."
+    }
+  ],
+  "actions": [
+    {
+      "id": "unifi.restartAccessPoint",
+      "title": "Restart Access Point",
+      "argumentSchema": [
+        {
+          "id": "device_id",
+          "title": "Device ID",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "unifi.blockClient",
+      "title": "Block Client",
+      "argumentSchema": [
+        {
+          "id": "client_id",
+          "title": "Client ID",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "unifi.health",
+      "title": "Network Health",
+      "valueSchema": [
+        {
+          "id": "wanStatus",
+          "title": "WAN Status",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "clients",
+          "title": "Clients",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "uptimePercent",
+          "title": "Uptime Percent",
+          "type": "number",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "unifi.overview",
+      "title": "Network Overview",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "layout": "grid",
+      "dataStreamID": "unifi.health",
+      "columnSpan": 2,
+      "rowSpan": 2,
+      "preferredWidth": 560,
+      "preferredHeight": 360
+    }
+  ]
+}

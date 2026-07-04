@@ -37,6 +37,22 @@
       ],
       "environment": "QUAKEKIT_SPORTS_LEAGUE",
       "help": "League used by the scoreboard provider."
+    },
+    {
+      "id": "favorite_team",
+      "title": "Favorite Team",
+      "type": "choice",
+      "defaultValue": "CAR",
+      "choices": [
+        "CAR",
+        "ATL",
+        "NYM",
+        "LAL",
+        "GSW",
+        "NYR"
+      ],
+      "environment": "QUAKEKIT_SPORTS_FAVORITE_TEAM",
+      "help": "Preferred team abbreviation highlighted by future score renderers."
     }
   ],
   "actions": [
@@ -60,10 +76,10 @@
       "type": "dataDriven",
       "presentation": "pageAndWidget",
       "dataStreamID": "sports.favoriteTeams",
-      "columnSpan": 2,
+      "columnSpan": 3,
       "rowSpan": 1,
-      "preferredWidth": 480,
-      "preferredHeight": 200
+      "preferredWidth": 960,
+      "preferredHeight": 240
     }
   ]
 }

@@ -9,14 +9,31 @@ host validates each `manifest.json` against
 | `system-monitor.quakekitplugin` | POSIX shell | `shell` | Local system metrics action and data stream. |
 | `weather.quakekitplugin` | POSIX shell plus HTML | `shell` | Weather data provider with an HTML canvas view. |
 | `markets.quakekitplugin` | PHP | `php` | Market ticker provider with environment-backed settings. |
+| `obs-stream-controls.quakekitplugin` | POSIX shell | `shell` | OBS stream scene and control stubs. |
+| `octoprint-printer.quakekitplugin` | POSIX shell | `shell` | OctoPrint printer status and control stubs. |
 | `ai-agent.quakekitplugin` | HTML plus stdio adapter | `stdioJSONRPC` | Web document surface for an agent adapter. |
 | `sports.quakekitplugin` | Executable stdio adapter | `stdioJSONRPC` | Scoreboard data provider. |
+| `discord-companion.quakekitplugin` | POSIX shell | `shell` | Discord presence, voice, and webhook companion stub. |
+| `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS scene, stream, and recording controls stub. |
+| `home-assistant.quakekitplugin` | POSIX shell | `shell` | Home Assistant entity dashboard stub. |
+| `octoprint.quakekitplugin` | POSIX shell | `shell` | 3D printer status and job controls stub. |
+| `ubiquiti-network.quakekitplugin` | POSIX shell | `shell` | UniFi network health dashboard stub. |
+| `hotkey-grid.quakekitplugin` | POSIX shell | `shell` | Focus-aware macro and status grid stub. |
+| `music-now-playing.quakekitplugin` | POSIX shell | `shell` | Spotify/Apple Music/local now-playing companion stub. |
 | `native-status.quakekitplugin` | Swift | `nativeSwift` | Manifest-only native Swift documentation sample. |
 | `echo-plugin.json` | Executable stdio adapter | `stdioJSONRPC` | Loose manifest fixture for early validation. |
 
 Process examples should read stdin to completion, use declared settings from
 environment variables, and print one JSON object to stdout. HTML assets should
 stay package-local and reference their manifest view through `entryPath`.
+
+## Integration Stub Categories
+
+The integration stubs are intentionally deterministic until their credential and
+service-specific bridges are implemented. They still declare realistic settings,
+permissions, actions, data streams, and `dataDriven` views so the host can load
+them, render them through the generic native data board, and expose their
+settings from the tray configuration window.
 
 The native Swift example is intentionally manifest-only. It documents the
 `nativeSwift` transport without adding runtime Swift source, package targets, or

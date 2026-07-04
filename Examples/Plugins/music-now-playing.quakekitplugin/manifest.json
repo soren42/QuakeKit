@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "music_now_playing",
+  "name": "Music Now Playing",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "music-now-playing.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["api.spotify.com"] } },
+    { "secrets": { "keys": ["SPOTIFY_ACCESS_TOKEN"] } }
+  ],
+  "settings": [
+    { "id": "provider", "title": "Provider", "type": "choice", "defaultValue": "spotify", "choices": ["spotify", "apple_music", "local"], "environment": "QUAKEKIT_MUSIC_PROVIDER", "help": "Preferred now-playing provider." },
+    { "id": "refresh_interval", "title": "Refresh Interval", "type": "choice", "defaultValue": 5, "choices": [2, 5, 10, 30], "environment": "QUAKEKIT_MUSIC_REFRESH_SECONDS", "help": "Preferred refresh cadence in seconds." }
+  ],
+  "actions": [
+    { "id": "music.refresh", "title": "Refresh Track", "argumentSchema": [] },
+    { "id": "music.playPause", "title": "Play/Pause", "argumentSchema": [] },
+    { "id": "music.next", "title": "Next Track", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "music.track", "title": "Current Track", "valueSchema": [] }],
+  "views": [
+    { "id": "music.panel", "title": "Now Playing", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "music.track", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

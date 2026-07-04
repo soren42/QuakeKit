@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "obs_controls",
+  "name": "OBS Controls",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "obs-controls.sh", "arguments": [] },
+  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "permissions": [
+    { "network": { "hosts": ["localhost", "127.0.0.1"] } },
+    { "secrets": { "keys": ["OBS_WEBSOCKET_PASSWORD"] } }
+  ],
+  "settings": [
+    { "id": "websocket_url", "title": "WebSocket URL", "type": "string", "defaultValue": "ws://127.0.0.1:4455", "environment": "QUAKEKIT_OBS_WEBSOCKET_URL", "help": "OBS WebSocket endpoint." },
+    { "id": "profile", "title": "Profile", "type": "choice", "defaultValue": "stream", "choices": ["stream", "record", "studio"], "environment": "QUAKEKIT_OBS_PROFILE", "help": "Control preset shown on the panel." }
+  ],
+  "actions": [
+    { "id": "obs.refresh", "title": "Refresh OBS", "argumentSchema": [] },
+    { "id": "obs.toggleStream", "title": "Toggle Stream", "argumentSchema": [] },
+    { "id": "obs.toggleRecord", "title": "Toggle Recording", "argumentSchema": [] },
+    { "id": "obs.nextScene", "title": "Next Scene", "argumentSchema": [] }
+  ],
+  "dataStreams": [{ "id": "obs.status", "title": "OBS Status", "valueSchema": [] }],
+  "views": [
+    { "id": "obs.panel", "title": "OBS", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "obs.status", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+  ]
+}

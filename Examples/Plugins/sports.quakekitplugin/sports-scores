@@ -4,6 +4,7 @@ set -eu
 cat >/dev/null
 
 league="${QUAKEKIT_SPORTS_LEAGUE:-mlb}"
+favorite="${QUAKEKIT_SPORTS_FAVORITE_TEAM:-CAR}"
 case "$league" in
   nba) sport_path="basketball/nba" ;;
   nfl) sport_path="football/nfl" ;;
@@ -16,9 +17,24 @@ if [ -n "$payload" ]; then
   first_name="$(printf '%s' "$payload" | grep -o '"shortName":"[^"]*"' | head -1 | sed 's/"shortName":"//;s/"$//' || true)"
   status="$(printf '%s' "$payload" | grep -o '"description":"[^"]*"' | head -1 | sed 's/"description":"//;s/"$//' || true)"
   if [ -n "$first_name" ]; then
-    printf '{"games":[{"league":"%s","matchup":"%s","status":"%s"}],"source":"espn"}\n' "$league" "$first_name" "${status:-Scheduled}"
+    printf '{"games":[{"league":"%s","matchup":"%s","status":"%s","favorite":"%s"}],"favoriteTeam":"%s","updatedAt":"%s","source":"espn"}\n' "$league" "$first_name" "${status:-Scheduled}" "$favorite" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     exit 0
   fi
 fi
 
-printf '{"games":[{"league":"MLB","home":"ATL","away":"NYM","status":"Preview"}],"source":"fallback"}\n'
+case "$league" in
+  nba)
+    games='{"league":"NBA","matchup":"LAL @ GSW","status":"8:30 PM","favorite":"LAL"},{"league":"NBA","matchup":"BOS @ NYK","status":"Final · BOS 112 NYK 108","favorite":"NYK"}'
+    ;;
+  nfl)
+    games='{"league":"NFL","matchup":"CAR @ ATL","status":"Sun 1:00 PM","favorite":"CAR"},{"league":"NFL","matchup":"KC @ BUF","status":"Sun 4:25 PM","favorite":"BUF"}'
+    ;;
+  nhl)
+    games='{"league":"NHL","matchup":"NYR @ CAR","status":"2nd · 2-1 CAR","favorite":"CAR"},{"league":"NHL","matchup":"BOS @ TOR","status":"Final · TOR 4 BOS 3","favorite":"TOR"}'
+    ;;
+  *)
+    games='{"league":"MLB","matchup":"ATL @ NYM","status":"Preview","favorite":"ATL"},{"league":"MLB","matchup":"LAD @ SF","status":"Final · LAD 6 SF 4","favorite":"SF"}'
+    ;;
+esac
+
+printf '{"games":[%s],"favoriteTeam":"%s","updatedAt":"%s","source":"fallback"}\n' "$games" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"

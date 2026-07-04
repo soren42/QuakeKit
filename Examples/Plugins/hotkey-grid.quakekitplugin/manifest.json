@@ -1,0 +1,122 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "hotkey_grid",
+  "name": "Hotkey Grid",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "shell",
+    "command": "hotkey-grid.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "settings",
+    "viewProvider"
+  ],
+  "permissions": [
+    {
+      "inputSynthesis": {}
+    }
+  ],
+  "settings": [
+    {
+      "id": "profile",
+      "title": "Profile",
+      "type": "choice",
+      "defaultValue": "default",
+      "choices": [
+        "default",
+        "editing",
+        "streaming"
+      ],
+      "environment": "QUAKEKIT_HOTKEY_GRID_PROFILE",
+      "help": "Hotkey profile represented by the grid."
+    },
+    {
+      "id": "columns",
+      "title": "Columns",
+      "type": "integer",
+      "defaultValue": 4,
+      "minimum": 2,
+      "maximum": 6,
+      "environment": "QUAKEKIT_HOTKEY_GRID_COLUMNS",
+      "help": "Preferred column count for hosts that render the grid."
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_HOTKEY_GRID_DRY_RUN",
+      "help": "Safe stubs acknowledge hotkeys without synthesizing input."
+    }
+  ],
+  "actions": [
+    {
+      "id": "hotkey.trigger",
+      "title": "Trigger Hotkey",
+      "argumentSchema": [
+        {
+          "id": "hotkey_id",
+          "title": "Hotkey ID",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "hotkey.switchProfile",
+      "title": "Switch Profile",
+      "argumentSchema": [
+        {
+          "id": "profile",
+          "title": "Profile",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "hotkey.grid",
+      "title": "Hotkey Grid",
+      "valueSchema": [
+        {
+          "id": "profile",
+          "title": "Profile",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "columns",
+          "title": "Columns",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "dryRun",
+          "title": "Dry Run",
+          "type": "boolean",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "hotkey.gridView",
+      "title": "Hotkey Grid",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "layout": "grid",
+      "dataStreamID": "hotkey.grid",
+      "columnSpan": 2,
+      "rowSpan": 2,
+      "preferredWidth": 480,
+      "preferredHeight": 360
+    }
+  ]
+}

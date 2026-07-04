@@ -1,0 +1,130 @@
+{
+  "$schema": "../../../schemas/functional-plugin.schema.json",
+  "id": "discord_companion",
+  "name": "Discord Companion",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "shell",
+    "command": "discord-companion.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "actionProvider",
+    "dataProvider",
+    "settings",
+    "viewProvider"
+  ],
+  "permissions": [
+    {
+      "network": {
+        "hosts": [
+          "discord.com"
+        ]
+      }
+    },
+    {
+      "secrets": {
+        "keys": [
+          "DISCORD_BOT_TOKEN"
+        ]
+      }
+    }
+  ],
+  "settings": [
+    {
+      "id": "guild_id",
+      "title": "Guild ID",
+      "type": "string",
+      "defaultValue": "example-guild",
+      "environment": "QUAKEKIT_DISCORD_GUILD_ID",
+      "help": "Discord guild identifier used by real adapters."
+    },
+    {
+      "id": "status_channel",
+      "title": "Status Channel",
+      "type": "string",
+      "defaultValue": "stream-room",
+      "environment": "QUAKEKIT_DISCORD_STATUS_CHANNEL",
+      "help": "Channel name displayed by the companion panel."
+    },
+    {
+      "id": "presence_mode",
+      "title": "Presence Mode",
+      "type": "choice",
+      "defaultValue": "available",
+      "choices": [
+        "available",
+        "idle",
+        "do_not_disturb"
+      ],
+      "environment": "QUAKEKIT_DISCORD_PRESENCE_MODE",
+      "help": "Presence state that would be announced by an authenticated adapter."
+    }
+  ],
+  "actions": [
+    {
+      "id": "discord.postStatus",
+      "title": "Post Status",
+      "argumentSchema": [
+        {
+          "id": "message",
+          "title": "Message",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "discord.setPresence",
+      "title": "Set Presence",
+      "argumentSchema": [
+        {
+          "id": "state",
+          "title": "State",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "dataStreams": [
+    {
+      "id": "discord.companion",
+      "title": "Discord Companion",
+      "valueSchema": [
+        {
+          "id": "guild",
+          "title": "Guild",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "onlineMembers",
+          "title": "Online Members",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "presence",
+          "title": "Presence",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "discord.panel",
+      "title": "Discord Companion",
+      "type": "dataDriven",
+      "presentation": "widget",
+      "dataStreamID": "discord.companion",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 480,
+      "preferredHeight": 220
+    }
+  ]
+}

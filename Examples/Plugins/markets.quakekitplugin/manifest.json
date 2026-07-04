@@ -37,6 +37,18 @@
       ],
       "environment": "QUAKEKIT_MARKET_SYMBOLS",
       "help": "Comma-separated ticker preset for the market data provider."
+    },
+    {
+      "id": "display_mode",
+      "title": "Display Mode",
+      "type": "choice",
+      "defaultValue": "compact",
+      "choices": [
+        "compact",
+        "detailed"
+      ],
+      "environment": "QUAKEKIT_MARKET_DISPLAY_MODE",
+      "help": "Controls how much market metadata the provider returns."
     }
   ],
   "actions": [
@@ -58,12 +70,12 @@
       "id": "markets.ticker",
       "title": "Market Ticker",
       "type": "dataDriven",
-      "presentation": "widget",
+      "presentation": "pageAndWidget",
       "dataStreamID": "markets.watchlist",
-      "columnSpan": 2,
+      "columnSpan": 3,
       "rowSpan": 1,
-      "preferredWidth": 480,
-      "preferredHeight": 200
+      "preferredWidth": 960,
+      "preferredHeight": 240
     }
   ]
 }
