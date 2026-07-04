@@ -13,7 +13,8 @@ let launchOptions = PanelLaunchOptions(arguments: CommandLine.arguments.dropFirs
 let app = NSApplication.shared
 let delegate = PanelAppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.regular)
+app.setActivationPolicy(launchOptions.foregroundApp ? .regular : .accessory)
+app.mainMenu = NSMenu()
 app.run()
 
 struct PanelLaunchOptions {
@@ -24,6 +25,7 @@ struct PanelLaunchOptions {
     var sharedHID: Bool
     var strictHIDSeize: Bool
     var simpleFullscreen: Bool
+    var foregroundApp: Bool
     var keepAliveProfile: QuakeDevice.KeepAliveProfile
     var startupProfile: QuakeDevice.StartupProfile
 
@@ -37,6 +39,7 @@ struct PanelLaunchOptions {
         self.sharedHID = values.contains("--shared-hid")
         self.strictHIDSeize = values.contains("--strict-hid-seize")
         self.simpleFullscreen = values.contains("--simple-fullscreen")
+        self.foregroundApp = values.contains("--foreground")
         self.keepAliveProfile = Self.parseKeepAliveProfile(from: rawArguments)
         self.startupProfile = Self.parseStartupProfile(from: rawArguments)
     }
@@ -65,19 +68,26 @@ struct PanelLaunchOptions {
 @MainActor
 final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
+    private var settingsWindow: NSWindow?
+    private var statusItem: NSStatusItem?
     private var panelView: PanelView?
     private var testView: DisplayTestView?
     private var device: QuakeDevice?
     private var ringCoordinator = KnobRingCoordinator()
     private var ringTimer: Timer?
+    private var pointerGuardTimer: Timer?
     private var lastRingOutput: KnobRingResolvedOutput?
     private var displaySleepAssertionID: IOPMAssertionID = 0
     private let pluginPackages = PanelPluginLoader.loadSamplePackages()
     private let themePackages = PanelThemeLoader.loadSamplePackages()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) startup=\(launchOptions.startupProfile.rawValue) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
-        NSApp.activate(ignoringOtherApps: true)
+        log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) foreground=\(launchOptions.foregroundApp) startup=\(launchOptions.startupProfile.rawValue) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
+        configureStatusItem()
+        if launchOptions.foregroundApp || launchOptions.debugWindow {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        startPointerGuard()
         acquireDisplaySleepAssertion()
         openPanelWindow()
         observeDisplayChanges()
@@ -92,9 +102,85 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         ringTimer?.invalidate()
         ringTimer = nil
+        pointerGuardTimer?.invalidate()
+        pointerGuardTimer = nil
         NotificationCenter.default.removeObserver(self)
         device?.stop()
         releaseDisplaySleepAssertion()
+    }
+
+    private func configureStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.title = "QK"
+        item.button?.toolTip = "QuakeKit"
+
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Open Settings...", action: #selector(openSettingsWindow), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Show Panel", action: #selector(showPanelWindow), keyEquivalent: ""))
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit QuakeKit", action: #selector(quit), keyEquivalent: "q"))
+        for item in menu.items {
+            item.target = self
+        }
+        item.menu = menu
+        statusItem = item
+    }
+
+    private func startPointerGuard() {
+        guard !launchOptions.debugWindow, !launchOptions.mainScreen else { return }
+        pointerGuardTimer?.invalidate()
+        pointerGuardTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            Task { @MainActor in
+                guard let quakeScreen = DisplayLocator.quakeScreen(),
+                      let primaryScreen = NSScreen.screens.first(where: { !DisplayLocator.isQuakeLike($0.frame.size) }) ?? NSScreen.main else {
+                    return
+                }
+                let mouse = NSEvent.mouseLocation
+                guard quakeScreen.frame.contains(mouse) else { return }
+                let target = NSPoint(x: primaryScreen.frame.midX, y: primaryScreen.frame.midY)
+                CGWarpMouseCursorPosition(target)
+            }
+        }
+    }
+
+    @objc private func showPanelWindow() {
+        window?.orderFrontRegardless()
+    }
+
+    @objc private func openSettingsWindow() {
+        if let settingsWindow {
+            settingsWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let screen = NSScreen.screens.first { !DisplayLocator.isQuakeLike($0.frame.size) } ?? NSScreen.main
+        let screenFrame = screen?.visibleFrame ?? NSRect(x: 160, y: 160, width: 1100, height: 720)
+        let size = NSSize(width: min(920, screenFrame.width - 80), height: min(620, screenFrame.height - 80))
+        let rect = NSRect(
+            x: screenFrame.midX - size.width / 2,
+            y: screenFrame.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+        let view = SettingsPlaceholderView(frame: NSRect(origin: .zero, size: size))
+        let settingsWindow = NSWindow(
+            contentRect: rect,
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false,
+            screen: screen
+        )
+        settingsWindow.title = "QuakeKit Settings"
+        settingsWindow.contentView = view
+        settingsWindow.isReleasedWhenClosed = false
+        settingsWindow.makeKeyAndOrderFront(nil)
+        self.settingsWindow = settingsWindow
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func quit() {
+        NSApp.terminate(nil)
     }
 
     private func observeDisplayChanges() {
@@ -192,16 +278,20 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         panelWindow.title = "QuakeKit Panel"
         panelWindow.backgroundColor = .black
         panelWindow.isOpaque = true
+        panelWindow.hidesOnDeactivate = false
+        panelWindow.isMovable = launchOptions.debugWindow
+        panelWindow.isMovableByWindowBackground = false
         panelWindow.contentView = panelContentView
         panelWindow.setFrame(rect, display: true)
         panelWindow.makeKeyAndOrderFront(nil)
         panelWindow.orderFrontRegardless()
         if launchOptions.displayTest {
             panelWindow.level = .screenSaver
-            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         } else if quakeLike && !launchOptions.debugWindow {
             panelWindow.level = .screenSaver
-            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            panelWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+            applyPanelPresentationOptions()
             if launchOptions.simpleFullscreen {
                 panelWindow.toggleFullScreen(nil)
             }
@@ -218,6 +308,15 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         log("window visible=\(panelWindow.isVisible) frame=\(format(panelWindow.frame)) content=\(format(panelContentView.frame)) level=\(panelWindow.level.rawValue)")
 
         self.window = panelWindow
+    }
+
+    private func applyPanelPresentationOptions() {
+        let options: NSApplication.PresentationOptions = [
+            .hideDock,
+            .hideMenuBar,
+            .disableAppleMenu
+        ]
+        NSApp.presentationOptions = options
     }
 
     private func reframePanelWindow() {
@@ -457,6 +556,10 @@ enum ShellAction: Equatable {
     case editThemeOption(String)
     case resetThemeOverrides
     case editGlobalSetting(String)
+    case openCarouselSettings
+    case toggleCarousel
+    case editCarouselDuration
+    case toggleCarouselWidget(String)
     case openPluginSettings(String)
     case editPluginSetting(pluginID: String, settingID: String)
     case resetPluginSettings(String)
@@ -490,6 +593,14 @@ struct ShellPage: Equatable {
     }
 }
 
+struct CarouselWidgetRef: Equatable {
+    var id: String
+    var pluginID: String
+    var pluginName: String
+    var viewID: String
+    var title: String
+}
+
 struct RuntimeSnapshot: Equatable {
     var controlConnected = false
     var touchConnected = false
@@ -514,11 +625,42 @@ struct ThemeUserConfiguration: Codable, Equatable {
 
 struct QuakeSettingsConfiguration: Codable, Equatable {
     var defaultPageIndex: Int
+    var carousel: CarouselConfiguration
     var pluginSettings: [String: [String: JSONValue]]
 
-    init(defaultPageIndex: Int = 0, pluginSettings: [String: [String: JSONValue]] = [:]) {
+    private enum CodingKeys: String, CodingKey {
+        case defaultPageIndex
+        case carousel
+        case pluginSettings
+    }
+
+    init(
+        defaultPageIndex: Int = 0,
+        carousel: CarouselConfiguration = CarouselConfiguration(),
+        pluginSettings: [String: [String: JSONValue]] = [:]
+    ) {
         self.defaultPageIndex = defaultPageIndex
+        self.carousel = carousel
         self.pluginSettings = pluginSettings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.defaultPageIndex = try container.decodeIfPresent(Int.self, forKey: .defaultPageIndex) ?? 0
+        self.carousel = try container.decodeIfPresent(CarouselConfiguration.self, forKey: .carousel) ?? CarouselConfiguration()
+        self.pluginSettings = try container.decodeIfPresent([String: [String: JSONValue]].self, forKey: .pluginSettings) ?? [:]
+    }
+}
+
+struct CarouselConfiguration: Codable, Equatable {
+    var enabled: Bool
+    var intervalSeconds: Int
+    var widgetIDs: [String]
+
+    init(enabled: Bool = false, intervalSeconds: Int = 15, widgetIDs: [String] = []) {
+        self.enabled = enabled
+        self.intervalSeconds = intervalSeconds
+        self.widgetIDs = widgetIDs
     }
 }
 
@@ -914,6 +1056,11 @@ enum ShellCatalog {
                 action: .editGlobalSetting("defaultPage")
             ),
             ShellTile(
+                title: "Carousel",
+                subtitle: settingsConfiguration.carousel.enabled ? "Every \(settingsConfiguration.carousel.intervalSeconds)s" : "Off",
+                action: .openCarouselSettings
+            ),
+            ShellTile(
                 title: "Plugins",
                 subtitle: "\(pluginPackages.count) loaded",
                 action: .setStatus("Install plugins with quake-probe --install-package <path>")
@@ -990,6 +1137,8 @@ final class PanelView: NSView {
     private var settingsConfiguration: QuakeSettingsConfiguration
     private var pluginDataStore = PluginDataStore()
     private var runtime = RuntimeSnapshot()
+    private var carouselTimer: Timer?
+    private var carouselIndex = 0
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
     private var systemDashboardView: SystemMonitorDashboardView?
@@ -1028,6 +1177,7 @@ final class PanelView: NSView {
         layer?.backgroundColor = activeTheme.background.cgColor
         log("PanelView init frame=\(format(frameRect)) portraitMode=\(portraitMode)")
         setupSubviews()
+        restartCarousel()
     }
 
     required init?(coder: NSCoder) {
@@ -1085,6 +1235,14 @@ final class PanelView: NSView {
             resetThemeOverrides()
         case .editGlobalSetting(let id):
             editGlobalSetting(id)
+        case .openCarouselSettings:
+            openCarouselSettings()
+        case .toggleCarousel:
+            toggleCarousel()
+        case .editCarouselDuration:
+            editCarouselDuration()
+        case .toggleCarouselWidget(let id):
+            toggleCarouselWidget(id)
         case .openPluginSettings(let pluginID):
             openPluginSettings(pluginID: pluginID)
         case .editPluginSetting(let pluginID, let settingID):
@@ -1620,6 +1778,124 @@ final class PanelView: NSView {
         }
     }
 
+    private func openCarouselSettings() {
+        transientPage = ShellPage(title: "Carousel", kind: .grid, tiles: carouselTiles())
+        selectedIndex = 0
+        gridSubpageIndex = 0
+        status = "Carousel settings"
+        rebuildPageContent()
+    }
+
+    private func carouselTiles() -> [ShellTile] {
+        let refs = carouselWidgetRefs()
+        var tiles = [
+            ShellTile(
+                title: "Enabled",
+                subtitle: settingsConfiguration.carousel.enabled ? "On" : "Off",
+                action: .toggleCarousel
+            ),
+            ShellTile(
+                title: "Duration",
+                subtitle: "\(settingsConfiguration.carousel.intervalSeconds)s per widget",
+                action: .editCarouselDuration
+            )
+        ]
+
+        tiles.append(contentsOf: refs.map { ref in
+            let included = carouselIncludedWidgetIDs().contains(ref.id)
+            return ShellTile(
+                title: included ? "\(ref.title) *" : ref.title,
+                subtitle: "\(ref.pluginName) · \(included ? "included" : "skipped")",
+                action: .toggleCarouselWidget(ref.id)
+            )
+        })
+        return tiles
+    }
+
+    private func toggleCarousel() {
+        settingsConfiguration.carousel.enabled.toggle()
+        QuakeSettingsStore.save(settingsConfiguration)
+        rebuildPages()
+        refreshCarouselTransientPage()
+        restartCarousel()
+        status = "Carousel \(settingsConfiguration.carousel.enabled ? "on" : "off")"
+    }
+
+    private func editCarouselDuration() {
+        let choices = [5, 10, 15, 30, 60]
+        let currentIndex = choices.firstIndex(of: settingsConfiguration.carousel.intervalSeconds) ?? 2
+        settingsConfiguration.carousel.intervalSeconds = choices[(currentIndex + 1) % choices.count]
+        QuakeSettingsStore.save(settingsConfiguration)
+        rebuildPages()
+        refreshCarouselTransientPage()
+        restartCarousel()
+        status = "Carousel duration \(settingsConfiguration.carousel.intervalSeconds)s"
+    }
+
+    private func toggleCarouselWidget(_ id: String) {
+        var ids = carouselIncludedWidgetIDs()
+        if ids.contains(id) {
+            ids.removeAll { $0 == id }
+        } else {
+            ids.append(id)
+        }
+        settingsConfiguration.carousel.widgetIDs = ids
+        QuakeSettingsStore.save(settingsConfiguration)
+        refreshCarouselTransientPage()
+        restartCarousel()
+        status = "Carousel widgets \(ids.count)"
+    }
+
+    private func refreshCarouselTransientPage() {
+        if transientPage?.title == "Carousel" {
+            transientPage = ShellPage(title: "Carousel", kind: .grid, tiles: carouselTiles())
+            rebuildPageContent()
+        }
+    }
+
+    private func restartCarousel() {
+        carouselTimer?.invalidate()
+        carouselTimer = nil
+        guard settingsConfiguration.carousel.enabled, !carouselWidgetRefs().isEmpty else { return }
+        let interval = TimeInterval(max(5, settingsConfiguration.carousel.intervalSeconds))
+        carouselTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.advanceCarousel()
+            }
+        }
+    }
+
+    private func advanceCarousel() {
+        let refs = carouselWidgetRefs().filter { carouselIncludedWidgetIDs().contains($0.id) }
+        guard !refs.isEmpty else { return }
+        let ref = refs[carouselIndex % refs.count]
+        carouselIndex = (carouselIndex + 1) % refs.count
+        openPluginView(pluginID: ref.pluginID, viewID: ref.viewID)
+        status = "Carousel \(ref.title)"
+    }
+
+    private func carouselIncludedWidgetIDs() -> [String] {
+        let explicit = settingsConfiguration.carousel.widgetIDs
+        if !explicit.isEmpty { return explicit }
+        return carouselWidgetRefs().map(\.id)
+    }
+
+    private func carouselWidgetRefs() -> [CarouselWidgetRef] {
+        pluginPackages.flatMap { package in
+            package.manifest.views.compactMap { view in
+                let presentation = view.presentation ?? .page
+                guard presentation == .widget || presentation == .pageAndWidget else { return nil }
+                return CarouselWidgetRef(
+                    id: "\(package.manifest.id):\(view.id)",
+                    pluginID: package.manifest.id,
+                    pluginName: package.manifest.name,
+                    viewID: view.id,
+                    title: view.title
+                )
+            }
+        }
+    }
+
     private func openPluginSettings(pluginID: String) {
         guard let package = pluginPackages.first(where: { $0.manifest.id == pluginID }) else {
             status = "Plugin settings missing"
@@ -1952,6 +2228,55 @@ final class ThemeBackgroundImageView: NSView {
     }
 }
 
+final class SettingsPlaceholderView: NSView {
+    private let titleLabel = NSTextField(labelWithString: "QuakeKit Settings")
+    private let tabsLabel = NSTextField(labelWithString: "Global   Themes   Widgets & Apps   Carousel   About")
+    private let bodyLabel = NSTextField(labelWithString: "")
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+
+        titleLabel.font = NSFont.systemFont(ofSize: 28, weight: .bold)
+        titleLabel.backgroundColor = .clear
+        addSubview(titleLabel)
+
+        tabsLabel.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
+        tabsLabel.textColor = .secondaryLabelColor
+        tabsLabel.backgroundColor = .clear
+        addSubview(tabsLabel)
+
+        bodyLabel.stringValue = """
+        This is the primary-monitor configuration surface for the release app.
+
+        Planned controls:
+        - Global launch, display ownership, and panel behavior
+        - Theme selection, color overrides, and theme package install/remove
+        - Widget/app enablement, settings, install/remove, and permissions
+        - Carousel widget set, ordering, and rotation duration
+        - About, diagnostics, device firmware, and logs
+        """
+        bodyLabel.font = NSFont.systemFont(ofSize: 15, weight: .regular)
+        bodyLabel.textColor = .labelColor
+        bodyLabel.backgroundColor = .clear
+        bodyLabel.maximumNumberOfLines = 0
+        addSubview(bodyLabel)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        let inset: CGFloat = 28
+        titleLabel.frame = NSRect(x: inset, y: bounds.height - 64, width: bounds.width - inset * 2, height: 36)
+        tabsLabel.frame = NSRect(x: inset, y: bounds.height - 98, width: bounds.width - inset * 2, height: 22)
+        bodyLabel.frame = NSRect(x: inset, y: 28, width: bounds.width - inset * 2, height: bounds.height - 140)
+    }
+}
+
 struct SystemMonitorProcess: Equatable {
     var pid: Int
     var name: String
@@ -1959,12 +2284,21 @@ struct SystemMonitorProcess: Equatable {
     var memory: Double
 }
 
+struct SystemMonitorVolume: Equatable {
+    var name: String
+    var usedPercent: Double
+    var usedGB: Double
+    var totalGB: Double
+}
+
 struct SystemMonitorSnapshot: Equatable {
     var cpu: Double
     var cpuUser: Double
     var cpuSystem: Double
     var memory: Double
+    var memoryMode: String
     var disk: Double
+    var hasBattery: Bool
     var battery: Double
     var loadAverage: String
     var loadHistory: [Double]
@@ -1978,6 +2312,7 @@ struct SystemMonitorSnapshot: Equatable {
     var diskWrittenGB: Double
     var diskUsedGB: Double
     var diskTotalGB: Double
+    var volumes: [SystemMonitorVolume]
     var uptimeSeconds: Int
     var topProcesses: [SystemMonitorProcess]
     var timestamp: Date?
@@ -1987,7 +2322,9 @@ struct SystemMonitorSnapshot: Equatable {
         cpuUser: Double,
         cpuSystem: Double,
         memory: Double,
+        memoryMode: String,
         disk: Double,
+        hasBattery: Bool,
         battery: Double,
         loadAverage: String,
         loadHistory: [Double],
@@ -2001,6 +2338,7 @@ struct SystemMonitorSnapshot: Equatable {
         diskWrittenGB: Double,
         diskUsedGB: Double,
         diskTotalGB: Double,
+        volumes: [SystemMonitorVolume],
         uptimeSeconds: Int,
         topProcesses: [SystemMonitorProcess],
         timestamp: Date?
@@ -2009,7 +2347,9 @@ struct SystemMonitorSnapshot: Equatable {
         self.cpuUser = cpuUser
         self.cpuSystem = cpuSystem
         self.memory = memory
+        self.memoryMode = memoryMode
         self.disk = disk
+        self.hasBattery = hasBattery
         self.battery = battery
         self.loadAverage = loadAverage
         self.loadHistory = loadHistory
@@ -2023,6 +2363,7 @@ struct SystemMonitorSnapshot: Equatable {
         self.diskWrittenGB = diskWrittenGB
         self.diskUsedGB = diskUsedGB
         self.diskTotalGB = diskTotalGB
+        self.volumes = volumes
         self.uptimeSeconds = uptimeSeconds
         self.topProcesses = topProcesses
         self.timestamp = timestamp
@@ -2033,7 +2374,9 @@ struct SystemMonitorSnapshot: Equatable {
         cpuUser: 0,
         cpuSystem: 0,
         memory: 0,
+        memoryMode: "used",
         disk: 0,
+        hasBattery: false,
         battery: 0,
         loadAverage: "-",
         loadHistory: [0, 0, 0, 0],
@@ -2047,6 +2390,7 @@ struct SystemMonitorSnapshot: Equatable {
         diskWrittenGB: 0,
         diskUsedGB: 0,
         diskTotalGB: 0,
+        volumes: [],
         uptimeSeconds: 0,
         topProcesses: [],
         timestamp: nil
@@ -2058,7 +2402,9 @@ struct SystemMonitorSnapshot: Equatable {
         self.cpuUser = object["cpuUser"]?.doubleValue ?? 0
         self.cpuSystem = object["cpuSystem"]?.doubleValue ?? 0
         self.memory = object["memory"]?.doubleValue ?? 0
+        self.memoryMode = object["memoryMode"]?.stringValue ?? "used"
         self.disk = object["disk"]?.doubleValue ?? 0
+        self.hasBattery = object["hasBattery"]?.boolValue ?? false
         self.battery = object["battery"]?.doubleValue ?? 0
         self.loadAverage = object["loadAverage"]?.stringValue ?? "-"
         self.loadHistory = object["loadHistory"]?.arrayValue?.compactMap(\.doubleValue) ?? [self.cpu]
@@ -2072,6 +2418,15 @@ struct SystemMonitorSnapshot: Equatable {
         self.diskWrittenGB = object["diskWrittenGB"]?.doubleValue ?? 0
         self.diskUsedGB = object["diskUsedGB"]?.doubleValue ?? 0
         self.diskTotalGB = object["diskTotalGB"]?.doubleValue ?? 0
+        self.volumes = object["volumes"]?.arrayValue?.compactMap { item in
+            guard let volume = item.objectValue else { return nil }
+            return SystemMonitorVolume(
+                name: volume["name"]?.stringValue ?? "-",
+                usedPercent: volume["usedPercent"]?.doubleValue ?? 0,
+                usedGB: volume["usedGB"]?.doubleValue ?? 0,
+                totalGB: volume["totalGB"]?.doubleValue ?? 0
+            )
+        } ?? []
         self.uptimeSeconds = object["uptimeSeconds"]?.integerValue ?? 0
         self.topProcesses = object["topProcesses"]?.arrayValue?.compactMap { item in
             guard let process = item.objectValue else { return nil }
@@ -2148,13 +2503,16 @@ final class SystemMonitorDashboardView: NSView {
         let header = NSRect(x: rect.minX, y: rect.maxY - 56, width: rect.width, height: 56)
         drawTitle("SYSTEM", subtitle: uptimeText(snapshot.uptimeSeconds), in: header)
 
-        let cardHeight = (rect.height - header.height - gap * 3) / 4
+        let batteryCard = snapshot.hasBattery
+            ? ("BATT", snapshot.battery, theme.warning, "state \(format(snapshot.battery))%")
+            : ("PROC", min(100, Double(snapshot.runningProcesses)), theme.warning, "\(snapshot.processes) total · \(snapshot.runningProcesses) running")
         let cards = [
             ("CPU", snapshot.cpu, theme.accent, "usr \(format(snapshot.cpuUser))% sys \(format(snapshot.cpuSystem))%"),
-            ("RAM", snapshot.memory, theme.danger, "\(snapshot.threads) threads"),
+            (snapshot.memoryMode == "free" ? "RAM FREE" : "RAM USED", snapshot.memory, theme.danger, "\(snapshot.threads) threads"),
             ("DISK", snapshot.disk, theme.success, "\(format(snapshot.diskUsedGB)) / \(format(snapshot.diskTotalGB)) GB"),
-            ("BATT", snapshot.battery, theme.warning, "state \(snapshot.battery == 0 ? "-" : format(snapshot.battery) + "%")")
+            batteryCard
         ]
+        let cardHeight = (rect.height - header.height - gap * CGFloat(cards.count - 1)) / CGFloat(cards.count)
         for (index, card) in cards.enumerated() {
             let y = header.minY - gap - CGFloat(index + 1) * cardHeight - CGFloat(index) * gap
             drawMetricCard(title: card.0, value: card.1, color: card.2, detail: card.3, in: NSRect(x: rect.minX, y: y, width: rect.width, height: cardHeight))
@@ -2176,6 +2534,9 @@ final class SystemMonitorDashboardView: NSView {
     }
 
     private func drawProcessTable(in rect: NSRect) {
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(rect: rect).addClip()
+        defer { NSGraphicsContext.restoreGraphicsState() }
         drawCard(in: rect)
         drawText("TOP PROCESSES", in: NSRect(x: rect.minX + 14, y: rect.maxY - 34, width: rect.width - 28, height: 24), size: 16, weight: .bold, color: theme.textPrimary)
         drawText("\(snapshot.processes) total · \(snapshot.runningProcesses) running", in: NSRect(x: rect.minX + 14, y: rect.maxY - 58, width: rect.width - 28, height: 18), size: 12, weight: .medium, color: theme.textSecondary)
@@ -2197,6 +2558,9 @@ final class SystemMonitorDashboardView: NSView {
     }
 
     private func drawIOCard(in rect: NSRect) {
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(rect: rect).addClip()
+        defer { NSGraphicsContext.restoreGraphicsState() }
         drawCard(in: rect)
         drawText("I/O MATRIX", in: NSRect(x: rect.minX + 14, y: rect.maxY - 34, width: rect.width - 28, height: 22), size: 16, weight: .bold, color: theme.textPrimary)
         let rows: [(String, Double, Double, NSColor)] = [
@@ -2206,9 +2570,17 @@ final class SystemMonitorDashboardView: NSView {
             ("DISK W", snapshot.diskWrittenGB, max(snapshot.diskReadGB, snapshot.diskWrittenGB, 1), theme.warning)
         ]
         for (index, row) in rows.enumerated() {
-            let y = rect.maxY - 76 - CGFloat(index) * 39
+            let y = rect.maxY - 66 - CGFloat(index) * 26
             drawText(row.0, in: NSRect(x: rect.minX + 16, y: y, width: 70, height: 18), size: 12, weight: .bold, color: theme.textSecondary)
             drawBar(value: row.1, maximum: row.2, color: row.3, label: "\(format(row.1)) GB", in: NSRect(x: rect.minX + 92, y: y + 1, width: rect.width - 112, height: 16))
+        }
+
+        let volumeStartY = rect.minY + 18
+        let volumeRows = snapshot.volumes.prefix(3)
+        for (index, volume) in volumeRows.enumerated() {
+            let y = volumeStartY + CGFloat(volumeRows.count - index - 1) * 23
+            drawText(volume.name, in: NSRect(x: rect.minX + 16, y: y, width: 86, height: 16), size: 10, weight: .bold, color: theme.textSecondary)
+            drawBar(value: volume.usedPercent, maximum: 100, color: theme.success, label: "\(format(volume.usedGB))/\(format(volume.totalGB)) GB", in: NSRect(x: rect.minX + 108, y: y + 1, width: rect.width - 128, height: 14))
         }
     }
 

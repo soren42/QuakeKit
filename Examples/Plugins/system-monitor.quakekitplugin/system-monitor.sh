@@ -7,6 +7,16 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+volume_scope="${QUAKEKIT_SYSTEM_VOLUME_SCOPE:-local}"
+show_battery="${QUAKEKIT_SYSTEM_SHOW_BATTERY:-auto}"
+process_rows="${QUAKEKIT_SYSTEM_PROCESS_ROWS:-6}"
+memory_mode="${QUAKEKIT_SYSTEM_MEMORY_MODE:-used}"
+case "$process_rows" in
+  ''|*[!0-9]*) process_rows=6 ;;
+esac
+if [ "$process_rows" -lt 3 ]; then process_rows=3; fi
+if [ "$process_rows" -gt 8 ]; then process_rows=8; fi
+
 top_snapshot="$(top -l 1 -n 0 2>/dev/null || true)"
 load_line="$(printf '%s\n' "$top_snapshot" | awk -F': ' '/^Load Avg:/ {print $2; exit}')"
 load_one="$(printf '%s' "$load_line" | awk -F', ' '{gsub(/^ +| +$/,"",$1); print $1}')"
@@ -18,13 +28,28 @@ pages_free="$(vm_stat 2>/dev/null | awk '/Pages free/ {gsub("\\.","",$3); print 
 pages_active="$(vm_stat 2>/dev/null | awk '/Pages active/ {gsub("\\.","",$3); print $3; exit}' || printf '0')"
 pages_inactive="$(vm_stat 2>/dev/null | awk '/Pages inactive/ {gsub("\\.","",$3); print $3; exit}' || printf '0')"
 pages_wired="$(vm_stat 2>/dev/null | awk '/Pages wired down/ {gsub("\\.","",$4); print $4; exit}' || printf '0')"
-disk_info="$(df -Pk / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $2 "," $3 "," $4 "," $5; exit}')"
+disk_command="df -Pk"
+if [ "$volume_scope" = "local" ]; then
+  disk_command="df -lPk"
+fi
+disk_info="$($disk_command / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $2 "," $3 "," $4 "," $5; exit}')"
 disk_total_kb="$(printf '%s' "$disk_info" | awk -F, '{print $1 + 0}')"
 disk_used_kb="$(printf '%s' "$disk_info" | awk -F, '{print $2 + 0}')"
 disk_available_kb="$(printf '%s' "$disk_info" | awk -F, '{print $3 + 0}')"
 disk_percent="$(printf '%s' "$disk_info" | awk -F, '{print $4 + 0}')"
-battery_percent="$(pmset -g batt 2>/dev/null | awk -F'[%;]' '/InternalBattery/ {gsub(/^ +/,"",$2); print $2; exit}' || printf '0')"
-battery_state="$(pmset -g batt 2>/dev/null | awk -F"'" '/InternalBattery/ {print $2; exit}' || printf 'unknown')"
+battery_report="$(pmset -g batt 2>/dev/null || true)"
+if printf '%s\n' "$battery_report" | grep -q 'InternalBattery'; then
+  has_battery=true
+  battery_percent="$(printf '%s\n' "$battery_report" | awk -F'[%;]' '/InternalBattery/ {gsub(/^ +/,"",$2); print $2; exit}')"
+  battery_state="$(printf '%s\n' "$battery_report" | awk -F"'" '/InternalBattery/ {print $2; exit}')"
+else
+  has_battery=false
+  battery_percent=0
+  battery_state="none"
+fi
+if [ "$show_battery" = "never" ]; then
+  has_battery=false
+fi
 boot_epoch="$(sysctl -n kern.boottime 2>/dev/null | sed -n 's/^{ sec = \([0-9][0-9]*\),.*/\1/p' || printf '0')"
 now_epoch="$(date +%s 2>/dev/null || printf '0')"
 if [ "${boot_epoch:-0}" -gt 0 ] && [ "${now_epoch:-0}" -gt "$boot_epoch" ]; then
@@ -39,6 +64,9 @@ if [ "$total_pages" -gt 0 ]; then
   memory_percent=$((used_pages * 100 / total_pages))
 else
   memory_percent=0
+fi
+if [ "$memory_mode" = "free" ]; then
+  memory_percent=$((100 - memory_percent))
 fi
 
 cpu_line="$(printf '%s\n' "$top_snapshot" | awk '/^CPU usage:/ {print; exit}')"
@@ -60,7 +88,7 @@ disk_written_gb="$(printf '%s\n' "$top_snapshot" | awk '/^Disks:/ {for (i=1; i<=
 
 top_processes="$(
   ps -axo pid=,pcpu=,pmem=,command= -r 2>/dev/null |
-    awk 'NR <= 6 {
+    awk -v limit="$process_rows" 'NR <= limit {
       pid=$1
       cpu=$2
       mem=$3
@@ -73,12 +101,28 @@ top_processes="$(
     }'
 )"
 
-printf '{"cpu":%s,"cpuUser":%s,"cpuSystem":%s,"cpuIdle":%s,"memory":%s,"disk":%s,"diskTotalGB":%.1f,"diskUsedGB":%.1f,"diskAvailableGB":%.1f,"battery":%s,"batteryState":"%s","loadAverage":"%s","loadHistory":[%s,%s,%s,%s],"cores":%s,"processes":%s,"runningProcesses":%s,"threads":%s,"networkInGB":%s,"networkOutGB":%s,"diskReadGB":%s,"diskWrittenGB":%s,"uptimeSeconds":%s,"topProcesses":[%s],"source":"system-monitor.sh"}\n' \
-  "$cpu_percent" "${cpu_user:-0}" "${cpu_system:-0}" "${cpu_idle:-0}" "$memory_percent" "${disk_percent:-0}" \
+volumes="$(
+  $disk_command 2>/dev/null |
+    awk -v scope="$volume_scope" 'NR > 1 && count < 4 {
+      if (scope != "all" && $6 != "/" && $6 !~ "^/Volumes/") next
+      gsub("%","",$5)
+      name=$6
+      sub("^/Volumes/","",name)
+      if (name == "/") name="Root"
+      gsub(/\\/,"\\\\",name)
+      gsub(/"/,"\\\"",name)
+      printf "%s{\"name\":\"%s\",\"usedPercent\":%s,\"usedGB\":%.1f,\"totalGB\":%.1f}", sep, name, $5 + 0, $3 / 1048576, $2 / 1048576
+      sep=","
+      count++
+    }'
+)"
+
+printf '{"cpu":%s,"cpuUser":%s,"cpuSystem":%s,"cpuIdle":%s,"memory":%s,"memoryMode":"%s","disk":%s,"diskTotalGB":%.1f,"diskUsedGB":%.1f,"diskAvailableGB":%.1f,"hasBattery":%s,"battery":%s,"batteryState":"%s","loadAverage":"%s","loadHistory":[%s,%s,%s,%s],"cores":%s,"processes":%s,"runningProcesses":%s,"threads":%s,"networkInGB":%s,"networkOutGB":%s,"diskReadGB":%s,"diskWrittenGB":%s,"uptimeSeconds":%s,"volumes":[%s],"topProcesses":[%s],"source":"system-monitor.sh"}\n' \
+  "$cpu_percent" "${cpu_user:-0}" "${cpu_system:-0}" "${cpu_idle:-0}" "$memory_percent" "$(json_escape "$memory_mode")" "${disk_percent:-0}" \
   "$(awk -v kb="${disk_total_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
   "$(awk -v kb="${disk_used_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
   "$(awk -v kb="${disk_available_kb:-0}" 'BEGIN { printf "%.1f", kb / 1048576 }')" \
-  "${battery_percent:-0}" "$(json_escape "${battery_state:-unknown}")" "${load:-0}" \
+  "$has_battery" "${battery_percent:-0}" "$(json_escape "${battery_state:-unknown}")" "${load:-0}" \
   "${cpu_percent:-0}" "${load_one_percent:-0}" "${load_five_percent:-0}" "${load_fifteen_percent:-0}" \
   "$cores" "${process_total:-0}" "${process_running:-0}" "${thread_count:-0}" \
-  "${network_in_gb:-0}" "${network_out_gb:-0}" "${disk_read_gb:-0}" "${disk_written_gb:-0}" "${uptime_seconds:-0}" "$top_processes"
+  "${network_in_gb:-0}" "${network_out_gb:-0}" "${disk_read_gb:-0}" "${disk_written_gb:-0}" "${uptime_seconds:-0}" "$volumes" "$top_processes"

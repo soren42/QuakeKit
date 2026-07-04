@@ -47,6 +47,53 @@
       ],
       "environment": "QUAKEKIT_SYSTEM_DETAIL_LEVEL",
       "help": "Controls how much system detail the plugin returns."
+    },
+    {
+      "id": "volume_scope",
+      "title": "Volume Scope",
+      "type": "choice",
+      "defaultValue": "local",
+      "choices": [
+        "local",
+        "all"
+      ],
+      "environment": "QUAKEKIT_SYSTEM_VOLUME_SCOPE",
+      "help": "Local shows physical/local filesystems only; all includes remote and synthetic mounts."
+    },
+    {
+      "id": "show_battery",
+      "title": "Show Battery",
+      "type": "choice",
+      "defaultValue": "auto",
+      "choices": [
+        "auto",
+        "always",
+        "never"
+      ],
+      "environment": "QUAKEKIT_SYSTEM_SHOW_BATTERY",
+      "help": "Auto hides the battery panel on desktop Macs with no battery."
+    },
+    {
+      "id": "process_rows",
+      "title": "Process Rows",
+      "type": "integer",
+      "defaultValue": 6,
+      "minimum": 3,
+      "maximum": 8,
+      "environment": "QUAKEKIT_SYSTEM_PROCESS_ROWS",
+      "help": "Maximum number of top processes returned for the full-screen dashboard."
+    },
+    {
+      "id": "memory_mode",
+      "title": "Memory Mode",
+      "type": "choice",
+      "defaultValue": "used",
+      "choices": [
+        "used",
+        "free"
+      ],
+      "environment": "QUAKEKIT_SYSTEM_MEMORY_MODE",
+      "help": "Controls whether the RAM panel emphasizes used or free memory."
     }
   ],
   "actions": [
@@ -107,6 +154,12 @@
           "id": "networkOutGB",
           "title": "Network Out",
           "type": "number",
+          "required": false
+        },
+        {
+          "id": "hasBattery",
+          "title": "Has Battery",
+          "type": "boolean",
           "required": false
         }
       ]
