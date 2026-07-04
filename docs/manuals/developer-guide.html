@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Developer Guide</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Manual Set</div>
+      <h1>Developer Guide</h1>
+      <p>Architecture, modules, build workflow, runtime contracts, package lifecycle, testing, safety, and release engineering for QuakeKit contributors.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Audience</dt><dd>Core contributors and maintainers</dd></div>
+      <div><dt>Language</dt><dd>Swift 6, AppKit, IOKit HID, JSON manifests</dd></div>
+      <div><dt>Platform</dt><dd>macOS 14 or newer for current host</dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Table of Contents</h2>
+    <nav class="toc">
+      <a href="#architecture">1. Architecture</a>
+      <a href="#modules">2. Swift Modules</a>
+      <a href="#build">3. Build And Validation</a>
+      <a href="#host">4. macOS Host</a>
+      <a href="#runtime">5. Runtime Model</a>
+      <a href="#packages">6. Package Discovery</a>
+      <a href="#hardware">7. Hardware Safety</a>
+      <a href="#testing">8. Testing Strategy</a>
+      <a href="#release">9. Release Checklist</a>
+      <a href="#gaps">10. Engineering Gaps</a>
+      <a href="#index">Index</a>
+    </nav>
+  </section>
+
+  <section id="architecture">
+    <h2>1. Architecture</h2>
+    <p>QuakeKit is intentionally a platform, not a single-purpose dashboard. The macOS DK-QUAKE host is the first host implementation. The runtime and plugin contracts should remain portable enough for future Windows and Linux hosts.</p>
+    <div class="figure">
+      <img src="assets/platform-architecture.svg" alt="QuakeKit layered architecture">
+      <p class="caption">QuakeKit separates device I/O, runtime state, plugin contracts, host UI, and third-party extension packages.</p>
+    </div>
+    <table>
+      <thead><tr><th>Layer</th><th>Responsibility</th><th>Must Avoid</th></tr></thead>
+      <tbody>
+        <tr><td>Device adapters</td><td>Transport I/O, byte framing, safe commands, normalized events.</td><td>Application layout, plugin policy, UI assumptions.</td></tr>
+        <tr><td>Runtime core</td><td>Pages, widgets, actions, data snapshots, event bus, knob-ring arbitration.</td><td>Hard dependency on AppKit or DK-specific display geometry.</td></tr>
+        <tr><td>Plugin API</td><td>Codable manifests, settings, permissions, messages, package validation.</td><td>Executing untrusted code directly inside host process.</td></tr>
+        <tr><td>Host app</td><td>macOS windows, settings, menu bar, audio, package install, permissions, display ownership.</td><td>Embedding business logic that belongs in plugins.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="modules">
+    <h2>2. Swift Modules</h2>
+    <table>
+      <thead><tr><th>Target</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>QuakeHID</code></td><td><code>Sources/QuakeHID</code></td><td>IOKit HID manager, device startup, wake/keep-alive, control frames, protocol constants.</td></tr>
+        <tr><td><code>QuakeRuntime</code></td><td><code>Sources/QuakeRuntime</code></td><td>Runtime events, model types, plugin execution host, data store, knob-ring resolver.</td></tr>
+        <tr><td><code>QuakePluginAPI</code></td><td><code>Sources/QuakePluginAPI</code></td><td>Functional and theme manifests, package loaders, installer, permissions, JSON values/messages.</td></tr>
+        <tr><td><code>quake-panel</code></td><td><code>Sources/QuakePanelHost</code></td><td>AppKit host, DK panel window, tray icon, settings window, weather/system views, audio service.</td></tr>
+        <tr><td><code>quake-probe</code></td><td><code>Sources/QuakeProbe</code></td><td>CLI hardware diagnostics, manifest validation, package install, action execution.</td></tr>
+        <tr><td><code>quake-test</code></td><td><code>Sources/QuakeTest</code></td><td>Portable regression executable for protocol/runtime/plugin checks.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="build">
+    <h2>3. Build And Validation</h2>
+    <p>Use Xcode’s developer directory when CommandLineTools lacks the Swift Testing module:</p>
+    <pre><code class="language-bash">export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer</code></pre>
+    <p>Core workflow:</p>
+    <pre><code class="language-bash">swift build
+swift test
+swift run quake-test
+./scripts/validate-release.sh</code></pre>
+    <p><code>scripts/validate-release.sh</code> runs the full non-hardware gate: Swift build/test, <code>quake-test</code>, plugin manifest validation, theme manifest validation, adapter JSON validation, and local app bundle assembly.</p>
+  </section>
+
+  <section id="host">
+    <h2>4. macOS Host</h2>
+    <p>The AppKit host launches as an accessory app by default. It creates a menu-bar status item, opens a high-level borderless window on the DK display, starts a pointer guard, acquires a display sleep assertion, and starts HID unless <code>--no-hid</code> is used.</p>
+    <table>
+      <thead><tr><th>Flag</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>--foreground</code></td><td>Regular app activation for debugging.</td></tr>
+        <tr><td><code>--debug-window</code></td><td>Resizable non-fullscreen host window.</td></tr>
+        <tr><td><code>--main-screen</code></td><td>Render on the main display.</td></tr>
+        <tr><td><code>--no-hid</code></td><td>Display-only mode.</td></tr>
+        <tr><td><code>--shared-hid</code></td><td>Shared HID open mode for debugging alongside other software.</td></tr>
+        <tr><td><code>--strict-hid-seize</code></td><td>Fail HID startup instead of falling back if seize fails.</td></tr>
+        <tr><td><code>--startup teejs|diagnostic</code></td><td>Startup command profile.</td></tr>
+        <tr><td><code>--keepalive vendor|screenOn|aggressive</code></td><td>Keep-alive behavior for diagnostics.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="runtime">
+    <h2>5. Runtime Model</h2>
+    <p>The runtime normalizes HID input and plugin output into UI-facing state. Important concepts are:</p>
+    <ul>
+      <li><strong>RuntimeEvent:</strong> connected, touch, knob, state, action, and stream events.</li>
+      <li><strong>PluginDataStore:</strong> captures action results and data snapshots for display.</li>
+      <li><strong>PluginExecutionHost:</strong> executes supported process-style plugin actions.</li>
+      <li><strong>KnobRingCoordinator:</strong> arbitrates semantic LED-ring requests by source, priority, TTL, and theme mapping.</li>
+    </ul>
+    <div class="callout">
+      <p><span class="label">Boundary</span>Functional plugins request semantic states such as success, warning, danger, focus, or progress. Themes map those states to colors and animations.</p>
+    </div>
+  </section>
+
+  <section id="packages">
+    <h2>6. Package Discovery</h2>
+    <p>Bundled packages load from <code>Examples/Plugins</code> and <code>Examples/Themes</code>. Installed packages load from Application Support and override bundled packages with the same manifest ID.</p>
+    <pre><code class="language-text">~/Library/Application Support/QuakeKit/Plugins/
+~/Library/Application Support/QuakeKit/Themes/</code></pre>
+    <p>Accepted install inputs are unpacked <code>.quakekitplugin</code> and <code>.quakekittheme</code> directories, plus <code>.tar</code>, <code>.tar.gz</code>, and <code>.tgz</code> archives containing one package directory.</p>
+  </section>
+
+  <section id="hardware">
+    <h2>7. Hardware Safety</h2>
+    <p>The DK control protocol silently drops malformed frames, so protocol tests pin exact vendor command bytes. Do not add exploratory write commands to production paths. Keep unknown protocol experimentation isolated, reviewed, and opt-in.</p>
+    <div class="callout danger">
+      <p><span class="label">Risk</span>The known DFU command must never be used as a wake probe or generic diagnostic. Keep wake behavior limited to known-safe screen-on, ping, query, brightness, microphone, and knob-ring commands.</p>
+    </div>
+  </section>
+
+  <section id="testing">
+    <h2>8. Testing Strategy</h2>
+    <table>
+      <thead><tr><th>Test</th><th>Command</th><th>Catches</th></tr></thead>
+      <tbody>
+        <tr><td>Swift package build</td><td><code>swift build</code></td><td>Compile errors across products.</td></tr>
+        <tr><td>Swift Testing</td><td><code>swift test</code></td><td>Protocol framing tests and future unit suites.</td></tr>
+        <tr><td>Portable regression</td><td><code>swift run quake-test</code></td><td>Protocol vectors, ring arbitration, plugin validation, installer cycle.</td></tr>
+        <tr><td>Release gate</td><td><code>./scripts/validate-release.sh</code></td><td>End-to-end non-hardware readiness.</td></tr>
+        <tr><td>Hardware probe</td><td><code>swift run quake-probe --wake --listen</code></td><td>Device response and keep-alive behavior.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="release">
+    <h2>9. Release Checklist</h2>
+    <ol>
+      <li>Run <code>./scripts/validate-release.sh</code>.</li>
+      <li>Verify clean <code>git status</code>.</li>
+      <li>Build local app bundle and launch with DK hardware connected.</li>
+      <li>Confirm panel wake, touch, knob, LED ring, settings window, package install/remove, and carousel behavior.</li>
+      <li>Print manuals to PDF and verify layout.</li>
+      <li>For public release, sign/notarize the <code>.app</code> and update install sections.</li>
+    </ol>
+  </section>
+
+  <section id="gaps">
+    <h2>10. Engineering Gaps</h2>
+    <ul>
+      <li>JSON Schema files are normative, but CLI validation currently uses Swift decoding/validators rather than executing JSON Schema constraints directly.</li>
+      <li><code>shell</code>, <code>stdioJSONRPC</code>, and <code>php</code> action execution are implemented; <code>websocket</code>, <code>webView</code>, and <code>nativeSwift</code> are contract surfaces with incomplete execution support.</li>
+      <li>Permission prompts, grant persistence, and Keychain-backed secret storage need production implementation.</li>
+      <li>Theme asset existence and richer web applet lifecycle validation need hardening.</li>
+      <li>Final signed app packaging, updater strategy, and crash/log collection are pending.</li>
+    </ul>
+  </section>
+
+  <section id="index">
+    <h2>Index</h2>
+    <ul class="index-list">
+      <li>architecture, section 1</li>
+      <li>build, section 3</li>
+      <li>hardware safety, section 7</li>
+      <li>package discovery, section 6</li>
+      <li>release checklist, section 9</li>
+      <li>runtime model, section 5</li>
+      <li>testing, section 8</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

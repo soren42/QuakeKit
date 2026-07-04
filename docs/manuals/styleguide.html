@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Documentation Styleguide</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Documentation System</div>
+      <h1>Documentation Styleguide</h1>
+      <p>Standards for QuakeKit manuals, reference handbooks, printed PDFs, diagrams, tables, callouts, examples, and future release documentation.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Project</dt><dd>QuakeKit for DK-QUAKE / ARIS-68</dd></div>
+      <div><dt>Status</dt><dd>v1.0 documentation draft</dd></div>
+      <div><dt>Format</dt><dd>Single-file HTML manuals with shared local CSS/JS/SVG assets</dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2 id="toc">Table of Contents</h2>
+    <nav class="toc">
+      <a href="#purpose">1. Purpose</a>
+      <a href="#document-set">2. Document Set</a>
+      <a href="#page-model">3. Page Model</a>
+      <a href="#voice">4. Voice And Terminology</a>
+      <a href="#structure">5. Structure Standards</a>
+      <a href="#visuals">6. Visual Standards</a>
+      <a href="#code">7. Code And Commands</a>
+      <a href="#reference">8. Reference Tables</a>
+      <a href="#gaps">9. Gaps And Draft Markers</a>
+      <a href="#accessibility">10. Accessibility</a>
+      <a href="#release-checklist">11. Release Checklist</a>
+      <a href="#index">Index</a>
+    </nav>
+  </section>
+
+  <section id="purpose">
+    <h2>1. Purpose</h2>
+    <p>This styleguide defines how QuakeKit documentation should read, look, print, and age. It exists so the User Manual, Developer Guide, Plugin Developer Guide, and Theme Designer Handbook feel like one documentation system rather than four unrelated files.</p>
+    <p>The project is still moving quickly. These documents should be complete enough to orient a reader today, explicit about what is still alpha-quality, and easy to update when the first signed <code>.app</code> bundle replaces command-line launch testing.</p>
+    <div class="callout">
+      <p><span class="label">Rule</span>Documentation must tell the truth about the current implementation. When a feature is planned but not done, describe the intent and mark the gap clearly.</p>
+    </div>
+  </section>
+
+  <section id="document-set">
+    <h2>2. Document Set</h2>
+    <table>
+      <thead><tr><th>Document</th><th>Audience</th><th>Primary Job</th><th>Required Tone</th></tr></thead>
+      <tbody>
+        <tr><td><code>user-manual.html</code></td><td>Non-technical DK-QUAKE users</td><td>Install, launch, configure, use, troubleshoot, and understand privacy/permissions.</td><td>Plain, confident, low jargon.</td></tr>
+        <tr><td><code>developer-guide.html</code></td><td>Core contributors and platform maintainers</td><td>Explain architecture, modules, build/test workflow, release gates, package discovery, and extension boundaries.</td><td>Technical, direct, implementation-aware.</td></tr>
+        <tr><td><code>plugin-developer-guide.html</code></td><td>Third-party plugin authors</td><td>Teach manifest structure, transports, settings, actions, data streams, permissions, packaging, and examples.</td><td>Practical and example-heavy.</td></tr>
+        <tr><td><code>theme-designers-handbook.html</code></td><td>Theme authors and visual designers</td><td>Teach theme package format, color tokens, layout hints, assets, knob-ring presentation, and PDF-quality design examples.</td><td>Visual, precise, design-system oriented.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="page-model">
+    <h2>3. Page Model</h2>
+    <p>Manuals are HTML documents designed for both direct browser reading and US Letter PDF output. Use the shared stylesheet at <code>docs/manuals/assets/manual.css</code>. The default printed page target is:</p>
+    <ul>
+      <li>Paper: US Letter, portrait.</li>
+      <li>Print margin: <code>0.55in</code>.</li>
+      <li>Screen body width: <code>8.5in</code> maximum.</li>
+      <li>Cover page: large title, metadata, brief scope.</li>
+      <li>Tables and figures: avoid page breaks inside whenever possible.</li>
+    </ul>
+    <p>Every manual should use this base structure:</p>
+    <pre><code class="language-html">&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;title&gt;QuakeKit Manual Title&lt;/title&gt;
+  &lt;link rel="stylesheet" href="assets/manual.css"&gt;
+  &lt;script src="assets/manual.js" defer&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;main class="manual"&gt;
+  &lt;section class="cover"&gt;...&lt;/section&gt;
+  &lt;section&gt;&lt;h2&gt;Table of Contents&lt;/h2&gt;...&lt;/section&gt;
+  ...
+&lt;/main&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+  </section>
+
+  <section id="voice">
+    <h2>4. Voice And Terminology</h2>
+    <p>QuakeKit documentation should be direct and helpful. It should not sound like marketing copy. Explain what a reader can do, what can go wrong, and what to check next.</p>
+    <table>
+      <thead><tr><th>Use</th><th>Avoid</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td>QuakeKit</td><td>OpenQuake, MacQuake, DK app</td><td>QuakeKit is the project name moving forward.</td></tr>
+        <tr><td>DK-QUAKE display</td><td>screen gadget, small monitor</td><td>Names the physical target precisely.</td></tr>
+        <tr><td>Functional plugin</td><td>plugin, app, widget interchangeably</td><td>Separates behavior from theme packages.</td></tr>
+        <tr><td>Theme package</td><td>skin, CSS pack</td><td>Themes define tokens, assets, components, and hardware presentation.</td></tr>
+        <tr><td>Menu bar accessory</td><td>system tray</td><td>macOS uses menu bar terminology. “System tray” can be mentioned for Windows-oriented readers.</td></tr>
+        <tr><td>Current alpha build</td><td>release-quality replacement</td><td>The current implementation is still pre-v1.0.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="structure">
+    <h2>5. Structure Standards</h2>
+    <h3>Headings</h3>
+    <p>Use numbered top-level sections in manuals. Keep headings short and literal. Prefer “Install QuakeKit” over “Getting Everything Ready.”</p>
+    <h3>Task Sections</h3>
+    <p>User-facing task sections should follow this order: what the task accomplishes, prerequisites, steps, expected result, troubleshooting note. Developer-facing task sections should add verification commands.</p>
+    <h3>Known Gaps</h3>
+    <p>If a section describes a future release behavior, include a gap note near the relevant text rather than burying it at the end.</p>
+    <div class="callout warning">
+      <p><span class="label">Gap</span>The final QuakeKit release is expected to ship as a signed <code>.app</code> bundle. Current development builds can assemble a local bundle, but packaging, signing, notarization, and first-run UX still need final release work.</p>
+    </div>
+  </section>
+
+  <section id="visuals">
+    <h2>6. Visual Standards</h2>
+    <p>Use diagrams when they compress architecture or workflow complexity. Use screenshots only when they reveal concrete UI state that prose cannot describe efficiently. Because the app is changing quickly, early manuals should prefer SVG diagrams and schematic UI figures over brittle screenshots.</p>
+    <div class="figure">
+      <img src="assets/platform-architecture.svg" alt="Layered QuakeKit platform architecture diagram">
+      <p class="caption">Standard architecture figure. Reuse this diagram across manuals when explaining the runtime boundary.</p>
+    </div>
+    <p>Figure captions should explain why the figure matters. Do not caption with only “Architecture diagram” or “Screenshot.”</p>
+  </section>
+
+  <section id="code">
+    <h2>7. Code And Commands</h2>
+    <p>Commands should be copyable, minimal, and run from the repository root unless the text says otherwise. Prefer full command blocks over inline command chains when the command is a task the reader might execute.</p>
+    <pre><code class="language-bash">cd /path/to/QuakeKit
+./scripts/validate-release.sh</code></pre>
+    <p>For JSON examples, include enough context for validation. Avoid fragments unless the text clearly says “excerpt.”</p>
+    <pre><code class="language-json">{
+  "$schema": "../../schemas/functional-plugin.schema.json",
+  "id": "example_status",
+  "name": "Example Status",
+  "version": "1.0.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "status.sh" }
+}</code></pre>
+  </section>
+
+  <section id="reference">
+    <h2>8. Reference Tables</h2>
+    <p>Reference tables should use consistent columns: field, type, required, purpose. If a table documents user-visible controls, use setting, default, effect, restart required.</p>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>string</td><td>Yes</td><td>Stable lowercase identifier for package discovery and stored preferences.</td></tr>
+        <tr><td>version</td><td>string</td><td>Yes</td><td>Human-readable package version. SemVer is recommended.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="gaps">
+    <h2>9. Gaps And Draft Markers</h2>
+    <p>Use one of three explicit markers:</p>
+    <table>
+      <thead><tr><th>Marker</th><th>Use When</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="label">Alpha</span></td><td>Feature exists but behavior, UI, or packaging may change.</td><td>Current plugin settings surface.</td></tr>
+        <tr><td><span class="label">Gap</span></td><td>Feature is intended but incomplete.</td><td>Signed/notarized installer.</td></tr>
+        <tr><td><span class="label">Risk</span></td><td>Feature touches permissions, data privacy, hardware safety, or third-party terms.</td><td>Microphone recording, media automation, AI harnesses.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="accessibility">
+    <h2>10. Accessibility</h2>
+    <ul>
+      <li>Every image must include meaningful <code>alt</code> text.</li>
+      <li>Do not encode status only with color. Pair color with labels or symbols.</li>
+      <li>Use real headings in order; do not fake headings with bold paragraphs.</li>
+      <li>Tables must have header rows.</li>
+      <li>Code blocks must preserve whitespace and avoid horizontal-only scrolling in print.</li>
+    </ul>
+  </section>
+
+  <section id="release-checklist">
+    <h2>11. Release Checklist</h2>
+    <ol>
+      <li>Open each manual in Safari or Chromium and verify no missing local assets.</li>
+      <li>Print each manual to PDF on US Letter and inspect cover, table breaks, code wrapping, and diagram scaling.</li>
+      <li>Run <code>./scripts/validate-release.sh</code> before publishing manuals with release artifacts.</li>
+      <li>Update all “current alpha” notes when the signed <code>.app</code> bundle is ready.</li>
+      <li>Refresh plugin and theme inventory tables from the current repository before tagging v1.0.</li>
+    </ol>
+  </section>
+
+  <section id="index">
+    <h2>Index</h2>
+    <ul class="index-list">
+      <li>accessibility, section 10</li>
+      <li>callouts, sections 5 and 9</li>
+      <li>code examples, section 7</li>
+      <li>document set, section 2</li>
+      <li>known gaps, section 9</li>
+      <li>page size, section 3</li>
+      <li>PDF output, sections 3 and 11</li>
+      <li>terminology, section 4</li>
+      <li>visual standards, section 6</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Theme Designer's Handbook</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Manual Set</div>
+      <h1>Theme Designer's Handbook</h1>
+      <p>Create QuakeKit theme packages with color systems, typography, metrics, component styling, layout hints, assets, configurable options, and DK knob-ring presentation.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Audience</dt><dd>Theme authors and visual designers</dd></div>
+      <div><dt>Normative Schema</dt><dd><code>schemas/theme-plugin.schema.json</code></dd></div>
+      <div><dt>Package Suffix</dt><dd><code>.quakekittheme</code></dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Table of Contents</h2>
+    <nav class="toc">
+      <a href="#role">1. What Themes Own</a>
+      <a href="#package">2. Package Layout</a>
+      <a href="#palette">3. Palette And Semantics</a>
+      <a href="#typography">4. Typography And Metrics</a>
+      <a href="#components">5. Components</a>
+      <a href="#layout">6. Layout Hints</a>
+      <a href="#assets">7. Image And Design Assets</a>
+      <a href="#hardware">8. Knob Ring Presentation</a>
+      <a href="#options">9. Configurable Options</a>
+      <a href="#example">10. Complete Theme Example</a>
+      <a href="#validate">11. Validate And Install</a>
+      <a href="#gaps">12. Current Gaps</a>
+      <a href="#index">Index</a>
+    </nav>
+  </section>
+
+  <section id="role">
+    <h2>1. What Themes Own</h2>
+    <p>Themes own presentation, not behavior. A theme should describe how QuakeKit looks and how semantic states map to visual treatment. Functional plugins still own data, actions, and integration logic.</p>
+    <table>
+      <thead><tr><th>Themes Own</th><th>Plugins Own</th></tr></thead>
+      <tbody>
+        <tr><td>Color tokens, semantic colors, typography, component styles, background assets, layout preferences, knob-ring visual mapping.</td><td>Data sources, actions, settings, view declarations, external services, semantic status requests.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="package">
+    <h2>2. Package Layout</h2>
+    <pre><code class="language-text">cyberpunk-neon.quakekittheme/
+  theme.json
+  assets/
+    neon-circuit.svg</code></pre>
+    <p>Only <code>theme.json</code> is required. Asset files are optional but should be listed in the <code>assets</code> array when included.</p>
+  </section>
+
+  <section id="palette">
+    <h2>3. Palette And Semantics</h2>
+    <p>Define token colors first, then map semantic host roles to those tokens. This keeps native UI, web applets, and future hosts aligned.</p>
+    <table class="field-table">
+      <thead><tr><th>Semantic Role</th><th>Required</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td>background</td><td>Yes</td><td>Main panel background.</td></tr>
+        <tr><td>surface</td><td>Yes</td><td>Base cards, rows, and controls.</td></tr>
+        <tr><td>surfaceRaised</td><td>Yes</td><td>Selected or elevated UI surfaces.</td></tr>
+        <tr><td>border</td><td>Yes</td><td>Tile, tab, chart, and row boundaries.</td></tr>
+        <tr><td>textPrimary</td><td>Yes</td><td>Main labels and values.</td></tr>
+        <tr><td>textSecondary</td><td>Yes</td><td>Secondary labels and captions.</td></tr>
+        <tr><td>accent</td><td>Yes</td><td>Focus, selection, and key actions.</td></tr>
+        <tr><td>success / warning / danger</td><td>Yes</td><td>Health/status states.</td></tr>
+      </tbody>
+    </table>
+    <pre><code class="language-json">"palette": {
+  "mode": "dark",
+  "colors": {
+    "void": { "value": "#04070D", "role": "Panel background" },
+    "cyan": { "value": "#39F5FF", "role": "Primary neon accent", "configurable": true },
+    "magenta": { "value": "#FF5CDB", "role": "Secondary accent", "configurable": true }
+  },
+  "semanticColors": {
+    "background": "void",
+    "surface": "#080D18",
+    "surfaceRaised": "#11182A",
+    "border": "cyan",
+    "textPrimary": "#F4F9FF",
+    "textSecondary": "#AAB7D4",
+    "accent": "cyan",
+    "success": "#A7FF57",
+    "warning": "#FFE66D",
+    "danger": "#FF6B5C"
+  }
+}</code></pre>
+  </section>
+
+  <section id="typography">
+    <h2>4. Typography And Metrics</h2>
+    <p>Keep panel typography dense and legible. The DK panel is wide and short, so overly large type wastes vertical space quickly.</p>
+    <pre><code class="language-json">"typography": {
+  "displayFont": "Avenir Next Condensed",
+  "bodyFont": "SF Pro Text",
+  "monoFont": "Menlo",
+  "scale": {
+    "caption": 10,
+    "body": 13,
+    "title": 18,
+    "value": 28
+  }
+},
+"metrics": {
+  "cornerRadius": 7,
+  "borderWidth": 1,
+  "spacing": 8,
+  "density": "compact"
+}</code></pre>
+  </section>
+
+  <section id="components">
+    <h2>5. Components</h2>
+    <p>Component styles are token overrides for common host surfaces. They should reference palette tokens or semantic colors, not one-off values scattered across the file.</p>
+    <table>
+      <thead><tr><th>Component</th><th>Typical Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>tile</code></td><td>Widget tiles and app action panels.</td></tr>
+        <tr><td><code>tab</code></td><td>Top page labels and segmented navigation.</td></tr>
+        <tr><td><code>statusRow</code></td><td>Runtime rows and compact settings rows.</td></tr>
+        <tr><td><code>gauge</code></td><td>CPU, memory, weather, or system bars.</td></tr>
+        <tr><td><code>chart</code></td><td>Line charts, sparklines, and telemetry graphs.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="layout">
+    <h2>6. Layout Hints</h2>
+    <p>Themes can express preferred layout style without forcing every plugin to draw an entire page.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Values</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>defaultPageStyle</code></td><td><code>grid</code>, <code>fullScreen</code>, <code>halfAndGrid</code>, <code>twoHalves</code>, <code>thirds</code>, <code>quarters</code></td><td>Default composition.</td></tr>
+        <tr><td><code>widgetGrid</code></td><td>columns, rows</td><td>Preferred widget grid.</td></tr>
+        <tr><td><code>appletGrid</code></td><td>columns, rows</td><td>Preferred applet grid.</td></tr>
+        <tr><td><code>splitRatio</code></td><td>0.2 to 0.8</td><td>Split-screen proportion.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="assets">
+    <h2>7. Image And Design Assets</h2>
+    <p>Themes may include images, fonts, sounds, CSS, or scripts. Native host components should not execute theme scripts; script assets are for web/plugin surfaces once the bridge is stable.</p>
+    <pre><code class="language-json">"assets": [
+  {
+    "id": "circuit",
+    "kind": "image",
+    "path": "assets/neon-circuit.svg",
+    "role": "background",
+    "fit": "cover",
+    "opacity": 0.28
+  }
+]</code></pre>
+    <p>Prefer SVG or high-resolution PNG assets that tolerate downscaling to the DK panel. Avoid low-contrast dark artwork behind dense telemetry.</p>
+  </section>
+
+  <section id="hardware">
+    <h2>8. Knob Ring Presentation</h2>
+    <p>The knob LED ring belongs to the theme as a presentation map. Plugins request semantic states; the runtime arbitrates priority and TTL; the theme maps the winning state to color, intensity, and animation.</p>
+    <pre><code class="language-json">"hardware": {
+  "knobRing": {
+    "enabled": true,
+    "idle": { "color": "cyan", "intensity": 0.18, "animation": "solid" },
+    "focus": { "color": "cyan", "intensity": 0.75, "animation": "pulse" },
+    "success": { "color": "#A7FF57", "intensity": 0.7, "animation": "solid" },
+    "warning": { "color": "#FFE66D", "intensity": 0.85, "animation": "pulse" },
+    "danger": { "color": "#FF6B5C", "intensity": 1.0, "animation": "flash" },
+    "progress": { "color": "magenta", "intensity": 0.8, "animation": "progress" }
+  }
+}</code></pre>
+  </section>
+
+  <section id="options">
+    <h2>9. Configurable Options</h2>
+    <p>Options expose safe visual customization controls in the settings UI. Keep options targeted and understandable.</p>
+    <pre><code class="language-json">"options": [
+  {
+    "id": "accent",
+    "title": "Accent Color",
+    "type": "color",
+    "target": "palette.colors.cyan.value",
+    "defaultValue": "#39F5FF"
+  },
+  {
+    "id": "density",
+    "title": "Density",
+    "type": "choice",
+    "target": "metrics.density",
+    "defaultValue": "compact",
+    "choices": ["compact", "standard", "comfortable"]
+  }
+]</code></pre>
+  </section>
+
+  <section id="example">
+    <h2>10. Complete Theme Example</h2>
+    <pre><code class="language-json">{
+  "$schema": "../../schemas/theme-plugin.schema.json",
+  "id": "example_neon",
+  "name": "Example Neon",
+  "version": "1.0.0",
+  "apiVersion": "0.1",
+  "kind": "theme",
+  "palette": {
+    "mode": "dark",
+    "colors": {
+      "base": { "value": "#05070D" },
+      "surface": { "value": "#0B1020" },
+      "cyan": { "value": "#39F5FF", "configurable": true },
+      "pink": { "value": "#FF5CDB", "configurable": true }
+    },
+    "semanticColors": {
+      "background": "base",
+      "surface": "surface",
+      "surfaceRaised": "#11182A",
+      "border": "cyan",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#AAB7D4",
+      "accent": "cyan",
+      "success": "#A7FF57",
+      "warning": "#FFE66D",
+      "danger": "#FF6B5C"
+    }
+  },
+  "metrics": { "cornerRadius": 7, "borderWidth": 1, "spacing": 8, "density": "compact" },
+  "layout": { "defaultPageStyle": "fullScreen", "widgetGrid": { "columns": 4, "rows": 2 } },
+  "options": [
+    { "id": "accent", "title": "Accent Color", "type": "color", "target": "palette.colors.cyan.value", "defaultValue": "#39F5FF" }
+  ]
+}</code></pre>
+  </section>
+
+  <section id="validate">
+    <h2>11. Validate And Install</h2>
+    <pre><code class="language-bash">swift run quake-probe --validate-theme Examples/Themes/cyberpunk-neon.quakekittheme/theme.json
+swift run quake-probe --install-package ./ExampleNeon.quakekittheme
+swift run quake-probe --install-package ./ExampleNeon.quakekittheme.tar.gz</code></pre>
+  </section>
+
+  <section id="gaps">
+    <h2>12. Current Gaps</h2>
+    <ul>
+      <li>Theme asset existence is structurally declared but not fully enforced by validation.</li>
+      <li>CSS/script theme assets need a stricter bridge contract before third-party execution is recommended.</li>
+      <li>The settings UI exposes first-pass controls; richer color pickers and preview tooling are still needed.</li>
+      <li>Printed visual examples should be refreshed with final v1.0 screenshots before publication.</li>
+    </ul>
+  </section>
+
+  <section id="index">
+    <h2>Index</h2>
+    <ul class="index-list">
+      <li>assets, section 7</li>
+      <li>color tokens, section 3</li>
+      <li>components, section 5</li>
+      <li>knob ring, section 8</li>
+      <li>layout, section 6</li>
+      <li>options, section 9</li>
+      <li>package layout, section 2</li>
+      <li>typography, section 4</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

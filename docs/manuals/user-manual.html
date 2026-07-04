@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit User Manual</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Manual Set</div>
+      <h1>User Manual</h1>
+      <p>Installing, launching, configuring, using, and troubleshooting QuakeKit on macOS with the DK-QUAKE / ARIS-68 touch display and control center.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Audience</dt><dd>End users and testers</dd></div>
+      <div><dt>Release State</dt><dd>Alpha draft for v1.0 preparation</dd></div>
+      <div><dt>Hardware</dt><dd>DK-QUAKE display, touch HID, knob controls, knob LED ring</dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Table of Contents</h2>
+    <nav class="toc">
+      <a href="#read-first">1. Read This First</a>
+      <a href="#install">2. Install And Launch</a>
+      <a href="#permissions">3. Permissions And Privacy</a>
+      <a href="#hardware">4. DK Hardware Behavior</a>
+      <a href="#navigation">5. Panel Navigation</a>
+      <a href="#settings">6. Settings Window</a>
+      <a href="#themes">7. Themes</a>
+      <a href="#widgets">8. Widgets And Apps</a>
+      <a href="#carousel">9. Carousel</a>
+      <a href="#packages">10. Installing Packages</a>
+      <a href="#troubleshooting">11. Troubleshooting</a>
+      <a href="#gaps">12. Current Gaps</a>
+      <a href="#index">Index</a>
+    </nav>
+  </section>
+
+  <section id="read-first">
+    <h2>1. Read This First</h2>
+    <p>QuakeKit is a Swift-native control center for the DK-QUAKE / ARIS-68 touch display. It is designed to replace the stock DK software over time, while also becoming a modular platform for third-party widgets, applets, themes, and automation surfaces.</p>
+    <div class="callout warning">
+      <p><span class="label">Alpha</span>This build is still for development and testing. It can wake the panel, keep it alive, render the native host, read touch/knob input, run example plugins, and configure themes, but it is not yet a polished end-user replacement package.</p>
+    </div>
+    <div class="callout danger">
+      <p><span class="label">Safety</span>Do not send unknown HID commands to the device. QuakeKit avoids the known DFU command and keeps live probes to safe wake, ping, query, brightness, microphone, and knob-ring operations.</p>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>2. Install And Launch</h2>
+    <h3>Current Development Launch</h3>
+    <p>From the repository root, build and run the panel host:</p>
+    <pre><code class="language-bash">cd /Users/jason/Code/QuakeKit
+swift build
+.build/debug/quake-panel</code></pre>
+    <p>Run the non-hardware release validation sweep before sharing a build:</p>
+    <pre><code class="language-bash">./scripts/validate-release.sh</code></pre>
+    <h3>Local App Bundle Launch</h3>
+    <p>The current repository can assemble a local <code>.app</code> bundle for launch testing:</p>
+    <pre><code class="language-bash">./scripts/build-app-bundle.sh
+open .build/QuakeKit.app</code></pre>
+    <p>The generated app runs as a menu-bar accessory and includes bundled example plugins and themes in its resources.</p>
+    <div class="callout warning">
+      <p><span class="label">Gap</span>The final public release should be a signed and notarized macOS <code>.app</code> bundle. The current bundle script is a local development assembler, not the final installer or release artifact.</p>
+    </div>
+    <h3>Convenience Launchers</h3>
+    <pre><code class="language-bash">./scripts/launch-quakekit.sh
+./scripts/QuakeKit.command</code></pre>
+  </section>
+
+  <section id="permissions">
+    <h2>3. Permissions And Privacy</h2>
+    <p>QuakeKit can run display and HID workflows without microphone access. Microphone access is only needed for voice features, meeting clips, and future AI-agent audio workflows.</p>
+    <table>
+      <thead><tr><th>Permission</th><th>When Needed</th><th>Current Control</th><th>Data Location</th></tr></thead>
+      <tbody>
+        <tr><td>Microphone</td><td>Voice agent, 30-second meeting clip, future transcription workflows.</td><td>Menu bar item: <strong>Request Microphone Access</strong>.</td><td><code>~/Library/Application Support/QuakeKit/Recordings/</code></td></tr>
+        <tr><td>Input Monitoring / Accessibility</td><td>Future hotkey and application-companion plugins.</td><td>Not yet guided by QuakeKit.</td><td>macOS System Settings.</td></tr>
+        <tr><td>Network</td><td>Weather, markets, sports, Home Assistant, OctoPrint, UniFi, AI services.</td><td>Declared in plugin manifests where applicable.</td><td>Plugin-specific.</td></tr>
+        <tr><td>Secrets</td><td>API keys and service tokens.</td><td>Manifest contract exists; full Keychain UI is a gap.</td><td>Future Keychain-backed store.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="hardware">
+    <h2>4. DK Hardware Behavior</h2>
+    <p>The DK-QUAKE panel appears to macOS as an external display, plus HID interfaces for touch, knob/control input, and vendor commands. QuakeKit renders a borderless AppKit window onto the DK display. It does not push pixels through HID.</p>
+    <div class="figure">
+      <img src="assets/platform-architecture.svg" alt="QuakeKit layered platform architecture">
+      <p class="caption">QuakeKit treats the panel as a macOS display while using HID for control events, wake, keep-alive, and knob LED presentation.</p>
+    </div>
+    <h3>Display Ownership</h3>
+    <ul>
+      <li>DK-like display sizes are detected at <code>1920x480</code> or <code>480x1920</code>.</li>
+      <li>The panel window uses the full display frame instead of the reduced macOS visible frame.</li>
+      <li>The app hides Dock/menu bar presentation while owning the DK panel.</li>
+      <li>A pointer guard moves the mouse cursor back to the primary display if it crosses onto the DK panel.</li>
+    </ul>
+    <h3>Hardware Probe Commands</h3>
+    <pre><code class="language-bash">swift run quake-probe
+swift run quake-probe --all-hid
+swift run quake-probe --self-test
+swift run quake-probe --listen --wake
+swift run quake-probe --led-on
+swift run quake-probe --led-off
+swift run quake-probe --led-test
+swift run quake-probe --brightness 255</code></pre>
+  </section>
+
+  <section id="navigation">
+    <h2>5. Panel Navigation</h2>
+    <p>The current native panel exposes seven top-level pages:</p>
+    <table>
+      <thead><tr><th>Page</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Home</td><td>Top-level status, quick actions, and overview.</td></tr>
+        <tr><td>Widgets</td><td>Grid of compact widget views. Overflow pages can be changed with knob boundary navigation or touch arrow pads.</td></tr>
+        <tr><td>Apps</td><td>Full applet pages and plugin action entries.</td></tr>
+        <tr><td>Themes</td><td>On-device theme selection and quick visual option checks.</td></tr>
+        <tr><td>Settings</td><td>Panel-friendly settings shortcuts.</td></tr>
+        <tr><td>Runtime</td><td>Runtime state, HID status, and diagnostic snapshots.</td></tr>
+        <tr><td>Plugin APIs</td><td>Plugin/package capability and API surface inspection.</td></tr>
+      </tbody>
+    </table>
+    <h3>Knob Controls</h3>
+    <ul>
+      <li>Rotate: move focus through the current page.</li>
+      <li>Press: activate the focused tile or action.</li>
+      <li>Page press behavior: a knob index used by the device cycles top-level pages.</li>
+    </ul>
+    <h3>Touch Controls</h3>
+    <ul>
+      <li>Tap page labels to change pages.</li>
+      <li>Tap a tile to activate it.</li>
+      <li>Use left/right arrow pads when a grid has more items than fit on one DK panel page.</li>
+    </ul>
+  </section>
+
+  <section id="settings">
+    <h2>6. Settings Window</h2>
+    <p>Open the primary settings window from the QuakeKit menu-bar icon: <strong>Open Settings...</strong>. This window appears on the primary Mac display and is designed for keyboard and mouse use.</p>
+    <table>
+      <thead><tr><th>Section</th><th>Current Controls</th></tr></thead>
+      <tbody>
+        <tr><td>Global</td><td>Default panel page, launch mode summary, display ownership summary, package directory.</td></tr>
+        <tr><td>Themes</td><td>Active theme, theme options, reset overrides, remove installed themes.</td></tr>
+        <tr><td>Widgets &amp; Apps</td><td>Installed/bundled plugin views and their layout/presentation hints.</td></tr>
+        <tr><td>Carousel</td><td>Enable rotation, choose duration, include/exclude widget views.</td></tr>
+        <tr><td>Plugins</td><td>Plugin settings, reset plugin settings, remove installed plugin packages.</td></tr>
+        <tr><td>About</td><td>Loaded plugin/theme counts and reload notes.</td></tr>
+      </tbody>
+    </table>
+    <p>Current settings files live in:</p>
+    <pre><code class="language-text">~/Library/Application Support/QuakeKit/settings.json
+~/Library/Application Support/QuakeKit/theme-config.json</code></pre>
+  </section>
+
+  <section id="themes">
+    <h2>7. Themes</h2>
+    <p>The bundled themes are <strong>Cyberpunk Neon</strong>, <strong>Focus Dark</strong>, and <strong>Weather Glass</strong>. Themes define color tokens, typography, component styles, layout defaults, assets, configurable visual options, and knob-ring presentation.</p>
+    <p>Theme packages use this layout:</p>
+    <pre><code class="language-text">SomeTheme.quakekittheme/
+  theme.json
+  assets/</code></pre>
+    <p>Validate or install a theme from the command line:</p>
+    <pre><code class="language-bash">swift run quake-probe --validate-theme Examples/Themes/focus-dark.quakekittheme/theme.json
+swift run quake-probe --install-package ./SomeTheme.quakekittheme
+swift run quake-probe --install-package ./SomeTheme.quakekittheme.tar.gz</code></pre>
+  </section>
+
+  <section id="widgets">
+    <h2>8. Widgets And Apps</h2>
+    <p>QuakeKit ships a broad set of example plugins so users and developers can test the platform shape. Current examples include Weather, System Monitor, Markets, Sports, Home Assistant, OBS, Spotify, YouTube, Discord, OctoPrint, Security Cameras, Timers, Meeting Notes, hotkey grids, terminal companions, and AI-agent harnesses.</p>
+    <table>
+      <thead><tr><th>Category</th><th>Examples</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>System</td><td>System Monitor, Agenda, Timers, Clipboard Notes</td><td>Runnable fixtures and native/data-driven displays.</td></tr>
+        <tr><td>Information</td><td>Weather, Markets, Sports</td><td>Keyless public-data adapters with deterministic fallbacks.</td></tr>
+        <tr><td>Media</td><td>Spotify, YouTube, Music Now Playing</td><td>Local-control fixtures and metadata surfaces.</td></tr>
+        <tr><td>Automation</td><td>Home Assistant, OctoPrint, UniFi, OBS, Security Cameras</td><td>Offline-safe stubs with settings and action surfaces.</td></tr>
+        <tr><td>AI / Voice</td><td>Voice AI Agent, Meeting Notes, ChatGPT, Claude, Gemini, Grok, DeepSeek, Cursor</td><td>Harness scaffolds; vendor terms and API choices remain release concerns.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="carousel">
+    <h2>9. Carousel</h2>
+    <p>The carousel automatically rotates selected widget-capable views on the DK panel. In the settings window, use <strong>Carousel</strong> to enable it, choose a duration, and include or exclude individual widgets.</p>
+    <ul>
+      <li>Durations: 5, 10, 15, 30, or 60 seconds.</li>
+      <li>If no explicit widget list is saved, all eligible widgets are included.</li>
+      <li>Carousel is best for passive dashboards such as Weather, System Monitor, Agenda, Markets, and Sports.</li>
+    </ul>
+  </section>
+
+  <section id="packages">
+    <h2>10. Installing Packages</h2>
+    <p>QuakeKit can install unpacked package directories or tar bundles. Use the settings window buttons <strong>Install Plugin...</strong> and <strong>Install Theme...</strong>, or install through the CLI:</p>
+    <pre><code class="language-bash">swift run quake-probe --install-package ./SomePlugin.quakekitplugin
+swift run quake-probe --install-package ./SomeTheme.quakekittheme
+swift run quake-probe --install-package ./SomePlugin.quakekitplugin.tar.gz
+swift run quake-probe --install-package ./SomePlugin.tgz</code></pre>
+    <p>Installed packages are copied into:</p>
+    <pre><code class="language-text">~/Library/Application Support/QuakeKit/Plugins/
+~/Library/Application Support/QuakeKit/Themes/</code></pre>
+    <div class="callout warning">
+      <p><span class="label">Alpha</span>Package install/remove currently requires restarting QuakeKit before package discovery refreshes.</p>
+    </div>
+  </section>
+
+  <section id="troubleshooting">
+    <h2>11. Troubleshooting</h2>
+    <table>
+      <thead><tr><th>Problem</th><th>Check</th><th>Command</th></tr></thead>
+      <tbody>
+        <tr><td>Panel stays dark</td><td>Confirm wake and keep-alive pongs.</td><td><code>swift run quake-probe --wake --listen</code></td></tr>
+        <tr><td>No touch or knob input</td><td>Confirm HID interfaces and permissions.</td><td><code>swift run quake-probe --all-hid</code></td></tr>
+        <tr><td>Plugin does not appear</td><td>Validate manifest and restart after install.</td><td><code>swift run quake-probe --validate-plugin path/to/manifest.json</code></td></tr>
+        <tr><td>Theme does not appear</td><td>Validate theme manifest and package suffix.</td><td><code>swift run quake-probe --validate-theme path/to/theme.json</code></td></tr>
+        <tr><td>Release confidence needed</td><td>Run full non-hardware validation.</td><td><code>./scripts/validate-release.sh</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="gaps">
+    <h2>12. Current Gaps</h2>
+    <ul>
+      <li>Final signed, notarized macOS release packaging is not complete.</li>
+      <li>Plugin permission prompts and secret storage are declarative but not complete user-facing flows.</li>
+      <li>Some web/native/plugin transport surfaces are documented as platform contracts before full host execution support exists.</li>
+      <li>Installed package reload requires restart.</li>
+      <li>Third-party integrations need service-specific setup guides before v1.0.</li>
+    </ul>
+  </section>
+
+  <section id="index">
+    <h2>Index</h2>
+    <ul class="index-list">
+      <li>app bundle, section 2</li>
+      <li>carousel, section 9</li>
+      <li>DK display, section 4</li>
+      <li>menu bar accessory, sections 2 and 6</li>
+      <li>microphone, section 3</li>
+      <li>package install, section 10</li>
+      <li>settings window, section 6</li>
+      <li>themes, section 7</li>
+      <li>troubleshooting, section 11</li>
+      <li>widgets, section 8</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

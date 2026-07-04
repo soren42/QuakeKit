@@ -199,6 +199,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the platform plan.
 See [docs/PLUGIN_ARCHITECTURE.md](docs/PLUGIN_ARCHITECTURE.md) for the plugin model.
 See [docs/FUNCTIONAL_PLUGIN_SPEC.md](docs/FUNCTIONAL_PLUGIN_SPEC.md) for the functional plugin contract.
 See [docs/THEME_PLUGIN_SPEC.md](docs/THEME_PLUGIN_SPEC.md) for the theme plugin contract.
+See [docs/manuals/index.html](docs/manuals/index.html) for the print-ready HTML manual set.
 
 ## License
 

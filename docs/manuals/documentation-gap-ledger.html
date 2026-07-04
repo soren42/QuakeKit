@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Documentation Gap Ledger</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Documentation System</div>
+      <h1>Documentation Gap Ledger</h1>
+      <p>Known gaps, assumptions, and follow-up tasks for turning the current manual drafts into release-quality v1.0 documentation.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Owner</dt><dd>QuakeKit documentation maintainers</dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Release Documentation Gaps</h2>
+    <table>
+      <thead><tr><th>Area</th><th>Gap</th><th>Needed Before v1.0</th></tr></thead>
+      <tbody>
+        <tr><td>Install</td><td>Final public release will be a signed <code>.app</code>; current docs describe local bundle assembly.</td><td>Replace development launch path with final download/install/open/remove/update flow.</td></tr>
+        <tr><td>Permissions</td><td>Plugin permission grants and secrets are documented as contracts, not complete user flows.</td><td>Add final screenshots and Keychain/permission grant steps once implemented.</td></tr>
+        <tr><td>Plugin Transports</td><td><code>webView</code>, <code>websocket</code>, and dynamic <code>nativeSwift</code> are contract surfaces with incomplete host execution support.</td><td>Either finish implementation or mark as preview in release docs.</td></tr>
+        <tr><td>Schema Validation</td><td>CLI validates Swift models, not every JSON Schema constraint.</td><td>Add schema validation to CI or document Swift validation as canonical for v1.0.</td></tr>
+        <tr><td>Theme Assets</td><td>Theme asset existence and script/CSS bridge policy need hardening.</td><td>Validate asset paths and document security rules for executable web assets.</td></tr>
+        <tr><td>Screenshots</td><td>Manuals currently use reusable SVG diagrams and prose, not final app screenshots.</td><td>Add final DK panel, settings window, package install, weather, system monitor, and theme screenshots.</td></tr>
+        <tr><td>Third-party Integrations</td><td>Service setup varies by plugin and is not yet deeply documented.</td><td>Add plugin-specific pages for Spotify, YouTube, Home Assistant, OBS, OctoPrint, UniFi, Discord, and AI vendors.</td></tr>
+        <tr><td>Repo Hygiene</td><td><code>.DS_Store</code> files are present in source/example/test trees.</td><td>Remove before release archives and ensure ignore rules prevent recurrence.</td></tr>
+        <tr><td>PDF QA</td><td>Manuals have not yet been visually printed to PDF in this pass.</td><td>Open each HTML manual and inspect generated US Letter PDFs.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Recommended Final Documentation Pass</h2>
+    <ol>
+      <li>Ship or freeze the final app-bundle install flow.</li>
+      <li>Capture screenshots from the final panel and settings UI.</li>
+      <li>Refresh plugin and theme inventory counts from the release branch.</li>
+      <li>Run <code>./scripts/validate-release.sh</code>.</li>
+      <li>Open <code>docs/manuals/index.html</code> and print each manual to PDF.</li>
+      <li>Review every <span class="label">Gap</span>, <span class="label">Alpha</span>, and <span class="label">Risk</span> callout for release wording.</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>

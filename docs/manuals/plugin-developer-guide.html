@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Plugin Developer Guide</title>
+  <link rel="stylesheet" href="assets/manual.css">
+  <script src="assets/manual.js" defer></script>
+</head>
+<body>
+<main class="manual">
+  <section class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit Manual Set</div>
+      <h1>Plugin Developer Guide</h1>
+      <p>Build functional plugins for QuakeKit using shell, PHP, stdio JSON-RPC, web documents, and future Swift-native extension points.</p>
+    </div>
+    <dl class="doc-meta">
+      <div><dt>Audience</dt><dd>Plugin authors and integration developers</dd></div>
+      <div><dt>Normative Schema</dt><dd><code>schemas/functional-plugin.schema.json</code></dd></div>
+      <div><dt>API Version</dt><dd><code>0.1</code></dd></div>
+      <div><dt>Updated</dt><dd data-build-date></dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Table of Contents</h2>
+    <nav class="toc">
+      <a href="#concepts">1. Concepts</a>
+      <a href="#package">2. Package Layout</a>
+      <a href="#manifest">3. Manifest Reference</a>
+      <a href="#settings">4. Settings</a>
+      <a href="#actions">5. Actions And Data Streams</a>
+      <a href="#views">6. Views And Layouts</a>
+      <a href="#permissions">7. Permissions</a>
+      <a href="#transports">8. Transports</a>
+      <a href="#examples">9. Complete Examples</a>
+      <a href="#validate">10. Validate And Install</a>
+      <a href="#gaps">11. Current Gaps</a>
+      <a href="#index">Index</a>
+    </nav>
+  </section>
+
+  <section id="concepts">
+    <h2>1. Concepts</h2>
+    <p>A functional plugin owns behavior: actions, data, external integrations, applet pages, widgets, or background work. It should not own the visual theme. QuakeKit’s host and active theme decide final presentation.</p>
+    <table>
+      <thead><tr><th>Concept</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Action</td><td>A command the host can invoke, such as refresh weather, toggle OBS recording, or start a timer.</td></tr>
+        <tr><td>Data stream</td><td>A named stream of values a view can display, such as CPU load or current track metadata.</td></tr>
+        <tr><td>View</td><td>A page, widget, or dual-purpose visual surface backed by plugin data or local web assets.</td></tr>
+        <tr><td>Permission</td><td>A declared trust requirement such as network, filesystem, audio capture, or local process access.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="package">
+    <h2>2. Package Layout</h2>
+    <p>A packaged plugin is a directory ending in <code>.quakekitplugin</code> with a required <code>manifest.json</code>.</p>
+    <pre><code class="language-text">weather.quakekitplugin/
+  manifest.json
+  weather.sh
+  index.html
+  assets/</code></pre>
+    <p>Installable archives may be <code>.tar</code>, <code>.tar.gz</code>, or <code>.tgz</code> files containing one plugin directory.</p>
+  </section>
+
+  <section id="manifest">
+    <h2>3. Manifest Reference</h2>
+    <table class="field-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>$schema</td><td>string</td><td>No</td><td>Editor validation reference.</td></tr>
+        <tr><td>id</td><td>string</td><td>Yes</td><td>Stable lowercase package ID.</td></tr>
+        <tr><td>name</td><td>string</td><td>Yes</td><td>User-visible plugin name.</td></tr>
+        <tr><td>version</td><td>string</td><td>Yes</td><td>Plugin version. SemVer recommended.</td></tr>
+        <tr><td>apiVersion</td><td>string</td><td>Yes</td><td>Current value: <code>0.1</code>.</td></tr>
+        <tr><td>entry</td><td>object</td><td>Yes</td><td>Transport, command, arguments, or URL.</td></tr>
+        <tr><td>capabilities</td><td>array</td><td>No</td><td>Discovery hints such as <code>dataProvider</code> or <code>viewProvider</code>.</td></tr>
+        <tr><td>permissions</td><td>array</td><td>No</td><td>Declared trust requirements.</td></tr>
+        <tr><td>settings</td><td>array</td><td>No</td><td>User-editable configuration.</td></tr>
+        <tr><td>actions</td><td>array</td><td>No</td><td>Host-invokable commands.</td></tr>
+        <tr><td>dataStreams</td><td>array</td><td>No</td><td>Named values published by the plugin.</td></tr>
+        <tr><td>views</td><td>array</td><td>No</td><td>Widget/page surfaces.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="settings">
+    <h2>4. Settings</h2>
+    <p>Settings are persisted by the host and exported to process plugins as <code>QUAKEKIT_SETTING_*</code>. If a setting declares <code>environment</code>, the host also exports that exact variable name.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td><code>string</code>, <code>integer</code>, <code>number</code>, <code>boolean</code>, <code>choice</code>, or <code>secret</code>.</td></tr>
+        <tr><td><code>group</code></td><td>Settings section name for richer UI.</td></tr>
+        <tr><td><code>order</code></td><td>Stable sort key within a group.</td></tr>
+        <tr><td><code>uiControl</code></td><td>Preferred editor: text field, slider, toggle, segmented, popup, file picker, secure field.</td></tr>
+        <tr><td><code>restartRequired</code></td><td>Whether the plugin or app should restart before the change takes effect.</td></tr>
+      </tbody>
+    </table>
+    <pre><code class="language-json">{
+  "id": "location",
+  "title": "Location",
+  "type": "choice",
+  "defaultValue": "Charlotte, NC",
+  "choices": ["Charlotte, NC", "Raleigh, NC", "New York, NY"],
+  "environment": "QUAKEKIT_WEATHER_LOCATION",
+  "group": "Forecast",
+  "order": 10,
+  "uiControl": "popup",
+  "help": "Primary weather location."
+}</code></pre>
+  </section>
+
+  <section id="actions">
+    <h2>5. Actions And Data Streams</h2>
+    <p>Actions are invokable commands. Data streams describe values that views can display. Action argument schemas and stream value schemas use the same field shape: <code>id</code>, <code>title</code>, <code>type</code>, <code>required</code>, and <code>defaultValue</code>.</p>
+    <pre><code class="language-json">"actions": [
+  {
+    "id": "timer.start",
+    "title": "Start Timer",
+    "argumentSchema": [
+      { "id": "minutes", "title": "Minutes", "type": "integer", "required": true }
+    ]
+  }
+],
+"dataStreams": [
+  {
+    "id": "timer.state",
+    "title": "Timer State",
+    "valueSchema": [
+      { "id": "remaining", "title": "Remaining Seconds", "type": "integer" }
+    ]
+  }
+]</code></pre>
+  </section>
+
+  <section id="views">
+    <h2>6. Views And Layouts</h2>
+    <p>Views bridge a plugin into the panel shell. A plugin may expose a full applet page, a compact widget, or both.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Values</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td><code>native</code>, <code>webCanvas</code>, <code>webDocument</code>, <code>text</code>, <code>dataDriven</code></td><td>Renderer hint.</td></tr>
+        <tr><td><code>presentation</code></td><td><code>page</code>, <code>widget</code>, <code>pageAndWidget</code></td><td>Where the host should place the view.</td></tr>
+        <tr><td><code>layout</code></td><td><code>grid</code>, <code>fullScreen</code>, <code>halfLeading</code>, <code>halfTrailing</code>, <code>halfAndGrid</code>, <code>twoHalves</code>, <code>thirds</code>, <code>quarters</code></td><td>Page layout hint.</td></tr>
+        <tr><td><code>columnSpan</code>, <code>rowSpan</code></td><td>integer</td><td>Widget grid sizing.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="permissions">
+    <h2>7. Permissions</h2>
+    <p>Declare the minimum permissions needed. Permissions are part of the host trust contract and should be treated as user-visible security metadata.</p>
+    <pre><code class="language-json">"permissions": [
+  { "network": { "hosts": ["api.open-meteo.com"] } },
+  { "filesystem": { "paths": ["~/Documents/QuakeKit"], "write": false } },
+  { "audioCapture": {} }
+]</code></pre>
+    <div class="callout warning">
+      <p><span class="label">Gap</span>Permission prompting and enforcement are not yet complete across all host surfaces. Still declare permissions accurately now so packages are ready for stricter hosts later.</p>
+    </div>
+  </section>
+
+  <section id="transports">
+    <h2>8. Transports</h2>
+    <table>
+      <thead><tr><th>Transport</th><th>Current Status</th><th>Best Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>shell</code></td><td>Executable action support implemented.</td><td>Local scripts, fixtures, service adapters.</td></tr>
+        <tr><td><code>php</code></td><td>Executable action support implemented.</td><td>Power-user PHP data adapters.</td></tr>
+        <tr><td><code>stdioJSONRPC</code></td><td>Process execution support implemented for current examples.</td><td>Language-neutral adapters.</td></tr>
+        <tr><td><code>webView</code></td><td>Manifest/view contract present; host execution still maturing.</td><td>HTML/CSS/JS applet pages.</td></tr>
+        <tr><td><code>nativeSwift</code></td><td>Manifest contract present; dynamic bundle model not final.</td><td>Trusted first-party or compiled integrations.</td></tr>
+        <tr><td><code>websocket</code></td><td>Contract surface; bridge implementation pending.</td><td>Long-running local/remote services.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="examples">
+    <h2>9. Complete Examples</h2>
+    <h3>Minimal Shell Widget</h3>
+    <pre><code class="language-json">{
+  "$schema": "../../schemas/functional-plugin.schema.json",
+  "id": "hello_status",
+  "name": "Hello Status",
+  "version": "1.0.0",
+  "apiVersion": "0.1",
+  "entry": { "transport": "shell", "command": "hello.sh" },
+  "capabilities": ["dataProvider", "actionProvider", "viewProvider"],
+  "actions": [{ "id": "hello.refresh", "title": "Refresh" }],
+  "dataStreams": [{ "id": "hello.status", "title": "Status" }],
+  "views": [{
+    "id": "hello.widget",
+    "title": "Hello",
+    "type": "dataDriven",
+    "presentation": "widget",
+    "dataStreamID": "hello.status",
+    "columnSpan": 1,
+    "rowSpan": 1
+  }]
+}</code></pre>
+    <pre><code class="language-bash">#!/bin/sh
+printf '{"title":"Hello","value":"Ready","detail":"QuakeKit plugin online"}\n'</code></pre>
+  </section>
+
+  <section id="validate">
+    <h2>10. Validate And Install</h2>
+    <pre><code class="language-bash">swift run quake-probe --validate-plugin Examples/Plugins/weather.quakekitplugin/manifest.json
+swift run quake-probe --run-plugin-action Examples/Plugins/system-monitor.quakekitplugin/manifest.json system.refresh
+swift run quake-probe --install-package ./Hello.quakekitplugin
+swift run quake-probe --install-package ./Hello.quakekitplugin.tar.gz</code></pre>
+    <p>Before submitting a plugin to the project, run:</p>
+    <pre><code class="language-bash">./scripts/validate-release.sh</code></pre>
+  </section>
+
+  <section id="gaps">
+    <h2>11. Current Gaps</h2>
+    <ul>
+      <li>Secret setting storage needs production Keychain handling.</li>
+      <li>Long-lived stream subscription semantics need a deeper host lifecycle contract.</li>
+      <li>Dynamic Swift plugin signing, loading, and sandbox boundaries are not final.</li>
+      <li>Web view bridge APIs should be documented once the host bridge stabilizes.</li>
+      <li>Schema-only constraints should eventually be validated directly in CI.</li>
+    </ul>
+  </section>
+
+  <section id="index">
+    <h2>Index</h2>
+    <ul class="index-list">
+      <li>actions, section 5</li>
+      <li>data streams, section 5</li>
+      <li>manifest, section 3</li>
+      <li>package layout, section 2</li>
+      <li>permissions, section 7</li>
+      <li>settings, section 4</li>
+      <li>transports, section 8</li>
+      <li>views, section 6</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
