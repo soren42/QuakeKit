@@ -1,0 +1,126 @@
+{
+  "id": "main_menu_classic",
+  "name": "Classic Main Menu",
+  "version": "0.1.0",
+  "apiVersion": "0.1",
+  "entry": {
+    "transport": "nativeSwift",
+    "arguments": []
+  },
+  "capabilities": [
+    "viewProvider"
+  ],
+  "permissions": [],
+  "settings": [],
+  "actions": [],
+  "dataStreams": [],
+  "views": [
+    {
+      "id": "classic",
+      "title": "Classic Launcher",
+      "type": "dataDriven",
+      "presentation": "mainMenu",
+      "layout": "halfAndGrid",
+      "preferredWidth": 1920,
+      "preferredHeight": 480,
+      "menuItems": [
+        {
+          "id": "runtime",
+          "title": "Runtime",
+          "subtitle": "Live host status",
+          "action": "page",
+          "target": "runtime",
+          "order": 10
+        },
+        {
+          "id": "widgets",
+          "title": "Widgets",
+          "subtitle": "Compact plugin views",
+          "action": "page",
+          "target": "widgets",
+          "order": 20
+        },
+        {
+          "id": "apps",
+          "title": "Apps",
+          "subtitle": "Full panel applets",
+          "action": "page",
+          "target": "apps",
+          "order": 30
+        },
+        {
+          "id": "themes",
+          "title": "Themes",
+          "subtitle": "Presentation packages",
+          "action": "page",
+          "target": "themes",
+          "order": 40
+        },
+        {
+          "id": "settings",
+          "title": "Settings",
+          "subtitle": "Host and plugin config",
+          "action": "page",
+          "target": "settings",
+          "order": 50
+        },
+        {
+          "id": "plugin_apis",
+          "title": "Plugin APIs",
+          "subtitle": "Swift HTML PHP bash",
+          "action": "page",
+          "target": "pluginAPIs",
+          "order": 60
+        },
+        {
+          "id": "carousel",
+          "title": "Carousel",
+          "subtitle": "Rotate selected widgets",
+          "action": "carousel",
+          "target": "settings",
+          "order": 70
+        },
+        {
+          "id": "weather",
+          "title": "Weather",
+          "subtitle": "Open forecast applet",
+          "action": "pluginView",
+          "target": "weather:weather.canvas",
+          "order": 80
+        },
+        {
+          "id": "system",
+          "title": "System",
+          "subtitle": "Cyberpunk monitor",
+          "action": "pluginView",
+          "target": "system_monitor:system.overview",
+          "order": 90
+        },
+        {
+          "id": "knob",
+          "title": "Knob",
+          "subtitle": "Rotate focus, press activate",
+          "action": "status",
+          "target": "Knob rotates focus; press activates.",
+          "order": 100
+        },
+        {
+          "id": "touch",
+          "title": "Touch",
+          "subtitle": "Tap focused actions",
+          "action": "status",
+          "target": "Touch routes through the selected menu widget.",
+          "order": 110
+        },
+        {
+          "id": "packages",
+          "title": "Packages",
+          "subtitle": "Install plugins and themes",
+          "action": "settings",
+          "target": "global",
+          "order": 120
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,8 @@ QuakeKit is structured as a platform, not a single-purpose dashboard app.
 2. **Runtime core**
    - Owns pages, layouts, actions, state, routing, and event dispatch.
    - Knows about concepts like tiles, widgets, dashboard pages, and action bindings.
+   - Treats the Home/main menu as a selectable special widget class, not as
+     immovable host chrome.
    - Does not know whether a plugin is Swift, JSON-RPC, WebSocket, or another process.
 
 3. **Plugin API**

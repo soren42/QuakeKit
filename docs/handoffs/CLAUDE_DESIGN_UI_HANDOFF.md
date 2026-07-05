@@ -2,7 +2,7 @@
 
 ## Assignment
 
-You are designing the frontend/interface package only. Do not change hardware protocol behavior, plugin execution behavior, package formats, app permissions, or Swift runtime architecture. Your deliverable should be a UI/design package that can be handed back to Codex for integration into the Swift/AppKit QuakeKit host.
+You are designing the frontend/interface package only. Do not change hardware protocol behavior, plugin execution behavior, app permissions, or Swift runtime architecture. The Home/main menu is now a selectable special plugin view class, so your primary deliverable should include a redesigned main-menu widget package that can be handed back to Codex for integration into the Swift/AppKit QuakeKit host.
 
 ## Project Summary
 
@@ -13,6 +13,7 @@ The long-term goal is a polished native replacement for the stock DK app, with a
 ## Current UI Surfaces
 
 - DK panel pages: Home, Widgets, Apps, Themes, Settings, Runtime, Plugin APIs.
+- Home is no longer hard-coded chrome. It is rendered from a selected `mainMenu` widget view, with `builtin:classic` as fallback and `Examples/Plugins/main-menu-classic.quakekitplugin` as the bundled package template.
 - Primary-monitor settings window: Global, Themes, Widgets & Apps, Carousel, Plugins, About.
 - macOS menu-bar accessory: Open Settings, Show Panel, microphone controls, meeting clip, speaker test, Quit.
 - Full-screen/freeform applets: System Monitor and Weather are the strongest current design testbeds.
@@ -24,6 +25,7 @@ The long-term goal is a polished native replacement for the stock DK app, with a
 - Hardware wake/keep-alive, panel rendering, touch input, knob input, and knob LED output are working.
 - The app can be launched from the Swift build or assembled into a local `.app` bundle for testing.
 - Plugin/theme package install and remove exist in the primary settings window, with restart required for package rediscovery.
+- Global settings include a Main Menu Widget selector. Installed plugin packages can provide alternate menu widgets through `presentation: "mainMenu"`.
 - Carousel can rotate eligible widget views with configurable duration and inclusion list.
 - Plugin fixtures are offline-safe and deterministic. They provide displayable payloads even without credentials.
 - LLM harnesses are UI-ready stubs only; they describe official API/local companion boundaries and should not imply consumer-UI scraping.
@@ -31,7 +33,7 @@ The long-term goal is a polished native replacement for the stock DK app, with a
 
 ## Design Goals
 
-1. Redesign the DK-panel main menu/navigation so it feels like a purpose-built control surface, not a generic desktop app.
+1. Redesign the DK-panel main menu/navigation as a `mainMenu` widget package, not as hard-coded host chrome.
 2. Preserve dense, glanceable utility. The display is wide and short; avoid tall marketing-style compositions.
 3. Support both widgets and full-page/multi-page applets.
 4. Account for non-grid layouts: full screen, two halves, thirds, quarters, and half-screen plus grid.
@@ -60,6 +62,7 @@ The long-term goal is a polished native replacement for the stock DK app, with a
 - Functional plugin schema: `schemas/functional-plugin.schema.json`
 - Theme schema: `schemas/theme-plugin.schema.json`
 - Current plugin examples: `Examples/Plugins/`
+- Main-menu package template: `Examples/Plugins/main-menu-classic.quakekitplugin/manifest.json`
 - Current theme examples: `Examples/Themes/`
 
 ## Implementation Files To Understand
@@ -92,11 +95,26 @@ Generic data-driven plugins now tend to emit:
 
 Design a generic data card/page system that can gracefully render these fields without custom UI for every plugin.
 
+## Main Menu Widget Contract
+
+The main menu is a functional plugin view with `presentation: "mainMenu"`.
+It can declare `menuItems[]` with:
+
+- `id`
+- `title`
+- `subtitle`
+- `icon` as a future token
+- `action`: `page`, `pluginView`, `pluginAction`, `status`, `carousel`, or `settings`
+- `target`: examples include `widgets`, `runtime`, `weather:weather.canvas`, `system_monitor:system.overview`, `toggle`, `settings`, or `plugin:weather`
+- `order`
+
+Design work should therefore deliver a menu package specification: layout, tile hierarchy, focus states, touch zones, optional icon tokens, and a manifest-level `menuItems[]` proposal. If new visual-only fields are needed, list them as schema requests rather than assuming Swift behavior already exists.
+
 ## Requested Deliverable Back To Codex
 
 Provide an interface package containing:
 
-- DK-panel main navigation redesign.
+- DK-panel main navigation redesign as a selectable `mainMenu` widget package.
 - Widget grid and overflow/page controls.
 - Full-page applet templates for System Monitor and Weather.
 - Generic data-driven plugin card and detail templates.
@@ -118,7 +136,7 @@ Preferred output format: design mockups plus an implementation-oriented spec tha
 
 ## Open UI Questions
 
-- Should the Home page be a launcher, a status overview, or a carousel landing page?
+- Which bundled `mainMenu` package should become the v1.0 default: classic launcher, status-first dashboard, carousel landing page, or a hybrid?
 - Should applet pages have persistent top navigation, edge swipe/touch pads, or transient navigation chrome?
 - How should knob focus be visualized across themes?
 - How much information should the DK panel show versus the primary settings window?

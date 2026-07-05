@@ -114,6 +114,24 @@ public enum PluginManifestValidator {
             if let height = view.preferredHeight, height < 1 {
                 errors.append("View \(view.id) preferredHeight must be positive.")
             }
+            if view.presentation == .mainMenu && view.menuItems.isEmpty {
+                warnings.append("Main menu view \(view.id) does not define menuItems; host will use fallback menu content.")
+            }
+            let menuItemIDs = view.menuItems.map(\.id)
+            if Set(menuItemIDs).count != menuItemIDs.count {
+                errors.append("View \(view.id) menu item ids must be unique.")
+            }
+            for item in view.menuItems {
+                if item.id.range(of: idPattern, options: .regularExpression) == nil {
+                    errors.append("View \(view.id) menu item \(item.id) id must match \(idPattern).")
+                }
+                if item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    errors.append("View \(view.id) menu item \(item.id) title is required.")
+                }
+                if !["page", "pluginView", "pluginAction", "status", "carousel", "settings"].contains(item.action) {
+                    errors.append("View \(view.id) menu item \(item.id) action must be page, pluginView, pluginAction, status, carousel, or settings.")
+                }
+            }
         }
 
         return PluginValidationResult(errors: errors, warnings: warnings)

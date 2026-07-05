@@ -238,6 +238,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         case page
         case widget
         case pageAndWidget
+        case mainMenu
     }
 
     public enum Layout: String, Codable, Sendable {
@@ -262,6 +263,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
     public var rowSpan: Int?
     public var preferredWidth: Int?
     public var preferredHeight: Int?
+    public var menuItems: [PluginMenuItem]
 
     public init(
         id: String,
@@ -274,7 +276,8 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         columnSpan: Int? = nil,
         rowSpan: Int? = nil,
         preferredWidth: Int? = nil,
-        preferredHeight: Int? = nil
+        preferredHeight: Int? = nil,
+        menuItems: [PluginMenuItem] = []
     ) {
         self.id = id
         self.title = title
@@ -287,6 +290,66 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         self.rowSpan = rowSpan
         self.preferredWidth = preferredWidth
         self.preferredHeight = preferredHeight
+        self.menuItems = menuItems
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case type
+        case presentation
+        case layout
+        case entryPath
+        case dataStreamID
+        case columnSpan
+        case rowSpan
+        case preferredWidth
+        case preferredHeight
+        case menuItems
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        type = try container.decodeIfPresent(ViewType.self, forKey: .type)
+        presentation = try container.decodeIfPresent(Presentation.self, forKey: .presentation)
+        layout = try container.decodeIfPresent(Layout.self, forKey: .layout)
+        entryPath = try container.decodeIfPresent(String.self, forKey: .entryPath)
+        dataStreamID = try container.decodeIfPresent(String.self, forKey: .dataStreamID)
+        columnSpan = try container.decodeIfPresent(Int.self, forKey: .columnSpan)
+        rowSpan = try container.decodeIfPresent(Int.self, forKey: .rowSpan)
+        preferredWidth = try container.decodeIfPresent(Int.self, forKey: .preferredWidth)
+        preferredHeight = try container.decodeIfPresent(Int.self, forKey: .preferredHeight)
+        menuItems = try container.decodeIfPresent([PluginMenuItem].self, forKey: .menuItems) ?? []
+    }
+}
+
+public struct PluginMenuItem: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var title: String
+    public var subtitle: String?
+    public var icon: String?
+    public var action: String
+    public var target: String?
+    public var order: Int?
+
+    public init(
+        id: String,
+        title: String,
+        subtitle: String? = nil,
+        icon: String? = nil,
+        action: String,
+        target: String? = nil,
+        order: Int? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.action = action
+        self.target = target
+        self.order = order
     }
 }
 

@@ -180,14 +180,15 @@ Action arguments and stream values share the same field shape.
 ## Views
 
 Views are the bridge between functional plugins and the panel shell. A plugin can
-offer full applet pages, compact widgets, or a view that supports both modes.
+offer full applet pages, compact widgets, a view that supports both modes, or a
+special main-menu widget used to render the Home page.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `id` | string | yes | Stable view id. |
 | `title` | string | yes | Human-readable view title. |
 | `type` | string | no | `native`, `webCanvas`, `webDocument`, `text`, or `dataDriven`. |
-| `presentation` | string | no | `page`, `widget`, or `pageAndWidget`. |
+| `presentation` | string | no | `page`, `widget`, `pageAndWidget`, or `mainMenu`. |
 | `layout` | string | no | Page layout hint: `grid`, `fullScreen`, `halfLeading`, `halfTrailing`, `halfAndGrid`, `twoHalves`, `thirds`, or `quarters`. |
 | `entryPath` | string | no | Local asset entrypoint such as `index.html`. |
 | `dataStreamID` | string | no | Data stream backing the view. |
@@ -195,10 +196,58 @@ offer full applet pages, compact widgets, or a view that supports both modes.
 | `rowSpan` | integer | no | Widget grid height hint. |
 | `preferredWidth` | integer | no | Preferred rendered width in points. |
 | `preferredHeight` | integer | no | Preferred rendered height in points. |
+| `menuItems` | array | no | Declarative menu entries for `mainMenu` views. |
 
 The host decides final layout. Plugins provide hints, not absolute control of
 the display. Widget views still use `columnSpan` and `rowSpan`; page views may
 use `layout` to request a non-grid shell such as split-screen, thirds, or quarters.
+
+## Main Menu Widgets
+
+The Home page is a special widget slot rather than a hard-coded screen. Users can
+select a main-menu widget from Settings, and theme/plugin authors can provide
+alternate launchers without touching the HID, windowing, or runtime layers.
+
+A main-menu view uses `presentation: "mainMenu"`. It may provide `menuItems[]`;
+if it does not, the host uses the built-in classic launcher as a fallback.
+
+```json
+{
+  "id": "classic",
+  "title": "Classic Launcher",
+  "type": "dataDriven",
+  "presentation": "mainMenu",
+  "layout": "halfAndGrid",
+  "menuItems": [
+    { "id": "widgets", "title": "Widgets", "action": "page", "target": "widgets", "order": 10 },
+    { "id": "weather", "title": "Weather", "action": "pluginView", "target": "weather:weather.canvas", "order": 20 },
+    { "id": "carousel", "title": "Carousel", "action": "carousel", "target": "settings", "order": 30 }
+  ]
+}
+```
+
+Menu item fields:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | yes | Stable item id. |
+| `title` | string | yes | Primary tile label. |
+| `subtitle` | string | no | Secondary tile label. |
+| `icon` | string | no | Future icon token. Current host stores but does not render it. |
+| `action` | string | yes | `page`, `pluginView`, `pluginAction`, `status`, `carousel`, or `settings`. |
+| `target` | string | no | Route target for the action. |
+| `order` | integer | no | Sort order within the menu widget. |
+
+Supported route targets:
+
+| Action | Target Examples | Effect |
+| --- | --- | --- |
+| `page` | `home`, `widgets`, `apps`, `themes`, `settings`, `runtime`, `pluginAPIs` | Opens a host page. |
+| `pluginView` | `system_monitor:system.overview` | Opens a plugin view as a transient applet. |
+| `pluginAction` | `weather:weather.refresh` | Invokes a plugin action. |
+| `carousel` | `settings`, `toggle`, `duration` | Opens carousel settings or changes carousel state. |
+| `settings` | `global`, `plugin:weather` | Opens host settings page or plugin settings tile page. |
+| `status` | any string | Shows a safe status message. |
 
 ## Theme And Hardware Boundaries
 

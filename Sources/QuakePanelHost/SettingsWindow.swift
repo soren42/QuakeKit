@@ -227,6 +227,20 @@ final class QuakeSettingsWindowView: NSView {
                     self.saveSettings()
                 }
             ),
+            RowSpec(
+                title: "Main Menu Widget",
+                value: mainMenuTitle(settings.mainMenuViewID),
+                detail: "The Home page is rendered by this special widget class; install another menu plugin to replace it.",
+                control: popup(
+                    values: mainMenuRefs().map(\.id),
+                    titles: mainMenuRefs().map(\.title),
+                    selectedValue: settings.mainMenuViewID
+                ) { [weak self] value in
+                    guard let self else { return }
+                    self.settings.mainMenuViewID = value
+                    self.saveSettings()
+                }
+            ),
             RowSpec(title: "Launch Mode", value: "Menu Bar Accessory", detail: "Release-style launch hides Dock and app menu unless --foreground is used.", control: nil),
             RowSpec(title: "Display Ownership", value: "Enabled", detail: "Panel window runs above the menu bar and pointer guard keeps the cursor off the device.", control: nil),
             RowSpec(title: "Package Directory", value: "~/Library/Application Support/QuakeKit", detail: "Installed plugin and theme packages are copied here.", control: button("Open") { [weak self] in self?.openPackageFolder() }),
@@ -287,10 +301,11 @@ final class QuakeSettingsWindowView: NSView {
 
     private func widgetRows() -> [RowSpec] {
         let viewCount = pluginPackages.reduce(0) { $0 + $1.manifest.views.count }
+        let menuCount = mainMenuRefs().count
         let summary = RowSpec(
             title: "View Inventory",
             value: "\(viewCount) views",
-            detail: "Widgets and apps are generated from plugin manifests; layout hints are shown per view.",
+            detail: "Widgets, apps, and \(menuCount) main menu options are generated from plugin manifests.",
             control: nil
         )
         return [summary] + pluginPackages.sorted { $0.manifest.name < $1.manifest.name }.flatMap { package in
@@ -298,7 +313,7 @@ final class QuakeSettingsWindowView: NSView {
                 RowSpec(
                     title: view.title,
                     value: package.manifest.name,
-                    detail: "\(view.presentation?.rawValue ?? "page") · \(view.layout?.rawValue ?? "host layout") · \(view.type?.rawValue ?? package.manifest.entry.transport.rawValue)",
+                    detail: "\(view.presentation?.rawValue ?? "page") · \(view.layout?.rawValue ?? "host layout") · \(view.type?.rawValue ?? package.manifest.entry.transport.rawValue)\(view.presentation == .mainMenu ? " · \(view.menuItems.count) menu items" : "")",
                     control: button("Open App Settings") { [weak self] in
                         self?.activeSection = .plugins
                         self?.sectionControl.selectedSegment = Section.plugins.rawValue
@@ -545,6 +560,7 @@ final class QuakeSettingsWindowView: NSView {
         pluginPackages.flatMap { package in
             package.manifest.views.compactMap { view in
                 let presentation = view.presentation ?? .page
+                guard presentation != .mainMenu else { return nil }
                 guard presentation == .widget || presentation == .pageAndWidget else { return nil }
                 return CarouselWidgetRef(
                     id: "\(package.manifest.id):\(view.id)",
@@ -583,6 +599,14 @@ final class QuakeSettingsWindowView: NSView {
         case 6: return "7 Plugin APIs"
         default: return "Page \(index + 1)"
         }
+    }
+
+    private func mainMenuRefs() -> [MainMenuWidgetRef] {
+        ShellCatalog.mainMenuRefs(from: pluginPackages)
+    }
+
+    private func mainMenuTitle(_ id: String) -> String {
+        mainMenuRefs().first { $0.id == id }?.title ?? "Classic Built-in Menu"
     }
 
     private func colorSwatches(for option: ThemeOption) -> [String] {

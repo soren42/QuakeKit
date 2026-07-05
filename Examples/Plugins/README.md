@@ -6,6 +6,7 @@ host validates each `manifest.json` against
 
 | Package | Language | Transport | Purpose |
 | --- | --- | --- | --- |
+| `main-menu-classic.quakekitplugin` | Declarative native view | `nativeSwift` | Selectable main-menu widget template for the Home page. |
 | `system-monitor.quakekitplugin` | POSIX shell | `shell` | Local system metrics action and data stream. |
 | `weather.quakekitplugin` | POSIX shell plus HTML | `shell` | Weather data provider with an HTML canvas view. |
 | `agenda.quakekitplugin` | POSIX shell | `shell` | Calendar/agenda fixture with optional local file input. |
@@ -67,6 +68,12 @@ permissions for future microphone/speaker capture.
 The native Swift example is intentionally manifest-only. It documents the
 `nativeSwift` transport without adding runtime Swift source, package targets, or
 dynamic loading behavior.
+
+Main-menu packages are a special view-provider shape. A view with
+`presentation: "mainMenu"` can declare `menuItems[]` that route to host pages,
+plugin views, plugin actions, carousel settings, or safe status messages. The
+host uses the selected main-menu widget for the Home page and falls back to the
+built-in classic menu when none is selected.
 
 App-aware companion fixtures are offline-safe by default. YouTube, Spotify,
 terminal, Affinity, and AI agent companions expose optional `QUAKEKIT_*_FILE`

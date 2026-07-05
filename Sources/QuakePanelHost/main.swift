@@ -690,6 +690,17 @@ struct CarouselWidgetRef: Equatable {
     var title: String
 }
 
+struct MainMenuWidgetRef: Equatable {
+    static let builtInID = "builtin:classic"
+
+    var id: String
+    var pluginID: String?
+    var pluginName: String
+    var viewID: String?
+    var title: String
+    var detail: String
+}
+
 struct RuntimeSnapshot: Equatable {
     var controlConnected = false
     var touchConnected = false
@@ -714,21 +725,25 @@ struct ThemeUserConfiguration: Codable, Equatable {
 
 struct QuakeSettingsConfiguration: Codable, Equatable {
     var defaultPageIndex: Int
+    var mainMenuViewID: String
     var carousel: CarouselConfiguration
     var pluginSettings: [String: [String: JSONValue]]
 
     private enum CodingKeys: String, CodingKey {
         case defaultPageIndex
+        case mainMenuViewID
         case carousel
         case pluginSettings
     }
 
     init(
         defaultPageIndex: Int = 0,
+        mainMenuViewID: String = MainMenuWidgetRef.builtInID,
         carousel: CarouselConfiguration = CarouselConfiguration(),
         pluginSettings: [String: [String: JSONValue]] = [:]
     ) {
         self.defaultPageIndex = defaultPageIndex
+        self.mainMenuViewID = mainMenuViewID
         self.carousel = carousel
         self.pluginSettings = pluginSettings
     }
@@ -736,6 +751,7 @@ struct QuakeSettingsConfiguration: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.defaultPageIndex = try container.decodeIfPresent(Int.self, forKey: .defaultPageIndex) ?? 0
+        self.mainMenuViewID = try container.decodeIfPresent(String.self, forKey: .mainMenuViewID) ?? MainMenuWidgetRef.builtInID
         self.carousel = try container.decodeIfPresent(CarouselConfiguration.self, forKey: .carousel) ?? CarouselConfiguration()
         self.pluginSettings = try container.decodeIfPresent([String: [String: JSONValue]].self, forKey: .pluginSettings) ?? [:]
     }
@@ -1011,29 +1027,16 @@ enum ShellCatalog {
             settingsConfiguration: settingsConfiguration
         )
         let languageTiles = pluginLanguageTiles()
+        let homeTiles = mainMenuTiles(
+            from: pluginPackages,
+            selectedMenuID: settingsConfiguration.mainMenuViewID,
+            widgetCount: widgetTiles.count,
+            appCount: appTiles.count + actionTiles.count,
+            themeCount: themePackages.count
+        )
 
         return [
-            ShellPage(title: "Home", kind: .grid, layout: themeLayout == .grid ? .halfAndGrid : themeLayout, tiles: [
-            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(5)),
-            ShellTile(title: "Widgets", subtitle: "\(widgetTiles.count) compact views", action: .openPage(1)),
-            ShellTile(title: "Apps", subtitle: "\(appTiles.count + actionTiles.count) entries", action: .openPage(2)),
-            ShellTile(title: "Themes", subtitle: "\(themePackages.count) installed", action: .openPage(3)),
-            ShellTile(title: "Settings", subtitle: "Host and plugin config", action: .openPage(4)),
-            ShellTile(title: "Plugin APIs", subtitle: "Swift HTML PHP bash", action: .openPage(6)),
-            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(5)),
-            ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
-            ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
-            ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
-            ShellTile(title: "Data", subtitle: "Provider slots", action: .setStatus("Data providers will feed widgets")),
-            ShellTile(title: "Actions", subtitle: "Host routed", action: .setStatus("Action router is local for now")),
-            ShellTile(title: "Views", subtitle: "Swift/AppKit", action: .setStatus("Native view surface")),
-            ShellTile(title: "Dashboards", subtitle: "Future web view", action: .setStatus("Dashboard embedding later")),
-            ShellTile(title: "Secrets", subtitle: "Keychain later", action: .setStatus("Secrets belong in Keychain")),
-            ShellTile(title: "Metrics", subtitle: "Widget idea", action: .setStatus("Metrics widget slot")),
-            ShellTile(title: "Music", subtitle: "Widget idea", action: .setStatus("Music widget slot")),
-            ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
-            ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
-            ]),
+            ShellPage(title: "Home", kind: .grid, layout: themeLayout == .grid ? .halfAndGrid : themeLayout, tiles: homeTiles),
             ShellPage(title: "Widgets", kind: .grid, layout: themeLayout, tiles: widgetTiles),
             ShellPage(title: "Apps", kind: .grid, layout: themeLayout == .grid ? .twoHalves : themeLayout, tiles: appTiles + actionTiles),
             ShellPage(title: "Themes", kind: .grid, tiles: themeTiles),
@@ -1041,6 +1044,144 @@ enum ShellCatalog {
             ShellPage(title: "Runtime", kind: .runtimeStatus, layout: .quarters, tiles: []),
             ShellPage(title: "Plugin APIs", kind: .grid, layout: .quarters, tiles: languageTiles)
         ]
+    }
+
+    static func mainMenuRefs(from packages: [PluginPackage]) -> [MainMenuWidgetRef] {
+        let packaged = packages.flatMap { package in
+            package.manifest.views.compactMap { view -> MainMenuWidgetRef? in
+                guard view.presentation == .mainMenu else { return nil }
+                return MainMenuWidgetRef(
+                    id: "\(package.manifest.id):\(view.id)",
+                    pluginID: package.manifest.id,
+                    pluginName: package.manifest.name,
+                    viewID: view.id,
+                    title: view.title,
+                    detail: "\(package.manifest.name) · \(view.menuItems.count) menu items"
+                )
+            }
+        }
+        return [
+            MainMenuWidgetRef(
+                id: MainMenuWidgetRef.builtInID,
+                pluginID: nil,
+                pluginName: "QuakeKit",
+                viewID: nil,
+                title: "Classic Built-in Menu",
+                detail: "Host fallback menu"
+            )
+        ] + packaged.sorted { $0.title < $1.title }
+    }
+
+    private static func mainMenuTiles(
+        from packages: [PluginPackage],
+        selectedMenuID: String,
+        widgetCount: Int,
+        appCount: Int,
+        themeCount: Int
+    ) -> [ShellTile] {
+        if selectedMenuID != MainMenuWidgetRef.builtInID,
+           let package = packages.first(where: { package in
+               package.manifest.views.contains { "\(package.manifest.id):\($0.id)" == selectedMenuID && $0.presentation == .mainMenu }
+           }),
+           let view = package.manifest.views.first(where: { "\(package.manifest.id):\($0.id)" == selectedMenuID && $0.presentation == .mainMenu }),
+           !view.menuItems.isEmpty {
+            let tiles = view.menuItems
+                .sorted { ($0.order ?? 0, $0.title) < ($1.order ?? 0, $1.title) }
+                .map { menuTile(from: $0, package: package) }
+            if !tiles.isEmpty {
+                return tiles
+            }
+        }
+        return builtInMainMenuTiles(widgetCount: widgetCount, appCount: appCount, themeCount: themeCount)
+    }
+
+    private static func builtInMainMenuTiles(widgetCount: Int, appCount: Int, themeCount: Int) -> [ShellTile] {
+        [
+            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(5)),
+            ShellTile(title: "Widgets", subtitle: "\(widgetCount) compact views", action: .openPage(1)),
+            ShellTile(title: "Apps", subtitle: "\(appCount) entries", action: .openPage(2)),
+            ShellTile(title: "Themes", subtitle: "\(themeCount) installed", action: .openPage(3)),
+            ShellTile(title: "Settings", subtitle: "Host and plugin config", action: .openPage(4)),
+            ShellTile(title: "Plugin APIs", subtitle: "Swift HTML PHP bash", action: .openPage(6)),
+            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(5)),
+            ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
+            ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
+            ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
+            ShellTile(title: "Data", subtitle: "Provider slots", action: .setStatus("Data providers feed widgets")),
+            ShellTile(title: "Actions", subtitle: "Host routed", action: .setStatus("Action router is local for now")),
+            ShellTile(title: "Views", subtitle: "Swift/AppKit", action: .setStatus("Native view surface")),
+            ShellTile(title: "Dashboards", subtitle: "Plugin applets", action: .setStatus("Dashboard applets use plugin views")),
+            ShellTile(title: "Secrets", subtitle: "Keychain later", action: .setStatus("Secrets belong in Keychain")),
+            ShellTile(title: "Metrics", subtitle: "Widget idea", action: .setStatus("Metrics widget slot")),
+            ShellTile(title: "Music", subtitle: "Widget idea", action: .setStatus("Music widget slot")),
+            ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
+            ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
+        ]
+    }
+
+    private static func menuTile(from item: PluginMenuItem, package: PluginPackage) -> ShellTile {
+        ShellTile(
+            title: item.title,
+            subtitle: item.subtitle ?? package.manifest.name,
+            action: menuAction(from: item)
+        )
+    }
+
+    private static func menuAction(from item: PluginMenuItem) -> ShellAction {
+        switch item.action {
+        case "page":
+            if let target = item.target, let index = pageIndex(for: target) {
+                return .openPage(index)
+            }
+            return .setStatus("Unknown page \(item.target ?? "-")")
+        case "pluginView":
+            if let target = item.target {
+                let parts = target.split(separator: ":", maxSplits: 1).map(String.init)
+                if parts.count == 2 {
+                    return .openPluginView(pluginID: parts[0], viewID: parts[1])
+                }
+            }
+            return .setStatus("Plugin view target missing")
+        case "pluginAction":
+            if let target = item.target {
+                let parts = target.split(separator: ":", maxSplits: 1).map(String.init)
+                if parts.count == 2 {
+                    return .invokePluginAction(pluginID: parts[0], actionID: parts[1])
+                }
+            }
+            return .setStatus("Plugin action target missing")
+        case "carousel":
+            switch item.target {
+            case "toggle":
+                return .toggleCarousel
+            case "duration":
+                return .editCarouselDuration
+            default:
+                return .openCarouselSettings
+            }
+        case "settings":
+            if let target = item.target, target.hasPrefix("plugin:") {
+                return .openPluginSettings(String(target.dropFirst("plugin:".count)))
+            }
+            return .openPage(4)
+        case "status":
+            return .setStatus(item.target ?? item.subtitle ?? item.title)
+        default:
+            return .setStatus("Unsupported menu action \(item.action)")
+        }
+    }
+
+    private static func pageIndex(for target: String) -> Int? {
+        switch target.lowercased() {
+        case "home", "0": return 0
+        case "widgets", "1": return 1
+        case "apps", "2": return 2
+        case "themes", "3": return 3
+        case "settings", "4": return 4
+        case "runtime", "5": return 5
+        case "pluginapis", "plugin_apis", "plugin-apis", "api", "apis", "6": return 6
+        default: return nil
+        }
     }
 
     private static func panelLayout(from style: ThemePageStyle?) -> PanelPageLayout {
@@ -1078,6 +1219,7 @@ enum ShellCatalog {
         let tiles = packages.flatMap { package in
             package.manifest.views.compactMap { view -> ShellTile? in
                 let presentation = view.presentation ?? .page
+                guard presentation != .mainMenu else { return nil }
                 guard presentationFilter(presentation) else { return nil }
                 let type = view.type?.rawValue ?? package.manifest.entry.transport.rawValue
                 return ShellTile(
@@ -2051,6 +2193,7 @@ final class PanelView: NSView {
         pluginPackages.flatMap { package in
             package.manifest.views.compactMap { view in
                 let presentation = view.presentation ?? .page
+                guard presentation != .mainMenu else { return nil }
                 guard presentation == .widget || presentation == .pageAndWidget else { return nil }
                 return CarouselWidgetRef(
                     id: "\(package.manifest.id):\(view.id)",

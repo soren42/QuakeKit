@@ -11,6 +11,9 @@ Functional plugins should support two presentation shapes:
 
 - **Applet pages**: full-panel or multi-page experiences, such as weather, an AI agent console, or a system dashboard.
 - **Widgets**: compact grid tiles that can be arranged alongside other widgets.
+- **Main-menu widgets**: special launcher views that render the Home page and
+  route to host pages, plugin views, plugin actions, carousel controls, or safe
+  status messages.
 
 The functional plugin manifest describes both shapes. A functional plugin can
 expose any mix of actions, data streams, and views. Theme plugins use a separate
@@ -83,15 +86,17 @@ Use this lane for:
 Each `PluginView` declares:
 
 - `type`: native, web canvas, web document, text, or data-driven
-- `presentation`: page, widget, or both
+- `presentation`: page, widget, both, or mainMenu
 - `entryPath`: local web/native asset entrypoint when needed
 - `dataStreamID`: stream backing the view
 - `columnSpan` and `rowSpan`: widget grid hints
 - `preferredWidth` and `preferredHeight`: page/widget layout hints
+- `menuItems`: declarative launcher entries when `presentation` is `mainMenu`
 
 The current host loads manifests from `Examples/Plugins`. The panel shell builds
-separate `Widgets` and `Apps` pages from those manifests, and declared plugin
-actions appear on the `Apps` page for early runtime testing.
+separate `Widgets` and `Apps` pages from those manifests, declared plugin
+actions appear on the `Apps` page for early runtime testing, and the Home page
+uses the selected `mainMenu` view with a built-in fallback.
 
 ## Example Targets
 
@@ -100,6 +105,7 @@ actions appear on the `Apps` page for early runtime testing.
 - `markets`: PHP-backed market ticker widget.
 - `sports_scores`: process-backed scoreboard page and widget.
 - `ai_agent`: microphone-capable conversational agent page.
+- `main_menu_classic`: declarative Home-page launcher widget.
 
 These examples now include minimal runnable or renderable package assets. Local
 shell, PHP, and stdio-style actions can be invoked by `PluginExecutionHost` and

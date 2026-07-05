@@ -470,7 +470,8 @@
           "enum": [
             "page",
             "widget",
-            "pageAndWidget"
+            "pageAndWidget",
+            "mainMenu"
           ]
         },
         "layout": {
@@ -509,6 +510,56 @@
         "preferredHeight": {
           "type": "integer",
           "minimum": 1
+        },
+        "menuItems": {
+          "type": "array",
+          "description": "Declarative entries for views with presentation mainMenu. The host maps these to safe shell routes.",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/menuItem"
+          }
+        }
+      }
+    },
+    "menuItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "action"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/manifestID"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "page",
+            "pluginView",
+            "pluginAction",
+            "status",
+            "carousel",
+            "settings"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "Route target. Examples: page widgets, pluginView system_monitor:system.overview, carousel settings, settings plugin:weather, or a status message."
+        },
+        "order": {
+          "type": "integer"
         }
       }
     },
