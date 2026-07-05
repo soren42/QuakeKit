@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 480" role="img" aria-labelledby="title desc">
+  <title id="title">Weather Glass Backdrop</title>
+  <desc id="desc">Layered cool blue weather-glass background with soft horizon glow and subtle rain lines.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071016"/>
+      <stop offset="0.45" stop-color="#0b2438"/>
+      <stop offset="1" stop-color="#163d5a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="72%" cy="18%" r="48%">
+      <stop offset="0" stop-color="#75e8ff" stop-opacity="0.34"/>
+      <stop offset="0.45" stop-color="#5cc8ff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#5cc8ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1920" height="480" fill="url(#sky)"/>
+  <rect width="1920" height="480" fill="url(#glow)"/>
+  <g filter="url(#blur)" opacity="0.45">
+    <ellipse cx="312" cy="430" rx="520" ry="86" fill="#5ce1ff"/>
+    <ellipse cx="1400" cy="438" rx="620" ry="76" fill="#b7d8e8"/>
+  </g>
+  <g stroke="#f7fcff" stroke-opacity="0.12" stroke-width="2">
+    <path d="M80 48 L10 236"/>
+    <path d="M210 22 L130 260"/>
+    <path d="M390 42 L300 292"/>
+    <path d="M620 26 L540 252"/>
+    <path d="M820 54 L740 304"/>
+    <path d="M1050 18 L970 258"/>
+    <path d="M1280 48 L1190 306"/>
+    <path d="M1510 20 L1430 252"/>
+    <path d="M1760 42 L1675 300"/>
+  </g>
+  <g fill="none" stroke="#5cc8ff" stroke-opacity="0.24">
+    <rect x="36" y="34" width="1848" height="412" rx="42"/>
+    <rect x="80" y="72" width="1760" height="338" rx="34"/>
+  </g>
+</svg>

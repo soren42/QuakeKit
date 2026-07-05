@@ -91,6 +91,18 @@
     "spacing": 10,
     "density": "standard"
   },
+  "layout": {
+    "defaultPageStyle": "grid",
+    "widgetGrid": {
+      "columns": 4,
+      "rows": 2
+    },
+    "appletGrid": {
+      "columns": 2,
+      "rows": 1
+    },
+    "splitRatio": 0.5
+  },
   "components": {
     "tile": {
       "background": "surface",

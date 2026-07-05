@@ -34,6 +34,7 @@ final class QuakeSettingsWindowView: NSView {
     private let documentView = NSView()
     private let installPluginButton = NSButton(title: "Install Plugin...", target: nil, action: nil)
     private let installThemeButton = NSButton(title: "Install Theme...", target: nil, action: nil)
+    private let openPackagesButton = NSButton(title: "Open Packages", target: nil, action: nil)
     private var rowViews: [SettingsRowView] = []
     private var activeSection: Section = .global
 
@@ -71,6 +72,10 @@ final class QuakeSettingsWindowView: NSView {
         installThemeButton.action = #selector(installTheme)
         addSubview(installThemeButton)
 
+        openPackagesButton.target = self
+        openPackagesButton.action = #selector(openPackageFolder)
+        addSubview(openPackagesButton)
+
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
         scrollView.documentView = documentView
@@ -86,11 +91,21 @@ final class QuakeSettingsWindowView: NSView {
         super.layout()
         let inset: CGFloat = 28
         titleLabel.frame = NSRect(x: inset, y: bounds.height - 64, width: 320, height: 36)
-        sectionControl.frame = NSRect(x: inset, y: bounds.height - 104, width: min(720, bounds.width - inset * 2), height: 28)
-        installThemeButton.frame = NSRect(x: bounds.width - inset - 138, y: bounds.height - 62, width: 138, height: 30)
-        installPluginButton.frame = NSRect(x: installThemeButton.frame.minX - 150, y: bounds.height - 62, width: 138, height: 30)
-        scrollView.frame = NSRect(x: inset, y: inset, width: bounds.width - inset * 2, height: bounds.height - 148)
+        let compactHeader = bounds.width < 780
+        let buttonY = compactHeader ? bounds.height - 104 : bounds.height - 62
+        openPackagesButton.frame = NSRect(x: bounds.width - inset - 128, y: buttonY, width: 128, height: 30)
+        installThemeButton.frame = NSRect(x: openPackagesButton.frame.minX - 146, y: buttonY, width: 134, height: 30)
+        installPluginButton.frame = NSRect(x: installThemeButton.frame.minX - 146, y: buttonY, width: 134, height: 30)
+        let sectionY = compactHeader ? bounds.height - 142 : bounds.height - 104
+        sectionControl.frame = NSRect(x: inset, y: sectionY, width: min(720, bounds.width - inset * 2), height: 28)
+        scrollView.frame = NSRect(x: inset, y: inset, width: bounds.width - inset * 2, height: bounds.height - (compactHeader ? 186 : 148))
         layoutRows()
+    }
+
+    func reload(settings: QuakeSettingsConfiguration, themeConfiguration: ThemeUserConfiguration) {
+        self.settings = settings
+        self.themeConfiguration = themeConfiguration
+        rebuildRows()
     }
 
     @objc private func sectionChanged() {
@@ -106,9 +121,17 @@ final class QuakeSettingsWindowView: NSView {
         installPackage(title: "Install QuakeKit Theme")
     }
 
+    @objc private func openPackageFolder() {
+        guard let directory = try? QuakePackageLocations.applicationSupportDirectory() else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        NSWorkspace.shared.activateFileViewerSelecting([directory])
+    }
+
     private func installPackage(title: String) {
         let panel = NSOpenPanel()
         panel.title = title
+        panel.message = "Choose a .quakekitplugin, .quakekittheme, .tar, .tar.gz, or .tgz package."
+        panel.prompt = "Install"
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
@@ -206,7 +229,9 @@ final class QuakeSettingsWindowView: NSView {
             ),
             RowSpec(title: "Launch Mode", value: "Menu Bar Accessory", detail: "Release-style launch hides Dock and app menu unless --foreground is used.", control: nil),
             RowSpec(title: "Display Ownership", value: "Enabled", detail: "Panel window runs above the menu bar and pointer guard keeps the cursor off the device.", control: nil),
-            RowSpec(title: "Package Directory", value: "~/Library/Application Support/QuakeKit", detail: "Installed plugin and theme packages are copied here.", control: nil)
+            RowSpec(title: "Package Directory", value: "~/Library/Application Support/QuakeKit", detail: "Installed plugin and theme packages are copied here.", control: button("Open") { [weak self] in self?.openPackageFolder() }),
+            RowSpec(title: "Settings File", value: "settings.json", detail: "Global, carousel, and plugin setting overrides are persisted in Application Support.", control: nil),
+            RowSpec(title: "Release Check", value: "./scripts/validate-release.sh", detail: "Builds Swift targets, validates packages, checks adapters, and assembles the app bundle.", control: nil)
         ]
     }
 
@@ -261,7 +286,14 @@ final class QuakeSettingsWindowView: NSView {
     }
 
     private func widgetRows() -> [RowSpec] {
-        pluginPackages.flatMap { package in
+        let viewCount = pluginPackages.reduce(0) { $0 + $1.manifest.views.count }
+        let summary = RowSpec(
+            title: "View Inventory",
+            value: "\(viewCount) views",
+            detail: "Widgets and apps are generated from plugin manifests; layout hints are shown per view.",
+            control: nil
+        )
+        return [summary] + pluginPackages.sorted { $0.manifest.name < $1.manifest.name }.flatMap { package in
             package.manifest.views.map { view in
                 RowSpec(
                     title: view.title,
@@ -303,6 +335,16 @@ final class QuakeSettingsWindowView: NSView {
             )
         ]
 
+        rows.append(RowSpec(
+            title: "Widget Set",
+            value: "\(carouselIncludedWidgetIDs().count) of \(carouselRefs().count)",
+            detail: settings.carousel.widgetIDs.isEmpty ? "All eligible widgets are included by default." : "Using explicit include list.",
+            control: buttonRow([
+                ("All", { [weak self] in self?.includeAllCarouselWidgets() }),
+                ("None", { [weak self] in self?.clearCarouselWidgets() })
+            ])
+        ))
+
         rows.append(contentsOf: carouselRefs().map { ref in
             RowSpec(
                 title: ref.title,
@@ -317,12 +359,14 @@ final class QuakeSettingsWindowView: NSView {
     }
 
     private func pluginRows() -> [RowSpec] {
-        pluginPackages.flatMap { package -> [RowSpec] in
+        pluginPackages.sorted { $0.manifest.name < $1.manifest.name }.flatMap { package -> [RowSpec] in
+            let executable = executableStatus(for: package.manifest.entry.transport)
+            let permissionSummary = package.manifest.permissions.isEmpty ? "no explicit permissions" : "\(package.manifest.permissions.count) permission declarations"
             var rows: [RowSpec] = [
                 RowSpec(
                     title: package.manifest.name,
-                    value: package.manifest.id,
-                    detail: "\(package.manifest.capabilities.map(\.rawValue).joined(separator: ", ")) · \(package.manifest.settings.count) settings",
+                    value: "\(package.manifest.entry.transport.rawValue) · \(executable)",
+                    detail: "\(package.manifest.id) · \(package.manifest.capabilities.map(\.rawValue).joined(separator: ", ")) · \(permissionSummary) · \(package.manifest.settings.count) settings",
                     control: package.manifest.settings.isEmpty ? nil : button("Reset Settings") { [weak self] in
                         self?.settings.pluginSettings[package.manifest.id] = nil
                         self?.saveSettings()
@@ -348,6 +392,21 @@ final class QuakeSettingsWindowView: NSView {
                 )
             })
             return rows
+        }
+    }
+
+    private func executableStatus(for transport: PluginEntry.Transport) -> String {
+        switch transport {
+        case .shell, .stdioJSONRPC:
+            return "local"
+        case .php:
+            return "optional PHP"
+        case .webView:
+            return "web view"
+        case .nativeSwift:
+            return "preview"
+        case .websocket:
+            return "bridge"
         }
     }
 
@@ -439,7 +498,9 @@ final class QuakeSettingsWindowView: NSView {
                 self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .string(value))
             }
         case .secret:
-            return nil
+            return secureField(value: current.stringValue ?? "") { [weak self] value in
+                self?.setPluginSetting(pluginID: pluginID, setting: setting, value: .string(value))
+            }
         }
     }
 
@@ -462,8 +523,22 @@ final class QuakeSettingsWindowView: NSView {
         saveSettings()
     }
 
+    private func includeAllCarouselWidgets() {
+        settings.carousel.widgetIDs = carouselRefs().map(\.id)
+        saveSettings()
+    }
+
+    private func clearCarouselWidgets() {
+        settings.carousel.widgetIDs = []
+        saveSettings()
+    }
+
     private func carouselIncluded(id: String) -> Bool {
         settings.carousel.widgetIDs.isEmpty || settings.carousel.widgetIDs.contains(id)
+    }
+
+    private func carouselIncludedWidgetIDs() -> [String] {
+        settings.carousel.widgetIDs.isEmpty ? carouselRefs().map(\.id) : settings.carousel.widgetIDs
     }
 
     private func carouselRefs() -> [CarouselWidgetRef] {
@@ -563,6 +638,17 @@ final class QuakeSettingsWindowView: NSView {
         return button
     }
 
+    private func buttonRow(_ specs: [(String, () -> Void)]) -> NSView {
+        let stack = NSStackView()
+        stack.orientation = .horizontal
+        stack.spacing = 8
+        stack.distribution = .fillEqually
+        for (title, action) in specs {
+            stack.addArrangedSubview(button(title, action: action))
+        }
+        return stack
+    }
+
     private func stepper(value: Double, minimum: Double, maximum: Double, increment: Double, onChange: @escaping (Double) -> Void) -> NSView {
         let container = NSView()
         let field = NSTextField(labelWithString: String(format: "%.0f", value))
@@ -589,6 +675,13 @@ final class QuakeSettingsWindowView: NSView {
 
     private func textField(value: String, onCommit: @escaping (String) -> Void) -> NSView {
         let field = ClosureTextField(string: value)
+        field.onCommit = { onCommit(field.stringValue) }
+        return field
+    }
+
+    private func secureField(value: String, onCommit: @escaping (String) -> Void) -> NSView {
+        let field = ClosureSecureTextField(string: value)
+        field.placeholderString = "Secret value"
         field.onCommit = { onCommit(field.stringValue) }
         return field
     }
@@ -640,9 +733,12 @@ private final class SettingsRowView: NSView {
     override func layout() {
         super.layout()
         let controlWidth: CGFloat = control == nil ? 0 : 190
-        titleLabel.frame = NSRect(x: 16, y: bounds.height - 30, width: bounds.width * 0.42, height: 20)
-        valueLabel.frame = NSRect(x: bounds.width * 0.44, y: bounds.height - 30, width: bounds.width - bounds.width * 0.44 - controlWidth - 28, height: 20)
-        detailLabel.frame = NSRect(x: 16, y: 14, width: bounds.width - controlWidth - 44, height: 20)
+        let titleWidth = max(160, min(bounds.width * 0.42, bounds.width - controlWidth - 64))
+        let valueX = titleWidth + 28
+        let valueWidth = max(0, bounds.width - valueX - controlWidth - 28)
+        titleLabel.frame = NSRect(x: 16, y: bounds.height - 30, width: titleWidth, height: 20)
+        valueLabel.frame = NSRect(x: valueX, y: bounds.height - 30, width: valueWidth, height: 20)
+        detailLabel.frame = NSRect(x: 16, y: 14, width: max(0, bounds.width - controlWidth - 44), height: 20)
         control?.frame = NSRect(x: bounds.width - controlWidth - 16, y: 22, width: controlWidth, height: 30)
     }
 }
@@ -728,6 +824,26 @@ private final class ClosureStepper: NSStepper {
 }
 
 private final class ClosureTextField: NSTextField, NSTextFieldDelegate {
+    var onCommit: (() -> Void)?
+
+    init(string: String) {
+        super.init(frame: .zero)
+        stringValue = string
+        isBezeled = true
+        isEditable = true
+        delegate = self
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        onCommit?()
+    }
+}
+
+private final class ClosureSecureTextField: NSSecureTextField, NSTextFieldDelegate {
     var onCommit: (() -> Void)?
 
     init(string: String) {

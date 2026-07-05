@@ -16,6 +16,9 @@ json_escape() {
 transcript="No transcript has been captured yet."
 transcription_state="stub"
 transcription_detail="Configure an audio file or connect a live recorder."
+session_id="${QUAKEKIT_AGENT_SESSION_ID:-voice-demo}"
+elapsed="${QUAKEKIT_AGENT_ELAPSED_SECONDS:-0}"
+input_level="${QUAKEKIT_AGENT_INPUT_LEVEL:-0.18}"
 
 if [ -n "$audio_file" ] && [ -f "$audio_file" ]; then
   if command -v whisper >/dev/null 2>&1; then
@@ -57,6 +60,6 @@ case "$method" in
     ;;
 esac
 
-printf '{"status":"%s","provider":"%s","backend":"%s","summaryStyle":"%s","speakerOutput":%s,"rows":[{"title":"Provider","value":"%s","detail":"official API/local endpoint only"},{"title":"Transcription","value":"%s","detail":"%s"},{"title":"Summary","value":"%s","detail":"meeting and brainstorming notes"},{"title":"Transcript","value":"Ready","detail":"%s"}],"source":"ai-agent-adapter"}\n' \
-  "$(json_escape "$state")" "$(json_escape "$provider")" "$(json_escape "$backend")" "$(json_escape "$summary_style")" "$speaker_output" \
-  "$(json_escape "$provider")" "$(json_escape "$backend")" "$(json_escape "$transcription_detail")" "$(json_escape "$summary_style")" "$(json_escape "$transcript")"
+printf '{"ok":true,"adapter":"ai-agent-adapter","mode":"offline-safe","sessionId":"%s","status":"%s","captureState":"%s","elapsedSeconds":%s,"inputLevel":%s,"provider":"%s","backend":"%s","summaryStyle":"%s","speakerOutput":%s,"transcriptSegments":[{"speaker":"User","text":"Capture the idea and turn it into next steps."},{"speaker":"Agent","text":"Ready to summarize once a transcript is available."}],"summary":"Voice harness is ready for microphone, transcription, summary, and speaker-output UI states.","actionItems":[{"title":"Request microphone permission","state":"available"},{"title":"Record 30 second clip","state":"available"},{"title":"Summarize transcript","state":"planned"}],"decisions":["Use local or official API transcription boundary","Do not scrape consumer LLM UIs"],"speakerQueue":[{"text":"QuakeKit voice output is ready.","state":"queued"}],"exportPath":"~/Library/Application Support/QuakeKit/Recordings/","actions":[{"id":"agent.listen","enabled":true,"dryRun":true},{"id":"agent.stop","enabled":true,"dryRun":true},{"id":"agent.transcribe","enabled":true,"dryRun":true},{"id":"agent.summarize","enabled":true,"dryRun":true},{"id":"agent.speak","enabled":true,"dryRun":true}],"rows":[{"title":"Provider","value":"%s","detail":"official API/local endpoint only"},{"title":"Capture","value":"%s","detail":"%ss · input %.2f"},{"title":"Transcription","value":"%s","detail":"%s"},{"title":"Summary","value":"%s","detail":"meeting and brainstorming notes"},{"title":"Speaker","value":"%s","detail":"queued output path available"},{"title":"Transcript","value":"Ready","detail":"%s"}],"source":"ai-agent-adapter"}\n' \
+  "$(json_escape "$session_id")" "$(json_escape "$state")" "$(json_escape "$state")" "$elapsed" "$input_level" "$(json_escape "$provider")" "$(json_escape "$backend")" "$(json_escape "$summary_style")" "$speaker_output" \
+  "$(json_escape "$provider")" "$(json_escape "$state")" "$elapsed" "$input_level" "$(json_escape "$backend")" "$(json_escape "$transcription_detail")" "$(json_escape "$summary_style")" "$(json_escape "$speaker_output")" "$(json_escape "$transcript")"

@@ -17,23 +17,41 @@
     "backgroundWorker"
   ],
   "permissions": [
-    { "audioCapture": {} },
-    { "audioPlayback": {} },
-    { "localProcess": {} },
+    {
+      "audioCapture": {}
+    },
+    {
+      "audioPlayback": {}
+    },
+    {
+      "localProcess": {}
+    },
     {
       "filesystem": {
-        "paths": ["~/Documents", "~/Desktop", "~/Downloads"],
+        "paths": [
+          "~/Documents",
+          "~/Desktop",
+          "~/Downloads"
+        ],
         "write": true
       }
     },
     {
       "network": {
-        "hosts": ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com"]
+        "hosts": [
+          "api.openai.com",
+          "api.anthropic.com",
+          "generativelanguage.googleapis.com"
+        ]
       }
     },
     {
       "secrets": {
-        "keys": ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"]
+        "keys": [
+          "OPENAI_API_KEY",
+          "ANTHROPIC_API_KEY",
+          "GEMINI_API_KEY"
+        ]
       }
     }
   ],
@@ -43,7 +61,11 @@
       "title": "Capture Mode",
       "type": "choice",
       "defaultValue": "audio_file",
-      "choices": ["audio_file", "live_microphone_stub", "wispr_flow"],
+      "choices": [
+        "audio_file",
+        "live_microphone_stub",
+        "wispr_flow"
+      ],
       "environment": "QUAKEKIT_MEETING_CAPTURE_MODE",
       "help": "Audio capture source. Live microphone recording is declared but not enabled until the host owns recording."
     },
@@ -60,7 +82,12 @@
       "title": "Transcription Backend",
       "type": "choice",
       "defaultValue": "whisper_cli",
-      "choices": ["whisper_cli", "wispr_flow", "apple_speech", "openai_whisper"],
+      "choices": [
+        "whisper_cli",
+        "wispr_flow",
+        "apple_speech",
+        "openai_whisper"
+      ],
       "environment": "QUAKEKIT_MEETING_TRANSCRIBE_BACKEND",
       "help": "Preferred speech-to-text backend."
     },
@@ -69,22 +96,74 @@
       "title": "Summary Format",
       "type": "choice",
       "defaultValue": "action_items",
-      "choices": ["action_items", "meeting_minutes", "brainstorm", "decision_log"],
+      "choices": [
+        "action_items",
+        "meeting_minutes",
+        "brainstorm",
+        "decision_log"
+      ],
       "environment": "QUAKEKIT_MEETING_SUMMARY_FORMAT",
       "help": "Output format for summarization."
     }
   ],
   "actions": [
-    { "id": "meeting.record", "title": "Record", "argumentSchema": [] },
-    { "id": "meeting.transcribe", "title": "Transcribe", "argumentSchema": [] },
-    { "id": "meeting.summarize", "title": "Summarize", "argumentSchema": [] },
-    { "id": "meeting.export", "title": "Export Notes", "argumentSchema": [] }
+    {
+      "id": "meeting.record",
+      "title": "Record",
+      "argumentSchema": []
+    },
+    {
+      "id": "meeting.transcribe",
+      "title": "Transcribe",
+      "argumentSchema": []
+    },
+    {
+      "id": "meeting.summarize",
+      "title": "Summarize",
+      "argumentSchema": []
+    },
+    {
+      "id": "meeting.export",
+      "title": "Export Notes",
+      "argumentSchema": []
+    }
   ],
   "dataStreams": [
     {
       "id": "meeting.summary",
       "title": "Meeting Summary",
-      "valueSchema": []
+      "valueSchema": [
+        {
+          "id": "meetingTitle",
+          "title": "Meeting Title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "durationMinutes",
+          "title": "Duration Minutes",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "captureMode",
+          "title": "Capture Mode",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "transcriptPreview",
+          "title": "Transcript Preview",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "summaryFormat",
+          "title": "Summary Format",
+          "type": "string",
+          "required": false
+        }
+      ]
     }
   ],
   "views": [

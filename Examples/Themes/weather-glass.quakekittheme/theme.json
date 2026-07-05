@@ -100,6 +100,19 @@
       "selectedBackground": "surfaceRaised",
       "selectedBorder": "accent"
     },
+    "tab": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "selectedBackground": "surfaceRaised",
+      "selectedBorder": "accent"
+    },
+    "statusRow": {
+      "background": "surface",
+      "foreground": "textPrimary",
+      "border": "border",
+      "accent": "accent"
+    },
     "gauge": {
       "background": "surface",
       "foreground": "textPrimary",
@@ -146,12 +159,27 @@
       }
     }
   },
+  "layout": {
+    "defaultPageStyle": "thirds",
+    "widgetGrid": {
+      "columns": 3,
+      "rows": 2
+    },
+    "appletGrid": {
+      "columns": 3,
+      "rows": 1
+    },
+    "splitRatio": 0.34
+  },
   "assets": [
     {
       "id": "weatherBackdrop",
       "kind": "image",
-      "path": "assets/backdrop.png",
-      "scale": 2
+      "path": "assets/backdrop.svg",
+      "role": "background",
+      "fit": "cover",
+      "opacity": 0.42,
+      "scale": 1
     }
   ],
   "options": [

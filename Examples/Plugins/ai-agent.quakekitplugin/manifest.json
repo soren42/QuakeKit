@@ -64,7 +64,13 @@
       "title": "LLM Provider",
       "type": "choice",
       "defaultValue": "openai",
-      "choices": ["openai", "anthropic", "gemini", "deepseek", "local"],
+      "choices": [
+        "openai",
+        "anthropic",
+        "gemini",
+        "deepseek",
+        "local"
+      ],
       "environment": "QUAKEKIT_AGENT_PROVIDER",
       "help": "Official API or local provider used by future agent execution."
     },
@@ -73,7 +79,13 @@
       "title": "Transcription Backend",
       "type": "choice",
       "defaultValue": "wispr_flow",
-      "choices": ["wispr_flow", "whisper_cli", "apple_speech", "openai_whisper", "manual_file"],
+      "choices": [
+        "wispr_flow",
+        "whisper_cli",
+        "apple_speech",
+        "openai_whisper",
+        "manual_file"
+      ],
       "environment": "QUAKEKIT_AGENT_TRANSCRIBE_BACKEND",
       "help": "Preferred transcription path. The stub only transcribes configured files through local whisper when available."
     },
@@ -90,7 +102,12 @@
       "title": "Summary Style",
       "type": "choice",
       "defaultValue": "meeting_notes",
-      "choices": ["meeting_notes", "brainstorm", "action_items", "executive_summary"],
+      "choices": [
+        "meeting_notes",
+        "brainstorm",
+        "action_items",
+        "executive_summary"
+      ],
       "environment": "QUAKEKIT_AGENT_SUMMARY_STYLE",
       "help": "Preferred structure for generated summaries."
     },
@@ -134,7 +151,44 @@
     {
       "id": "agent.session",
       "title": "Agent Session",
-      "valueSchema": []
+      "valueSchema": [
+        {
+          "id": "sessionId",
+          "title": "Session ID",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "captureState",
+          "title": "Capture State",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "elapsedSeconds",
+          "title": "Elapsed Seconds",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "inputLevel",
+          "title": "Input Level",
+          "type": "number",
+          "required": false
+        },
+        {
+          "id": "summary",
+          "title": "Summary",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "exportPath",
+          "title": "Export Path",
+          "type": "string",
+          "required": false
+        }
+      ]
     }
   ],
   "views": [

@@ -62,7 +62,44 @@
     {
       "id": "markets.watchlist",
       "title": "Watchlist",
-      "valueSchema": []
+      "valueSchema": [
+        {
+          "id": "symbols",
+          "title": "Symbols",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "price",
+          "title": "Price",
+          "type": "number",
+          "required": false
+        },
+        {
+          "id": "change",
+          "title": "Change",
+          "type": "number",
+          "required": false
+        },
+        {
+          "id": "changePercent",
+          "title": "Change Percent",
+          "type": "number",
+          "required": false
+        },
+        {
+          "id": "currency",
+          "title": "Currency",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "exchange",
+          "title": "Exchange",
+          "type": "string",
+          "required": false
+        }
+      ]
     }
   ],
   "views": [

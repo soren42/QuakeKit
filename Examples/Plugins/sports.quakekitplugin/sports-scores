@@ -17,24 +17,24 @@ if [ -n "$payload" ]; then
   first_name="$(printf '%s' "$payload" | grep -o '"shortName":"[^"]*"' | head -1 | sed 's/"shortName":"//;s/"$//' || true)"
   status="$(printf '%s' "$payload" | grep -o '"description":"[^"]*"' | head -1 | sed 's/"description":"//;s/"$//' || true)"
   if [ -n "$first_name" ]; then
-    printf '{"games":[{"league":"%s","matchup":"%s","status":"%s","favorite":"%s"}],"favoriteTeam":"%s","updatedAt":"%s","source":"espn"}\n' "$league" "$first_name" "${status:-Scheduled}" "$favorite" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '{"ok":true,"games":[{"league":"%s","matchup":"%s","homeTeam":"-","awayTeam":"-","homeScore":0,"awayScore":0,"period":"-","clock":"-","status":"%s","favorite":"%s"}],"favoriteTeam":"%s","updatedAt":"%s","actions":[{"id":"sports.refresh","title":"Refresh Scores","enabled":true}],"rows":[{"title":"%s","value":"%s","detail":"favorite %s"}],"source":"espn"}\n' "$league" "$first_name" "${status:-Scheduled}" "$favorite" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$league" "$first_name" "$favorite"
     exit 0
   fi
 fi
 
 case "$league" in
   nba)
-    games='{"league":"NBA","matchup":"LAL @ GSW","status":"8:30 PM","favorite":"LAL"},{"league":"NBA","matchup":"BOS @ NYK","status":"Final · BOS 112 NYK 108","favorite":"NYK"}'
+    games='{"league":"NBA","matchup":"LAL @ GSW","homeTeam":"GSW","awayTeam":"LAL","homeScore":0,"awayScore":0,"period":"Pregame","clock":"8:30 PM","status":"8:30 PM","favorite":"LAL"},{"league":"NBA","matchup":"BOS @ NYK","homeTeam":"NYK","awayTeam":"BOS","homeScore":108,"awayScore":112,"period":"Final","clock":"0:00","status":"Final · BOS 112 NYK 108","favorite":"NYK"}'
     ;;
   nfl)
-    games='{"league":"NFL","matchup":"CAR @ ATL","status":"Sun 1:00 PM","favorite":"CAR"},{"league":"NFL","matchup":"KC @ BUF","status":"Sun 4:25 PM","favorite":"BUF"}'
+    games='{"league":"NFL","matchup":"CAR @ ATL","homeTeam":"ATL","awayTeam":"CAR","homeScore":0,"awayScore":0,"period":"Pregame","clock":"Sun 1:00 PM","status":"Sun 1:00 PM","favorite":"CAR"},{"league":"NFL","matchup":"KC @ BUF","homeTeam":"BUF","awayTeam":"KC","homeScore":0,"awayScore":0,"period":"Pregame","clock":"Sun 4:25 PM","status":"Sun 4:25 PM","favorite":"BUF"}'
     ;;
   nhl)
-    games='{"league":"NHL","matchup":"NYR @ CAR","status":"2nd · 2-1 CAR","favorite":"CAR"},{"league":"NHL","matchup":"BOS @ TOR","status":"Final · TOR 4 BOS 3","favorite":"TOR"}'
+    games='{"league":"NHL","matchup":"NYR @ CAR","homeTeam":"CAR","awayTeam":"NYR","homeScore":2,"awayScore":1,"period":"2nd","clock":"11:42","status":"2nd · 2-1 CAR","favorite":"CAR"},{"league":"NHL","matchup":"BOS @ TOR","homeTeam":"TOR","awayTeam":"BOS","homeScore":4,"awayScore":3,"period":"Final","clock":"0:00","status":"Final · TOR 4 BOS 3","favorite":"TOR"}'
     ;;
   *)
-    games='{"league":"MLB","matchup":"ATL @ NYM","status":"Preview","favorite":"ATL"},{"league":"MLB","matchup":"LAD @ SF","status":"Final · LAD 6 SF 4","favorite":"SF"}'
+    games='{"league":"MLB","matchup":"ATL @ NYM","homeTeam":"NYM","awayTeam":"ATL","homeScore":0,"awayScore":0,"period":"Preview","clock":"7:10 PM","status":"Preview","favorite":"ATL"},{"league":"MLB","matchup":"LAD @ SF","homeTeam":"SF","awayTeam":"LAD","homeScore":4,"awayScore":6,"period":"Final","clock":"0:00","status":"Final · LAD 6 SF 4","favorite":"SF"}'
     ;;
 esac
 
-printf '{"games":[%s],"favoriteTeam":"%s","updatedAt":"%s","source":"fallback"}\n' "$games" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf '{"ok":true,"games":[%s],"favoriteTeam":"%s","updatedAt":"%s","actions":[{"id":"sports.refresh","title":"Refresh Scores","enabled":true},{"id":"sports.pinFavorite","title":"Pin Favorite","enabled":true,"dryRun":true}],"rows":[{"title":"Favorite","value":"%s","detail":"league %s"},{"title":"Games","value":"2","detail":"offline-safe scoreboard fixture"},{"title":"Source","value":"fallback","detail":"ESPN unavailable or timed out"}],"source":"fallback"}\n' "$games" "$favorite" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$favorite" "$league"

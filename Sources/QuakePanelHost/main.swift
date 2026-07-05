@@ -66,7 +66,7 @@ struct PanelLaunchOptions {
 }
 
 @MainActor
-final class PanelAppDelegate: NSObject, NSApplicationDelegate {
+final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var window: NSWindow?
     private var settingsWindow: NSWindow?
     private var statusItem: NSStatusItem?
@@ -123,19 +123,46 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
         item.button?.toolTip = "QuakeKit"
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Open Settings...", action: #selector(openSettingsWindow), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "Show Panel", action: #selector(showPanelWindow), keyEquivalent: ""))
+        menu.delegate = self
+        menu.addItem(statusMenuItem(id: "settings", title: "Open Settings...", action: #selector(openSettingsWindow), keyEquivalent: ","))
+        menu.addItem(statusMenuItem(id: "panel", title: "Show Panel", action: #selector(showPanelWindow), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Request Microphone Access", action: #selector(requestMicrophoneAccess), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Record 30s Meeting Clip", action: #selector(recordMeetingClip), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Speak Test Phrase", action: #selector(speakTestPhrase), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "microphone", title: "Request Microphone Access", action: #selector(requestMicrophoneAccess), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "record", title: "Record 30s Meeting Clip", action: #selector(recordMeetingClip), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "speak", title: "Speak Test Phrase", action: #selector(speakTestPhrase), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit QuakeKit", action: #selector(quit), keyEquivalent: "q"))
-        for item in menu.items {
-            item.target = self
-        }
+        menu.addItem(statusMenuItem(id: "quit", title: "Quit QuakeKit", action: #selector(quit), keyEquivalent: "q"))
         item.menu = menu
         statusItem = item
+    }
+
+    private func statusMenuItem(id: String, title: String, action: Selector, keyEquivalent: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        item.identifier = NSUserInterfaceItemIdentifier(id)
+        item.target = self
+        return item
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in menu.items {
+            switch item.identifier?.rawValue {
+            case "settings":
+                item.title = settingsWindow?.isVisible == true ? "Open Settings... (Open)" : "Open Settings..."
+                item.state = settingsWindow?.isVisible == true ? .on : .off
+            case "panel":
+                item.title = window?.isVisible == true ? "Show Panel (Visible)" : "Show Panel"
+                item.state = window?.isVisible == true ? .on : .off
+                item.isEnabled = window != nil
+            case "microphone":
+                item.title = "Microphone: \(audioService.capturePermissionDescription)"
+            case "record":
+                item.isEnabled = audioService.capturePermissionDescription != "denied"
+            case "speak":
+                item.isEnabled = true
+            default:
+                break
+            }
+        }
     }
 
     private func statusIconImage() -> NSImage? {
@@ -197,6 +224,9 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettingsWindow() {
         if let settingsWindow {
+            if let view = settingsWindow.contentView as? QuakeSettingsWindowView {
+                view.reload(settings: QuakeSettingsStore.load(), themeConfiguration: ThemeConfigurationStore.load())
+            }
             settingsWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return

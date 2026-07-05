@@ -38,6 +38,24 @@
           "title": "Updated At",
           "type": "string",
           "required": false
+        },
+        {
+          "id": "hostVersion",
+          "title": "Host Version",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "pluginVersion",
+          "title": "Plugin Version",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "latencyMs",
+          "title": "Latency ms",
+          "type": "number",
+          "required": false
         }
       ]
     }

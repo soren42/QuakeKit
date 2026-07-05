@@ -66,7 +66,50 @@
     {
       "id": "sports.favoriteTeams",
       "title": "Favorite Teams",
-      "valueSchema": []
+      "valueSchema": [
+        {
+          "id": "games",
+          "title": "Games",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "homeTeam",
+          "title": "Home Team",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "awayTeam",
+          "title": "Away Team",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "homeScore",
+          "title": "Home Score",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "awayScore",
+          "title": "Away Score",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "status",
+          "title": "Status",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "favorite",
+          "title": "Favorite",
+          "type": "string",
+          "required": false
+        }
+      ]
     }
   ],
   "views": [

@@ -12,8 +12,8 @@ host validates each `manifest.json` against
 | `timers.quakekitplugin` | POSIX shell | `shell` | Pomodoro, break, countdown, and stopwatch status fixture. |
 | `clipboard-notes.quakekitplugin` | POSIX shell | `shell` | Scratchpad and privacy-gated clipboard preview fixture. |
 | `markets.quakekitplugin` | PHP | `php` | Market ticker provider with environment-backed settings. |
-| `obs-stream-controls.quakekitplugin` | POSIX shell | `shell` | OBS stream scene and control stubs. |
-| `octoprint-printer.quakekitplugin` | POSIX shell | `shell` | OctoPrint printer status and control stubs. |
+| `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS stream scene, recording, audio, marker, and control-plan fixture. |
+| `octoprint.quakekitplugin` | POSIX shell | `shell` | OctoPrint printer status, temperature profile, job progress, and control-plan fixture. |
 | `ai-agent.quakekitplugin` | HTML plus stdio adapter | `stdioJSONRPC` | Voice-capable agent surface with transcription and summary settings. |
 | `meeting-notes.quakekitplugin` | POSIX shell | `shell` | Meeting recorder, transcription, summary, and export harness. |
 | `chatgpt-harness.quakekitplugin` | POSIX shell | `shell` | ChatGPT/OpenAI API companion stub. |
@@ -24,9 +24,7 @@ host validates each `manifest.json` against
 | `deepseek-harness.quakekitplugin` | POSIX shell | `shell` | DeepSeek API companion stub. |
 | `sports.quakekitplugin` | Executable stdio adapter | `stdioJSONRPC` | Scoreboard data provider. |
 | `discord-companion.quakekitplugin` | POSIX shell | `shell` | Discord presence, voice, webhook planning, and activity companion fixture. |
-| `obs-controls.quakekitplugin` | POSIX shell | `shell` | OBS scene, stream, recording, and request-plan controls fixture. |
 | `home-assistant.quakekitplugin` | POSIX shell | `shell` | Home Assistant entity dashboard stub. |
-| `octoprint.quakekitplugin` | POSIX shell | `shell` | 3D printer status, temperature profile, and job controls fixture. |
 | `ubiquiti-network.quakekitplugin` | POSIX shell | `shell` | UniFi network health dashboard stub. |
 | `security-cameras.quakekitplugin` | POSIX shell | `shell` | UniFi/Ring/Eufy-style camera and security-mode fixture. |
 | `app-context.quakekitplugin` | POSIX shell | `shell` | Frontmost app/window context detector and companion profile router. |
