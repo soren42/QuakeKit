@@ -570,6 +570,14 @@ enum DisplayLocator {
 }
 
 enum PanelPluginLoader {
+    /// RC1 presents one Music applet and one AI Command Center. Older example
+    /// package IDs remain importable as references but are not launcher entries.
+    private static let supersededPackageIDs: Set<String> = [
+        "spotify_controls", "spotify_current_track", "ai_agent_companions", "ai_workbench",
+        "claude_harness", "chatgpt_harness", "cursor_harness", "deepseek_harness",
+        "gemini_harness", "grok_harness"
+    ]
+
     static func loadSamplePackages() -> [PluginPackage] {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let directories = [
@@ -584,6 +592,10 @@ enum PanelPluginLoader {
             for result in results {
                 switch result {
                 case .success(let package, let warnings):
+                    guard !supersededPackageIDs.contains(package.manifest.id) else {
+                        log("plugin skipped \(package.manifest.id): superseded by RC1 consolidated applet")
+                        continue
+                    }
                     packagesByID[package.manifest.id] = package
                     log("plugin loaded \(package.manifest.id) views=\(package.manifest.views.count) source=\(package.baseURL.path)")
                     for warning in warnings {
@@ -726,24 +738,28 @@ struct ThemeUserConfiguration: Codable, Equatable {
 struct QuakeSettingsConfiguration: Codable, Equatable {
     var defaultPageIndex: Int
     var mainMenuViewID: String
+    var menuSettings: [String: JSONValue]
     var carousel: CarouselConfiguration
     var pluginSettings: [String: [String: JSONValue]]
 
     private enum CodingKeys: String, CodingKey {
         case defaultPageIndex
         case mainMenuViewID
+        case menuSettings
         case carousel
         case pluginSettings
     }
 
     init(
         defaultPageIndex: Int = 0,
-        mainMenuViewID: String = MainMenuWidgetRef.builtInID,
+        mainMenuViewID: String = "builtin:status-rail",
+        menuSettings: [String: JSONValue] = [:],
         carousel: CarouselConfiguration = CarouselConfiguration(),
         pluginSettings: [String: [String: JSONValue]] = [:]
     ) {
         self.defaultPageIndex = defaultPageIndex
         self.mainMenuViewID = mainMenuViewID
+        self.menuSettings = menuSettings
         self.carousel = carousel
         self.pluginSettings = pluginSettings
     }
@@ -751,7 +767,8 @@ struct QuakeSettingsConfiguration: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.defaultPageIndex = try container.decodeIfPresent(Int.self, forKey: .defaultPageIndex) ?? 0
-        self.mainMenuViewID = try container.decodeIfPresent(String.self, forKey: .mainMenuViewID) ?? MainMenuWidgetRef.builtInID
+        self.mainMenuViewID = try container.decodeIfPresent(String.self, forKey: .mainMenuViewID) ?? "builtin:status-rail"
+        self.menuSettings = try container.decodeIfPresent([String: JSONValue].self, forKey: .menuSettings) ?? [:]
         self.carousel = try container.decodeIfPresent(CarouselConfiguration.self, forKey: .carousel) ?? CarouselConfiguration()
         self.pluginSettings = try container.decodeIfPresent([String: [String: JSONValue]].self, forKey: .pluginSettings) ?? [:]
     }
@@ -1068,6 +1085,30 @@ enum ShellCatalog {
                 viewID: nil,
                 title: "Classic Built-in Menu",
                 detail: "Host fallback menu"
+            ),
+            MainMenuWidgetRef(
+                id: "builtin:status-rail",
+                pluginID: nil,
+                pluginName: "QuakeKit",
+                viewID: nil,
+                title: "Status Rail",
+                detail: "RC2 default · persistent left navigation rail"
+            ),
+            MainMenuWidgetRef(
+                id: "builtin:radial-orbit",
+                pluginID: nil,
+                pluginName: "QuakeKit",
+                viewID: nil,
+                title: "Radial Orbit",
+                detail: "RC2 alternate · hub and orbit navigation"
+            ),
+            MainMenuWidgetRef(
+                id: "builtin:ambient-marquee",
+                pluginID: nil,
+                pluginName: "QuakeKit",
+                viewID: nil,
+                title: "Ambient Marquee",
+                detail: "RC2 alternate · ambient hero and bottom dock"
             )
         ] + packaged.sorted { $0.title < $1.title }
     }
@@ -1097,25 +1138,12 @@ enum ShellCatalog {
 
     private static func builtInMainMenuTiles(widgetCount: Int, appCount: Int, themeCount: Int) -> [ShellTile] {
         [
-            ShellTile(title: "Runtime", subtitle: "Live host status", action: .openPage(5)),
-            ShellTile(title: "Widgets", subtitle: "\(widgetCount) compact views", action: .openPage(1)),
-            ShellTile(title: "Apps", subtitle: "\(appCount) entries", action: .openPage(2)),
-            ShellTile(title: "Themes", subtitle: "\(themeCount) installed", action: .openPage(3)),
-            ShellTile(title: "Settings", subtitle: "Host and plugin config", action: .openPage(4)),
-            ShellTile(title: "Plugin APIs", subtitle: "Swift HTML PHP bash", action: .openPage(6)),
-            ShellTile(title: "HID", subtitle: "Control online", action: .openPage(5)),
-            ShellTile(title: "Touch", subtitle: "Tap routing", action: .setStatus("Touch routes through focused tiles")),
-            ShellTile(title: "Knob", subtitle: "Focus control", action: .setStatus("Knob rotates focus; press activates")),
-            ShellTile(title: "Pages", subtitle: "Press page knob", action: .setStatus("Page knob cycles host pages")),
-            ShellTile(title: "Data", subtitle: "Provider slots", action: .setStatus("Data providers feed widgets")),
-            ShellTile(title: "Actions", subtitle: "Host routed", action: .setStatus("Action router is local for now")),
-            ShellTile(title: "Views", subtitle: "Swift/AppKit", action: .setStatus("Native view surface")),
-            ShellTile(title: "Dashboards", subtitle: "Plugin applets", action: .setStatus("Dashboard applets use plugin views")),
-            ShellTile(title: "Secrets", subtitle: "Keychain later", action: .setStatus("Secrets belong in Keychain")),
-            ShellTile(title: "Metrics", subtitle: "Widget idea", action: .setStatus("Metrics widget slot")),
-            ShellTile(title: "Music", subtitle: "Widget idea", action: .setStatus("Music widget slot")),
-            ShellTile(title: "HA", subtitle: "Widget idea", action: .setStatus("Home Assistant widget slot")),
-            ShellTile(title: "Editor", subtitle: "Layout tools", action: .setStatus("Widget editor will live here"))
+            ShellTile(title: "Runtime", subtitle: "Live device and host state", action: .openPage(5)),
+            ShellTile(title: "Widgets", subtitle: "\(widgetCount) installed views", action: .openPage(1)),
+            ShellTile(title: "Apps", subtitle: "\(appCount) applets and actions", action: .openPage(2)),
+            ShellTile(title: "Themes", subtitle: "\(themeCount) installed themes", action: .openPage(3)),
+            ShellTile(title: "Settings", subtitle: "Panel, menu, and plugin configuration", action: .openPage(4)),
+            ShellTile(title: "Plugin APIs", subtitle: "Swift · HTML · PHP · shell", action: .openPage(6))
         ]
     }
 
@@ -1379,6 +1407,7 @@ final class PanelView: NSView {
     private var dataBoardView: DataBoardView?
     private var pageLabels: [NSTextField] = []
     private let themeBackgroundView = ThemeBackgroundImageView(frame: .zero)
+    private let menuChromeView = MenuChromeView(frame: .zero)
     private let statusLabel = NSTextField(labelWithString: "")
     private let titleLabel = NSTextField(labelWithString: "")
     private let previousGridPad = ArrowPadView(direction: .previous)
@@ -1489,6 +1518,10 @@ final class PanelView: NSView {
 
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
         let point = NSPoint(x: logicalX, y: logicalY)
+        if let pageIndex = menuChromeView.navigationIndex(at: point) {
+            openPage(pageIndex)
+            return
+        }
         if let pageIndex = pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) {
             openPage(pageIndex)
             return
@@ -1589,6 +1622,9 @@ final class PanelView: NSView {
     private func setupSubviews() {
         themeBackgroundView.autoresizingMask = [.width, .height]
         addSubview(themeBackgroundView)
+
+        menuChromeView.autoresizingMask = [.width, .height]
+        addSubview(menuChromeView)
 
         titleLabel.font = NSFont.systemFont(ofSize: 24, weight: .bold)
         titleLabel.textColor = .white
@@ -1700,11 +1736,16 @@ final class PanelView: NSView {
     }
 
     private func layoutChrome() {
+        menuChromeView.frame = bounds
+        let usesTemplateChrome = activeMenuTemplate != .classic
+        titleLabel.isHidden = usesTemplateChrome
+        statusLabel.isHidden = usesTemplateChrome
         let inset: CGFloat = 16
         themeBackgroundView.frame = bounds
         titleLabel.frame = NSRect(x: inset, y: bounds.height - 46, width: 280, height: 30)
         let tabY = bounds.height - 48
         for (index, label) in pageLabels.enumerated() {
+            label.isHidden = usesTemplateChrome
             label.frame = NSRect(x: 320 + CGFloat(index) * 120, y: tabY, width: 104, height: 28)
         }
         statusLabel.frame = NSRect(x: inset + 4, y: 8, width: bounds.width - (inset + 4) * 2, height: 24)
@@ -1712,10 +1753,7 @@ final class PanelView: NSView {
     }
 
     private func layoutContent() {
-        let inset: CGFloat = 16
-        let topChrome: CGFloat = 62
-        let bottomChrome: CGFloat = 38
-        let contentRect = NSRect(x: inset, y: bottomChrome, width: bounds.width - inset * 2, height: bounds.height - topChrome - bottomChrome)
+        let contentRect = menuChromeView.contentRect(in: bounds)
         if let systemDashboardView {
             systemDashboardView.frame = contentRect
             return
@@ -1823,6 +1861,12 @@ final class PanelView: NSView {
         titleLabel.textColor = activeTheme.textPrimary
         layer?.backgroundColor = activeTheme.background.cgColor
         themeBackgroundView.configure(package: activeThemePackage)
+        menuChromeView.template = activeMenuTemplate
+        menuChromeView.theme = activeTheme
+        menuChromeView.pages = pages
+        menuChromeView.selectedPageIndex = currentPageIndex
+        menuChromeView.status = status
+        menuChromeView.menuSettings = settingsConfiguration.menuSettings
         for (index, label) in pageLabels.enumerated() {
             let active = index == currentPageIndex
             label.layer?.backgroundColor = (active
@@ -1847,6 +1891,11 @@ final class PanelView: NSView {
     private func updateStatus() {
         let pong = runtime.lastPong.map { " · pong \(Int(Date().timeIntervalSince($0)))s ago" } ?? ""
         statusLabel.stringValue = "\(currentPage.title) · \(status)\(pong)"
+        menuChromeView.status = "\(currentPage.title) · \(status)\(pong)"
+    }
+
+    private var activeMenuTemplate: PanelMenuTemplate {
+        PanelMenuTemplate(menuID: settingsConfiguration.mainMenuViewID)
     }
 
     private func updateRuntimeRows() {

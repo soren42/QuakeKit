@@ -2,7 +2,7 @@
   "$schema": "../../schemas/theme-plugin.schema.json",
   "id": "weather_glass",
   "name": "Weather Glass",
-  "version": "0.1.0",
+  "version": "1.0.0-rc1",
   "apiVersion": "0.1",
   "kind": "theme",
   "author": "QuakeKit",

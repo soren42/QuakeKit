@@ -29,7 +29,7 @@ dry_run="$(bool_value "${QUAKEKIT_MUSIC_DRY_RUN:-true}")"
 volume="$(seconds_value "${QUAKEKIT_MUSIC_VOLUME:-62}")"
 
 case "$provider" in
-  apple_music|local) ;;
+  apple_music|youtube_music|tidal|suno|local) ;;
   *) provider="spotify" ;;
 esac
 

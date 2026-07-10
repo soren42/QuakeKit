@@ -1,6 +1,6 @@
 # QuakeKit
 
-![Static Badge](https://img.shields.io/badge/-macOS-grey?style=flat&logo=apple)  ![Static Badge](https://img.shields.io/badge/version-6.3.2-orange?style=flat&logo=Swift)  ![Static Badge](https://img.shields.io/badge/status-ALPHA_Development_and_Test_ONLY-red?style=flat)
+![Static Badge](https://img.shields.io/badge/-macOS-grey?style=flat&logo=apple)  ![Static Badge](https://img.shields.io/badge/version-6.3.2-orange?style=flat&logo=Swift)  ![Static Badge](https://img.shields.io/badge/status-RC1_Community_Testing-blue?style=flat)
 
 
 Swift-native platform work for the DK-Quake / ARIS-68 touch display and control center.
@@ -9,7 +9,8 @@ This repository is being built as a modular device/runtime platform first. The D
 
 ## Status
 
-Early hardware/platform bring-up. This is not ready as an end-user replacement for DK-Suite yet.
+Release candidate 1 for community testing. This is still an unsigned local build,
+not a drop-in supported replacement for DK-Suite.
 
 Confirmed:
 
@@ -25,6 +26,8 @@ Confirmed:
 - The native shell supports global settings, plugin settings, and package installation from directories or tar bundles.
 - Installed plugin and theme packages can be removed from the primary settings window.
 - A basic `.app` bundle can be assembled for non-terminal launch testing.
+- RC1 ships selectable Status Rail, Radial Orbit, and Ambient Marquee native menu shells.
+- RC1 consolidates all Spotify examples into Music and individual LLM harness examples into AI Command Center.
 
 ## First Tangible Target
 

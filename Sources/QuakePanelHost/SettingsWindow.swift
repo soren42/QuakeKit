@@ -212,7 +212,7 @@ final class QuakeSettingsWindowView: NSView {
     }
 
     private func globalRows() -> [RowSpec] {
-        [
+        var rows = [
             RowSpec(
                 title: "Default Panel Page",
                 value: pageTitle(settings.defaultPageIndex),
@@ -247,6 +247,58 @@ final class QuakeSettingsWindowView: NSView {
             RowSpec(title: "Settings File", value: "settings.json", detail: "Global, carousel, and plugin setting overrides are persisted in Application Support.", control: nil),
             RowSpec(title: "Release Check", value: "./scripts/validate-release.sh", detail: "Builds Swift targets, validates packages, checks adapters, and assembles the app bundle.", control: nil)
         ]
+        switch PanelMenuTemplate(menuID: settings.mainMenuViewID) {
+        case .statusRail:
+            rows.insert(RowSpec(
+                title: "Status Rail Mode",
+                value: menuString("statusRail.railMode", fallback: "labels"),
+                detail: "Choose a labeled rail or a compact icon-style rail.",
+                control: popup(values: ["labels", "collapsed"], titles: ["Labels", "Collapsed"], selectedValue: menuString("statusRail.railMode", fallback: "labels")) { [weak self] value in
+                    self?.settings.menuSettings["statusRail.railMode"] = .string(value)
+                    self?.saveSettings()
+                }
+            ), at: 2)
+        case .radialOrbit:
+            rows.insert(RowSpec(
+                title: "Headline Projection",
+                value: menuBool("radialOrbit.headlineProjection", fallback: true) ? "On" : "Off",
+                detail: "Projects the focused applet's headline into the orbit hub.",
+                control: checkbox(isOn: menuBool("radialOrbit.headlineProjection", fallback: true)) { [weak self] enabled in
+                    self?.settings.menuSettings["radialOrbit.headlineProjection"] = .bool(enabled)
+                    self?.saveSettings()
+                }
+            ), at: 2)
+        case .ambientMarquee:
+            rows.insert(RowSpec(
+                title: "Dock Policy",
+                value: menuString("ambientMarquee.dockPolicy", fallback: "always"),
+                detail: "Autohide reveals the dock on touch or knob movement.",
+                control: popup(values: ["always", "autohide"], titles: ["Always Visible", "Autohide"], selectedValue: menuString("ambientMarquee.dockPolicy", fallback: "always")) { [weak self] value in
+                    self?.settings.menuSettings["ambientMarquee.dockPolicy"] = .string(value)
+                    self?.saveSettings()
+                }
+            ), at: 2)
+            rows.insert(RowSpec(
+                title: "Home Chip Overflow",
+                value: menuString("ambientMarquee.chipOverflow", fallback: "paginate"),
+                detail: "Controls overflow beyond six ambient Home chips.",
+                control: popup(values: ["paginate", "scroll", "shrink"], titles: ["Paginate", "Scroll", "Shrink"], selectedValue: menuString("ambientMarquee.chipOverflow", fallback: "paginate")) { [weak self] value in
+                    self?.settings.menuSettings["ambientMarquee.chipOverflow"] = .string(value)
+                    self?.saveSettings()
+                }
+            ), at: 3)
+        case .classic:
+            break
+        }
+        return rows
+    }
+
+    private func menuString(_ key: String, fallback: String) -> String {
+        settings.menuSettings[key]?.stringValue ?? fallback
+    }
+
+    private func menuBool(_ key: String, fallback: Bool) -> Bool {
+        settings.menuSettings[key]?.boolValue ?? fallback
     }
 
     private func themeRows() -> [RowSpec] {

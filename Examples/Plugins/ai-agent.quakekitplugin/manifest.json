@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "ai_agent",
-  "name": "Voice AI Agent",
-  "version": "0.2.0",
+  "name": "AI Command Center",
+  "version": "1.0.0-rc1",
   "apiVersion": "0.1",
   "entry": {
     "transport": "stdioJSONRPC",
@@ -60,19 +60,35 @@
   ],
   "settings": [
     {
-      "id": "llm_provider",
-      "title": "LLM Provider",
+      "id": "harness",
+      "title": "Agent / Harness",
       "type": "choice",
-      "defaultValue": "openai",
+      "defaultValue": "codex",
       "choices": [
-        "openai",
-        "anthropic",
+        "claude",
+        "claude_code",
+        "chatgpt",
+        "codex",
         "gemini",
+        "grok",
         "deepseek",
+        "cursor",
+        "antigravity",
         "local"
       ],
-      "environment": "QUAKEKIT_AGENT_PROVIDER",
-      "help": "Official API or local provider used by future agent execution."
+      "environment": "QUAKEKIT_AGENT_HARNESS",
+      "help": "The active AI harness shown by the command center. QuakeKit uses official APIs or local tools only; it does not automate consumer web UIs."
+    },
+    {
+      "id": "project_path",
+      "title": "Project Path",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_AGENT_PROJECT_PATH",
+      "help": "Optional project path used for the active-session summary.",
+      "group": "Session",
+      "order": 5,
+      "uiControl": "filePicker"
     },
     {
       "id": "transcription_backend",
@@ -118,6 +134,17 @@
       "defaultValue": false,
       "environment": "QUAKEKIT_AGENT_SPEAKER_OUTPUT",
       "help": "Whether future adapters may use spoken responses."
+    },
+    {
+      "id": "session_file",
+      "title": "Session File",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_AGENT_SESSION_FILE",
+      "help": "Optional pipe-delimited file: project|agents|tokensUsed|tokensRemaining|limit|queue|status.",
+      "group": "Session",
+      "order": 60,
+      "uiControl": "filePicker"
     }
   ],
   "actions": [
@@ -194,7 +221,7 @@
   "views": [
     {
       "id": "agent.conversation",
-      "title": "Agent Console",
+      "title": "AI Command Center",
       "type": "webDocument",
       "presentation": "pageAndWidget",
       "entryPath": "index.html",
@@ -206,7 +233,7 @@
     },
     {
       "id": "agent.session",
-      "title": "Meeting Notes",
+      "title": "AI Session",
       "type": "dataDriven",
       "presentation": "pageAndWidget",
       "dataStreamID": "agent.session",

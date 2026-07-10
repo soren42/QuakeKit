@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/functional-plugin.schema.json",
   "id": "music_now_playing",
-  "name": "Music Now Playing",
-  "version": "0.1.0",
+  "name": "Music",
+  "version": "1.0.0-rc1",
   "apiVersion": "0.1",
   "entry": { "transport": "shell", "command": "music-now-playing.sh", "arguments": [] },
   "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
@@ -11,7 +11,7 @@
     { "secrets": { "keys": ["SPOTIFY_ACCESS_TOKEN"] } }
   ],
   "settings": [
-    { "id": "provider", "title": "Provider", "type": "choice", "defaultValue": "spotify", "choices": ["spotify", "apple_music", "local"], "environment": "QUAKEKIT_MUSIC_PROVIDER", "help": "Preferred now-playing provider.", "group": "Source", "order": 10, "uiControl": "segmented" },
+    { "id": "provider", "title": "Source", "type": "choice", "defaultValue": "spotify", "choices": ["spotify", "apple_music", "youtube_music", "tidal", "suno", "local"], "environment": "QUAKEKIT_MUSIC_PROVIDER", "help": "Preferred now-playing source. One Music surface handles all providers.", "group": "Source", "order": 10, "uiControl": "segmented" },
     { "id": "refresh_interval", "title": "Refresh Interval", "type": "choice", "defaultValue": 5, "choices": [2, 5, 10, 30], "environment": "QUAKEKIT_MUSIC_REFRESH_SECONDS", "help": "Preferred refresh cadence in seconds.", "group": "Source", "order": 20, "uiControl": "popup" },
     { "id": "device_name", "title": "Device Name", "type": "string", "defaultValue": "Studio Speakers", "environment": "QUAKEKIT_MUSIC_DEVICE", "help": "Playback device label shown in offline-safe responses.", "group": "Playback", "order": 30, "uiControl": "textField" },
     { "id": "now_playing_file", "title": "Now Playing File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_MUSIC_NOW_PLAYING_FILE", "help": "Optional local pipe-delimited file: title|artist|album|state|position|duration.", "group": "Source", "order": 40, "uiControl": "filePicker" },

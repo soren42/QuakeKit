@@ -14,10 +14,12 @@ struct DataBoardSnapshot: Equatable {
     var subtitle: String
     var items: [DataBoardItem]
     var timestamp: Date?
+    var payload: JSONValue?
 
     init(pluginName: String, viewTitle: String, value: JSONValue?, timestamp: Date?) {
         self.title = viewTitle
         self.timestamp = timestamp
+        self.payload = value
         guard let value else {
             self.subtitle = pluginName
             self.items = [DataBoardItem(title: "No Data", value: "-", detail: "Run refresh action", positive: nil)]
@@ -150,6 +152,14 @@ final class DataBoardView: NSView {
     }
 
     private func drawCards() {
+        if snapshot.title.localizedCaseInsensitiveContains("playing") || snapshot.title.localizedCaseInsensitiveContains("music") {
+            drawMusicApplet()
+            return
+        }
+        if snapshot.title.localizedCaseInsensitiveContains("agent") || snapshot.title.localizedCaseInsensitiveContains("workbench") || snapshot.title.localizedCaseInsensitiveContains("meeting") {
+            drawAgentApplet()
+            return
+        }
         let top: CGFloat = 54
         let gap = theme.spacing
         let rect = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height - top)
@@ -168,6 +178,62 @@ final class DataBoardView: NSView {
             )
             drawCard(item, in: card)
         }
+    }
+
+    private func drawMusicApplet() {
+        let content = bounds.insetBy(dx: 2, dy: 4)
+        let art = NSRect(x: content.minX, y: content.minY, width: min(content.height, content.width * 0.24), height: content.height)
+        let artPath = NSBezierPath(roundedRect: art, xRadius: theme.cornerRadius, yRadius: theme.cornerRadius)
+        theme.accent.withAlphaComponent(0.22).setFill(); artPath.fill()
+        theme.accent.setStroke(); artPath.lineWidth = max(1, theme.borderWidth); artPath.stroke()
+        drawText("MUSIC", in: art.insetBy(dx: 18, dy: art.height * 0.58), size: 18, weight: .black, color: theme.accent, alignment: .center)
+        drawText("NOW PLAYING", in: NSRect(x: art.minX + 10, y: art.minY + 20, width: art.width - 20, height: 18), size: 11, weight: .bold, color: theme.textSecondary, alignment: .center)
+        let info = NSRect(x: art.maxX + 28, y: content.minY, width: content.width - art.width - 28, height: content.height)
+        let object = snapshot.payload?.objectValue ?? [:]
+        let track = object["track"]?.objectValue ?? object
+        let title = track["title"]?.stringValue ?? snapshot.items.first?.value ?? "No track selected"
+        let artist = track["artist"]?.stringValue ?? snapshot.items.first?.detail ?? "Choose a provider in settings"
+        let album = track["album"]?.stringValue ?? object["provider"]?.stringValue ?? "Offline-safe source"
+        let playing = object["playing"]?.boolValue ?? true
+        drawText(title, in: NSRect(x: info.minX, y: info.maxY - 72, width: info.width, height: 42), size: 34, weight: .black, color: theme.textPrimary)
+        drawText(artist, in: NSRect(x: info.minX, y: info.maxY - 104, width: info.width, height: 26), size: 20, weight: .semibold, color: theme.textSecondary)
+        drawText(album, in: NSRect(x: info.minX, y: info.maxY - 132, width: info.width, height: 22), size: 16, weight: .medium, color: theme.accent)
+        let trackRect = NSRect(x: info.minX, y: info.minY + 66, width: info.width, height: 12)
+        theme.surfaceRaised.setFill(); NSBezierPath(roundedRect: trackRect, xRadius: 6, yRadius: 6).fill()
+        theme.accent.setFill(); NSBezierPath(roundedRect: NSRect(x: trackRect.minX, y: trackRect.minY, width: trackRect.width * 0.58, height: trackRect.height), xRadius: 6, yRadius: 6).fill()
+        drawText(playing ? "◀     ❚❚     ▶" : "◀     ▶     ▶", in: NSRect(x: info.minX, y: info.minY + 12, width: 280, height: 34), size: 24, weight: .bold, color: theme.textPrimary)
+        drawText(playing ? "PLAYING" : "PAUSED", in: NSRect(x: info.maxX - 112, y: info.minY + 18, width: 112, height: 18), size: 12, weight: .bold, color: playing ? theme.success : theme.warning, alignment: .right)
+    }
+
+    private func drawAgentApplet() {
+        let object = snapshot.payload?.objectValue ?? [:]
+        let provider = object["harness"]?.stringValue ?? object["provider"]?.stringValue ?? object["agent"]?.stringValue ?? "Agent"
+        let state = object["status"]?.stringValue ?? object["captureState"]?.stringValue ?? "Ready"
+        let metrics = snapshot.items.prefix(5)
+        let left = NSRect(x: 0, y: 0, width: bounds.width * 0.36, height: bounds.height - 54)
+        let right = NSRect(x: left.maxX + theme.spacing, y: 0, width: bounds.width - left.width - theme.spacing, height: bounds.height - 54)
+        fillConsoleCard(left)
+        drawText(provider.uppercased(), in: NSRect(x: left.minX + 20, y: left.maxY - 58, width: left.width - 40, height: 28), size: 23, weight: .black, color: theme.accent)
+        drawText(state, in: NSRect(x: left.minX + 20, y: left.maxY - 92, width: left.width - 40, height: 24), size: 18, weight: .semibold, color: theme.textPrimary)
+        drawText("VOICE  •  TRANSCRIBE  •  SUMMARIZE", in: NSRect(x: left.minX + 20, y: left.minY + 22, width: left.width - 40, height: 18), size: 11, weight: .bold, color: theme.textSecondary)
+        fillConsoleCard(right)
+        drawText("SESSION METRICS", in: NSRect(x: right.minX + 18, y: right.maxY - 34, width: right.width - 36, height: 18), size: 13, weight: .bold, color: theme.textSecondary)
+        let columns = 3
+        let cellWidth = (right.width - 36) / CGFloat(columns)
+        for (index, item) in metrics.enumerated() {
+            let column = index % columns
+            let row = index / columns
+            let rect = NSRect(x: right.minX + 18 + CGFloat(column) * cellWidth, y: right.maxY - 102 - CGFloat(row) * 72, width: cellWidth - 8, height: 64)
+            drawText(item.title.uppercased(), in: NSRect(x: rect.minX, y: rect.maxY - 18, width: rect.width, height: 16), size: 10, weight: .bold, color: theme.textSecondary)
+            drawText(item.value, in: NSRect(x: rect.minX, y: rect.minY + 10, width: rect.width, height: 28), size: 22, weight: .black, color: item.positive == false ? theme.warning : theme.textPrimary)
+        }
+    }
+
+    private func fillConsoleCard(_ rect: NSRect) {
+        theme.surface.withAlphaComponent(0.88).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: theme.cornerRadius, yRadius: theme.cornerRadius).fill()
+        theme.border.setStroke()
+        NSBezierPath(roundedRect: rect, xRadius: theme.cornerRadius, yRadius: theme.cornerRadius).stroke()
     }
 
     private func drawCard(_ item: DataBoardItem, in rect: NSRect) {

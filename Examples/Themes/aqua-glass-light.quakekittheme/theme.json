@@ -1,63 +1,63 @@
 {
   "$schema": "../../schemas/theme-plugin.schema.json",
-  "id": "cyberpunk_neon",
-  "name": "Cyberpunk Neon",
+  "id": "aqua_glass_light",
+  "name": "Aqua Glass Light",
   "version": "1.0.0-rc1",
   "apiVersion": "0.1",
   "kind": "theme",
   "author": "QuakeKit",
-  "description": "Black-glass dashboard theme with high contrast neon cyan, magenta, and acid green accents.",
+  "description": "Aqua Glass Light RC1 theme imported from the Claude Design token contract.",
   "palette": {
-    "mode": "dark",
+    "mode": "light",
     "colors": {
       "background": {
-        "value": "#020006",
-        "role": "Near-black glass base",
+        "value": "#E9F1FC",
+        "role": "Night sky background",
         "configurable": false
       },
       "surface": {
-        "value": "#080712E6",
-        "role": "Dark translucent card surface",
+        "value": "#FFFFFFE6",
+        "role": "Translucent glass surface",
         "configurable": true
       },
       "surfaceRaised": {
-        "value": "#121024F2",
-        "role": "Focused neon glass surface",
+        "value": "#DCE9FAF2",
+        "role": "Raised glass surface",
         "configurable": true
       },
       "border": {
-        "value": "#00F5FF88",
-        "role": "Cyan neon border",
+        "value": "#7DA2D266",
+        "role": "Glass rim",
         "configurable": true
       },
       "textPrimary": {
-        "value": "#F8FBFF",
+        "value": "#142238",
         "role": "Primary text",
         "configurable": false
       },
       "textSecondary": {
-        "value": "#B7B2FF",
-        "role": "Secondary violet text",
+        "value": "#52677E",
+        "role": "Secondary text",
         "configurable": false
       },
       "accent": {
-        "value": "#00F5FF",
-        "role": "Cyan focus",
+        "value": "#007AFF",
+        "role": "Weather highlight",
         "configurable": true
       },
       "success": {
-        "value": "#B6FF00",
-        "role": "Acid green healthy state",
+        "value": "#64D2FF",
+        "role": "Favorable state",
         "configurable": true
       },
       "warning": {
-        "value": "#FFE600",
-        "role": "Electric yellow warning",
+        "value": "#FF9F0A",
+        "role": "Watch state",
         "configurable": true
       },
       "danger": {
-        "value": "#FF2BD6",
-        "role": "Magenta alert",
+        "value": "#FF453A",
+        "role": "Alert state",
         "configurable": true
       }
     },
@@ -75,33 +75,21 @@
     }
   },
   "typography": {
-    "displayFont": "SF Pro",
+    "displayFont": "SF Pro Rounded",
     "bodyFont": "SF Pro",
     "monoFont": "SF Mono",
     "scale": {
-      "caption": 12,
-      "body": 15,
-      "title": 24,
-      "value": 36
+      "caption": 13,
+      "body": 16,
+      "title": 26,
+      "value": 42
     }
   },
   "metrics": {
-    "cornerRadius": 6,
-    "borderWidth": 1.5,
-    "spacing": 9,
-    "density": "compact"
-  },
-  "layout": {
-    "defaultPageStyle": "halfAndGrid",
-    "widgetGrid": {
-      "columns": 8,
-      "rows": 2
-    },
-    "appletGrid": {
-      "columns": 4,
-      "rows": 1
-    },
-    "splitRatio": 0.48
+    "cornerRadius": 13,
+    "borderWidth": 1,
+    "spacing": 12,
+    "density": "comfortable"
   },
   "components": {
     "tile": {
@@ -110,7 +98,7 @@
       "border": "border",
       "accent": "accent",
       "selectedBackground": "surfaceRaised",
-      "selectedBorder": "danger"
+      "selectedBorder": "accent"
     },
     "tab": {
       "background": "surface",
@@ -123,40 +111,40 @@
       "background": "surface",
       "foreground": "textPrimary",
       "border": "border",
-      "accent": "success"
+      "accent": "accent"
     },
     "gauge": {
       "background": "surface",
       "foreground": "textPrimary",
-      "accent": "success"
+      "accent": "accent"
     },
     "chart": {
       "background": "surface",
       "foreground": "textPrimary",
-      "accent": "danger"
+      "accent": "accent"
     }
   },
   "hardware": {
     "knobRing": {
       "enabled": true,
       "idle": {
-        "color": "accent",
-        "intensity": 0.25,
+        "color": "border",
+        "intensity": 0.18,
         "animation": "solid"
       },
       "focus": {
-        "color": "danger",
-        "intensity": 0.8,
+        "color": "accent",
+        "intensity": 0.65,
         "animation": "pulse"
       },
       "success": {
         "color": "success",
-        "intensity": 0.9,
+        "intensity": 0.75,
         "animation": "solid"
       },
       "warning": {
         "color": "warning",
-        "intensity": 0.9,
+        "intensity": 0.85,
         "animation": "pulse"
       },
       "danger": {
@@ -166,52 +154,61 @@
       },
       "progress": {
         "color": "accent",
-        "intensity": 0.85,
+        "intensity": 0.7,
         "animation": "progress"
       }
     }
   },
-  "assets": [
-    {
-      "id": "neonCircuitBackdrop",
-      "kind": "image",
-      "path": "assets/neon-circuit.svg",
-      "role": "background",
-      "fit": "cover",
-      "opacity": 0.32,
-      "scale": 1
-    }
-  ],
+  "layout": {
+    "defaultPageStyle": "thirds",
+    "widgetGrid": {
+      "columns": 3,
+      "rows": 2
+    },
+    "appletGrid": {
+      "columns": 3,
+      "rows": 1
+    },
+    "splitRatio": 0.34
+  },
+  "assets": [],
   "options": [
     {
       "id": "accentColor",
-      "title": "Neon cyan",
+      "title": "Accent color",
       "type": "color",
       "target": "palette.colors.accent.value",
-      "defaultValue": "#00F5FF"
+      "defaultValue": "#007AFF"
     },
     {
-      "id": "dangerColor",
-      "title": "Neon magenta",
-      "type": "color",
-      "target": "palette.colors.danger.value",
-      "defaultValue": "#FF2BD6"
-    },
-    {
-      "id": "successColor",
-      "title": "Acid green",
-      "type": "color",
-      "target": "palette.colors.success.value",
-      "defaultValue": "#B6FF00"
+      "id": "cornerRadius",
+      "title": "Corner radius",
+      "type": "number",
+      "target": "metrics.cornerRadius",
+      "defaultValue": 8,
+      "minimum": 2,
+      "maximum": 16
     },
     {
       "id": "spacing",
-      "title": "Panel density",
+      "title": "Spacing",
       "type": "number",
       "target": "metrics.spacing",
-      "defaultValue": 9,
-      "minimum": 6,
-      "maximum": 14
+      "defaultValue": 12,
+      "minimum": 8,
+      "maximum": 18
+    },
+    {
+      "id": "density",
+      "title": "Density",
+      "type": "choice",
+      "target": "metrics.density",
+      "defaultValue": "comfortable",
+      "choices": [
+        "compact",
+        "standard",
+        "comfortable"
+      ]
     }
   ]
 }
