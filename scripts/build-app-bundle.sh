@@ -33,6 +33,7 @@ if [ -d "$RESOURCE_BUNDLE" ]; then
   /usr/bin/ditto "$RESOURCE_BUNDLE" "$BUNDLE_DIR/QuakeKit_QuakePanelHost.bundle"
 fi
 /usr/bin/ditto "$REPO_DIR/Examples" "$RESOURCES_DIR/Examples"
+/bin/cp "$REPO_DIR/Sources/QuakePanelHost/Resources/Brand/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -45,6 +46,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundleExecutable</key>
   <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon.icns</string>
   <key>CFBundleIdentifier</key>
   <string>com.soren42.quakekit</string>
   <key>CFBundleInfoDictionaryVersion</key>

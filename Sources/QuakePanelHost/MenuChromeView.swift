@@ -35,6 +35,8 @@ final class MenuChromeView: NSView {
     var selectedPageIndex = 0 { didSet { needsDisplay = true } }
     var status = "Ready" { didSet { needsDisplay = true } }
     var menuSettings: [String: JSONValue] = [:] { didSet { needsDisplay = true } }
+    private lazy var darkWordmark = wordmark(named: "quakekit-wordmark-ondark")
+    private lazy var lightWordmark = wordmark(named: "quakekit-wordmark-onlight")
 
     override var isOpaque: Bool { false }
 
@@ -89,7 +91,7 @@ final class MenuChromeView: NSView {
         fill(bounds, color: theme.background)
         fill(NSRect(x: 0, y: 0, width: 224, height: bounds.height), color: theme.surface.withAlphaComponent(0.94))
         stroke(NSRect(x: 0, y: 0, width: 224, height: bounds.height), color: theme.border)
-        drawText("QuakeKit", in: NSRect(x: 18, y: bounds.height - 35, width: 128, height: 22), size: 18, weight: .black, color: theme.textPrimary)
+        drawWordmark(in: NSRect(x: 16, y: bounds.height - 43, width: 142, height: 37))
         drawText("STATUS RAIL", in: NSRect(x: 18, y: bounds.height - 55, width: 160, height: 14), size: 10, weight: .bold, color: theme.accent)
         drawText(clockString(), in: NSRect(x: bounds.width - 86, y: bounds.height - 30, width: 68, height: 18), size: 14, weight: .bold, color: theme.textPrimary, alignment: .right)
         strokeLine(from: NSPoint(x: 224, y: bounds.height - 38), to: NSPoint(x: bounds.width, y: bounds.height - 38), color: theme.border)
@@ -125,7 +127,7 @@ final class MenuChromeView: NSView {
             if index == selectedPageIndex { fillRounded(rect, color: theme.accent.withAlphaComponent(0.18), radius: 6) }
             drawText(page.title, in: rect, size: 12, weight: .bold, color: index == selectedPageIndex ? theme.textPrimary : theme.textSecondary, alignment: .center)
         }
-        drawText("QuakeKit / (clockString())", in: NSRect(x: 18, y: bounds.height - 28, width: 200, height: 16), size: 11, weight: .medium, color: theme.textSecondary)
+        drawText("QuakeKit / \(clockString())", in: NSRect(x: 18, y: bounds.height - 28, width: 200, height: 16), size: 11, weight: .medium, color: theme.textSecondary)
     }
 
     private func drawAmbientMarquee() {
@@ -133,7 +135,7 @@ final class MenuChromeView: NSView {
         let hero = NSRect(x: 0, y: bounds.height - 130, width: bounds.width, height: 130)
         fill(hero, color: theme.surface.withAlphaComponent(0.72))
         drawText(clockString(), in: NSRect(x: 30, y: bounds.height - 100, width: 270, height: 58), size: 48, weight: .thin, color: theme.textPrimary)
-        drawText("QUAKEKIT  •  (status.uppercased())", in: NSRect(x: 34, y: bounds.height - 122, width: 420, height: 16), size: 11, weight: .bold, color: theme.accent)
+        drawText("QUAKEKIT  •  \(status.uppercased())", in: NSRect(x: 34, y: bounds.height - 122, width: 420, height: 16), size: 11, weight: .bold, color: theme.accent)
         drawText("Ambient Marquee", in: NSRect(x: bounds.width - 270, y: bounds.height - 94, width: 240, height: 22), size: 16, weight: .bold, color: theme.textPrimary, alignment: .right)
         drawText("Live display companion", in: NSRect(x: bounds.width - 270, y: bounds.height - 117, width: 240, height: 16), size: 11, weight: .medium, color: theme.textSecondary, alignment: .right)
         let dockY: CGFloat = 14
@@ -147,6 +149,15 @@ final class MenuChromeView: NSView {
     }
 
     private func clockString() -> String { DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short) }
+    private func wordmark(named name: String) -> NSImage? {
+        guard let url = Bundle.module.url(forResource: name, withExtension: "svg", subdirectory: "Brand") else { return nil }
+        return NSImage(contentsOf: url)
+    }
+    private func drawWordmark(in rect: NSRect) {
+        let rgb = theme.background.usingColorSpace(.deviceRGB)
+        let luminance = (rgb?.redComponent ?? 0) * 0.2126 + (rgb?.greenComponent ?? 0) * 0.7152 + (rgb?.blueComponent ?? 0) * 0.0722
+        (luminance > 0.55 ? lightWordmark : darkWordmark)?.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+    }
     private func fill(_ rect: NSRect, color: NSColor) { color.setFill(); rect.fill() }
     private func stroke(_ rect: NSRect, color: NSColor) { color.setStroke(); NSBezierPath(rect: rect).stroke() }
     private func fillRounded(_ rect: NSRect, color: NSColor, radius: CGFloat) { color.setFill(); NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill() }

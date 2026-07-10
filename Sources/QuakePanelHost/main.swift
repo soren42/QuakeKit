@@ -170,8 +170,8 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let image = NSImage(contentsOf: url) else {
             return nil
         }
-        image.size = NSSize(width: 55, height: 20)
-        image.isTemplate = false
+        image.size = NSSize(width: 18, height: 18)
+        image.isTemplate = true
         return image
     }
 
