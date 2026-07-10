@@ -4,21 +4,42 @@ import QuakePluginAPI
 
 final class QuakeSettingsWindowView: NSView {
     private enum Section: Int, CaseIterable {
-        case global
+        case general
         case themes
         case widgets
         case carousel
         case plugins
+        case audioPrivacy
         case about
 
         var title: String {
             switch self {
-            case .global: return "Global"
+            case .general: return "General"
             case .themes: return "Themes"
             case .widgets: return "Widgets & Apps"
             case .carousel: return "Carousel"
             case .plugins: return "Plugins"
+            case .audioPrivacy: return "Audio & Privacy"
             case .about: return "About"
+            }
+        }
+
+        var group: String {
+            switch self {
+            case .general, .themes, .widgets, .carousel: return "SYSTEM"
+            case .plugins, .audioPrivacy, .about: return "PACKAGES"
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .general: return "slider.horizontal.3"
+            case .themes: return "paintpalette"
+            case .widgets: return "square.grid.2x2"
+            case .carousel: return "arrow.triangle.2.circlepath"
+            case .plugins: return "powerplug"
+            case .audioPrivacy: return "mic"
+            case .about: return "info.circle"
             }
         }
     }
@@ -28,15 +49,24 @@ final class QuakeSettingsWindowView: NSView {
     private var settings: QuakeSettingsConfiguration
     private var themeConfiguration: ThemeUserConfiguration
     private let onConfigurationChanged: () -> Void
-    private let titleLabel = NSTextField(labelWithString: "QuakeKit Settings")
-    private let sectionControl = NSSegmentedControl(labels: Section.allCases.map(\.title), trackingMode: .selectOne, target: nil, action: nil)
+    private let sidebar = NSView()
+    private let sidebarBrand = NSTextField(labelWithString: "QuakeKit")
+    private let sidebarStack = NSStackView()
+    private let detailTitleLabel = NSTextField(labelWithString: "General")
+    private let detailSubtitleLabel = NSTextField(labelWithString: "Configure the QuakeKit host and panel behavior.")
+    private let detailHeader = NSView()
     private let scrollView = NSScrollView()
     private let documentView = NSView()
     private let installPluginButton = NSButton(title: "Install Plugin...", target: nil, action: nil)
     private let installThemeButton = NSButton(title: "Install Theme...", target: nil, action: nil)
     private let openPackagesButton = NSButton(title: "Open Packages", target: nil, action: nil)
     private var rowViews: [SettingsRowView] = []
-    private var activeSection: Section = .global
+    private var activeSection: Section = .general
+    private var sectionButtons: [Section: NSButton] = [:]
+    private let microphoneStatus: () -> String
+    private let onRequestMicrophoneAccess: () -> Void
+    private let onRecordMeetingClip: () -> Void
+    private let onSpeakTest: () -> Void
 
     init(
         frame frameRect: NSRect,
@@ -44,37 +74,58 @@ final class QuakeSettingsWindowView: NSView {
         themePackages: [ThemePackage],
         settings: QuakeSettingsConfiguration,
         themeConfiguration: ThemeUserConfiguration,
+        microphoneStatus: @escaping () -> String = { "unknown" },
+        onRequestMicrophoneAccess: @escaping () -> Void = {},
+        onRecordMeetingClip: @escaping () -> Void = {},
+        onSpeakTest: @escaping () -> Void = {},
         onConfigurationChanged: @escaping () -> Void
     ) {
         self.pluginPackages = pluginPackages
         self.themePackages = themePackages
         self.settings = settings
         self.themeConfiguration = themeConfiguration
+        self.microphoneStatus = microphoneStatus
+        self.onRequestMicrophoneAccess = onRequestMicrophoneAccess
+        self.onRecordMeetingClip = onRecordMeetingClip
+        self.onSpeakTest = onSpeakTest
         self.onConfigurationChanged = onConfigurationChanged
+        self.activeSection = Section(rawValue: UserDefaults.standard.integer(forKey: "QuakeKit.settings.activeSection")) ?? .general
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
-        titleLabel.font = NSFont.systemFont(ofSize: 28, weight: .bold)
-        titleLabel.backgroundColor = .clear
-        addSubview(titleLabel)
+        configureSidebar()
+        addSubview(sidebar)
 
-        sectionControl.selectedSegment = 0
-        sectionControl.target = self
-        sectionControl.action = #selector(sectionChanged)
-        addSubview(sectionControl)
+        detailTitleLabel.font = NSFont.systemFont(ofSize: 15, weight: .semibold)
+        detailTitleLabel.backgroundColor = .clear
+        detailHeader.addSubview(detailTitleLabel)
+        detailSubtitleLabel.font = NSFont.systemFont(ofSize: 11, weight: .regular)
+        detailSubtitleLabel.textColor = .secondaryLabelColor
+        detailSubtitleLabel.backgroundColor = .clear
+        detailHeader.addSubview(detailSubtitleLabel)
+        detailHeader.wantsLayer = true
+        detailHeader.layer?.borderColor = NSColor.separatorColor.cgColor
+        detailHeader.layer?.borderWidth = 0.5
+        addSubview(detailHeader)
 
         installPluginButton.target = self
         installPluginButton.action = #selector(installPlugin)
-        addSubview(installPluginButton)
+        installPluginButton.image = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil)
+        installPluginButton.imagePosition = .imageLeading
+        detailHeader.addSubview(installPluginButton)
 
         installThemeButton.target = self
         installThemeButton.action = #selector(installTheme)
-        addSubview(installThemeButton)
+        installThemeButton.image = NSImage(systemSymbolName: "paintpalette", accessibilityDescription: nil)
+        installThemeButton.imagePosition = .imageLeading
+        detailHeader.addSubview(installThemeButton)
 
         openPackagesButton.target = self
         openPackagesButton.action = #selector(openPackageFolder)
-        addSubview(openPackagesButton)
+        openPackagesButton.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        openPackagesButton.imagePosition = .imageLeading
+        detailHeader.addSubview(openPackagesButton)
 
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
@@ -89,16 +140,20 @@ final class QuakeSettingsWindowView: NSView {
 
     override func layout() {
         super.layout()
-        let inset: CGFloat = 28
-        titleLabel.frame = NSRect(x: inset, y: bounds.height - 64, width: 320, height: 36)
-        let compactHeader = bounds.width < 780
-        let buttonY = compactHeader ? bounds.height - 104 : bounds.height - 62
-        openPackagesButton.frame = NSRect(x: bounds.width - inset - 128, y: buttonY, width: 128, height: 30)
-        installThemeButton.frame = NSRect(x: openPackagesButton.frame.minX - 146, y: buttonY, width: 134, height: 30)
-        installPluginButton.frame = NSRect(x: installThemeButton.frame.minX - 146, y: buttonY, width: 134, height: 30)
-        let sectionY = compactHeader ? bounds.height - 142 : bounds.height - 104
-        sectionControl.frame = NSRect(x: inset, y: sectionY, width: min(720, bounds.width - inset * 2), height: 28)
-        scrollView.frame = NSRect(x: inset, y: inset, width: bounds.width - inset * 2, height: bounds.height - (compactHeader ? 186 : 148))
+        let narrow = bounds.width < 720
+        let sidebarWidth: CGFloat = narrow ? 62 : 236
+        sidebar.frame = NSRect(x: 0, y: 0, width: sidebarWidth, height: bounds.height)
+        sidebarBrand.isHidden = narrow
+        sidebarBrand.frame = NSRect(x: 16, y: bounds.height - 43, width: 180, height: 24)
+        detailHeader.frame = NSRect(x: sidebarWidth, y: bounds.height - 52, width: bounds.width - sidebarWidth, height: 52)
+        detailTitleLabel.frame = NSRect(x: 20, y: 26, width: 260, height: 18)
+        detailSubtitleLabel.frame = NSRect(x: 20, y: 9, width: max(180, detailHeader.bounds.width - 480), height: 14)
+        let buttonY: CGFloat = 13
+        openPackagesButton.frame = NSRect(x: detailHeader.bounds.width - 134, y: buttonY, width: 118, height: 27)
+        installThemeButton.frame = NSRect(x: openPackagesButton.frame.minX - 123, y: buttonY, width: 112, height: 27)
+        installPluginButton.frame = NSRect(x: installThemeButton.frame.minX - 123, y: buttonY, width: 112, height: 27)
+        scrollView.frame = NSRect(x: sidebarWidth, y: 0, width: bounds.width - sidebarWidth, height: bounds.height - 52)
+        sidebarStack.frame = NSRect(x: narrow ? 10 : 12, y: 20, width: sidebarWidth - (narrow ? 20 : 24), height: max(0, bounds.height - 88))
         layoutRows()
     }
 
@@ -108,9 +163,77 @@ final class QuakeSettingsWindowView: NSView {
         rebuildRows()
     }
 
-    @objc private func sectionChanged() {
-        activeSection = Section(rawValue: sectionControl.selectedSegment) ?? .global
+    @objc private func sectionChanged(_ sender: NSButton) {
+        activeSection = Section(rawValue: sender.tag) ?? .general
+        UserDefaults.standard.set(activeSection.rawValue, forKey: "QuakeKit.settings.activeSection")
         rebuildRows()
+    }
+
+    private func configureSidebar() {
+        sidebar.wantsLayer = true
+        sidebar.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        sidebar.layer?.borderColor = NSColor.separatorColor.cgColor
+        sidebar.layer?.borderWidth = 0.5
+        sidebarBrand.font = NSFont.systemFont(ofSize: 15, weight: .bold)
+        sidebarBrand.backgroundColor = .clear
+        sidebar.addSubview(sidebarBrand)
+        sidebarBrand.frame = NSRect(x: 16, y: 0, width: 180, height: 24)
+
+        sidebarStack.orientation = .vertical
+        sidebarStack.alignment = .leading
+        sidebarStack.spacing = 2
+        sidebar.addSubview(sidebarStack)
+        var currentGroup = ""
+        for section in Section.allCases {
+            if section.group != currentGroup {
+                currentGroup = section.group
+                let label = NSTextField(labelWithString: section.group)
+                label.font = NSFont.systemFont(ofSize: 10, weight: .semibold)
+                label.textColor = .tertiaryLabelColor
+                label.backgroundColor = .clear
+                label.alignment = .left
+                label.setContentHuggingPriority(.required, for: .vertical)
+                label.frame.size = NSSize(width: 180, height: 22)
+                sidebarStack.addArrangedSubview(label)
+            }
+            let button = NSButton(title: section.title, target: self, action: #selector(sectionChanged(_:)))
+            button.tag = section.rawValue
+            button.bezelStyle = .texturedRounded
+            button.isBordered = false
+            button.alignment = .left
+            button.image = NSImage(systemSymbolName: section.symbolName, accessibilityDescription: section.title)
+            button.imagePosition = .imageLeading
+            button.imageScaling = .scaleProportionallyDown
+            button.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+            button.contentTintColor = .labelColor
+            button.setButtonType(.toggle)
+            button.frame.size = NSSize(width: 200, height: 30)
+            button.toolTip = section.title
+            sidebarStack.addArrangedSubview(button)
+            sectionButtons[section] = button
+        }
+        updateSidebarSelection()
+    }
+
+    private func updateSidebarSelection() {
+        for (section, button) in sectionButtons {
+            button.state = section == activeSection ? .on : .off
+            button.contentTintColor = section == activeSection ? .controlAccentColor : .labelColor
+        }
+        detailTitleLabel.stringValue = activeSection.title
+        detailSubtitleLabel.stringValue = sectionSubtitle(activeSection)
+    }
+
+    private func sectionSubtitle(_ section: Section) -> String {
+        switch section {
+        case .general: return "Configure the QuakeKit host and panel behavior."
+        case .themes: return "Select a theme and tune its declared presentation options."
+        case .widgets: return "Browse installed panel views and their available settings."
+        case .carousel: return "Rotate eligible widgets automatically on the panel."
+        case .plugins: return "Inspect package capabilities, permissions, and settings."
+        case .audioPrivacy: return "Review microphone access and meeting capture controls."
+        case .about: return "Runtime version, package inventory, and local support paths."
+        }
     }
 
     @objc private func installPlugin() {
@@ -153,6 +276,7 @@ final class QuakeSettingsWindowView: NSView {
     }
 
     private func rebuildRows() {
+        updateSidebarSelection()
         rowViews.forEach { $0.removeFromSuperview() }
         rowViews.removeAll()
         for row in rowSpecs() {
@@ -165,8 +289,8 @@ final class QuakeSettingsWindowView: NSView {
 
     private func layoutRows() {
         let width = max(520, scrollView.bounds.width - 18)
-        let rowHeight: CGFloat = 78
-        let gap: CGFloat = 10
+        let rowHeight: CGFloat = 72
+        let gap: CGFloat = 0
         let totalHeight = CGFloat(rowViews.count) * rowHeight + CGFloat(max(0, rowViews.count - 1)) * gap + 8
         documentView.frame = NSRect(x: 0, y: 0, width: width, height: max(scrollView.bounds.height, totalHeight))
         for (index, row) in rowViews.enumerated() {
@@ -196,7 +320,7 @@ final class QuakeSettingsWindowView: NSView {
 
     private func rowSpecs() -> [RowSpec] {
         switch activeSection {
-        case .global:
+        case .general:
             return globalRows()
         case .themes:
             return themeRows()
@@ -206,6 +330,8 @@ final class QuakeSettingsWindowView: NSView {
             return carouselRows()
         case .plugins:
             return pluginRows()
+        case .audioPrivacy:
+            return audioPrivacyRows()
         case .about:
             return aboutRows()
         }
@@ -368,7 +494,6 @@ final class QuakeSettingsWindowView: NSView {
                     detail: "\(view.presentation?.rawValue ?? "page") · \(view.layout?.rawValue ?? "host layout") · \(view.type?.rawValue ?? package.manifest.entry.transport.rawValue)\(view.presentation == .mainMenu ? " · \(view.menuItems.count) menu items" : "")",
                     control: button("Open App Settings") { [weak self] in
                         self?.activeSection = .plugins
-                        self?.sectionControl.selectedSegment = Section.plugins.rawValue
                         self?.rebuildRows()
                     }
                 )
@@ -460,6 +585,54 @@ final class QuakeSettingsWindowView: NSView {
             })
             return rows
         }
+    }
+
+    private func audioPrivacyRows() -> [RowSpec] {
+        let microphone = microphoneStatus()
+        let microphoneActionTitle: String
+        if microphone == "authorized" {
+            microphoneActionTitle = "Granted"
+        } else if microphone == "denied" || microphone == "restricted" {
+            microphoneActionTitle = "Open Privacy"
+        } else {
+            microphoneActionTitle = "Allow"
+        }
+        return [
+            RowSpec(
+                title: "Microphone Access",
+                value: microphone.capitalized,
+                detail: "Required only for voice input and meeting recordings. QuakeKit never displays or stores permission secrets.",
+                control: button(microphoneActionTitle) { [weak self] in
+                    self?.onRequestMicrophoneAccess()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.rebuildRows() }
+                }
+            ),
+            RowSpec(
+                title: "Meeting Recording",
+                value: "Idle",
+                detail: "Record a thirty-second local meeting clip for the configured transcription workflow.",
+                control: button("Record 30s") { [weak self] in self?.onRecordMeetingClip() }
+            ),
+            RowSpec(
+                title: "Speaker Test",
+                value: "Ready",
+                detail: "Play a short local speech confirmation through the selected macOS output device.",
+                control: button("Test Speaker") { [weak self] in self?.onSpeakTest() }
+            ),
+            RowSpec(
+                title: "Recording Location",
+                value: "Application Support",
+                detail: "~/Library/Application Support/QuakeKit/Recordings. Audio is not uploaded by the shell.",
+                control: button("Reveal") { [weak self] in self?.openRecordingsFolder() }
+            )
+        ]
+    }
+
+    private func openRecordingsFolder() {
+        guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        let directory = base.appendingPathComponent("QuakeKit/Recordings", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        NSWorkspace.shared.activateFileViewerSelecting([directory])
     }
 
     private func executableStatus(for transport: PluginEntry.Transport) -> String {
@@ -773,10 +946,9 @@ private final class SettingsRowView: NSView {
         self.control = control
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.78).cgColor
+        layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         layer?.borderColor = NSColor.separatorColor.cgColor
-        layer?.borderWidth = 1
+        layer?.borderWidth = 0.5
 
         titleLabel.stringValue = title
         titleLabel.font = NSFont.systemFont(ofSize: 15, weight: .semibold)

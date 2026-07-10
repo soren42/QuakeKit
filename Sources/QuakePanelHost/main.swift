@@ -111,9 +111,9 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func configureStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let icon = statusIconImage() {
-            item.length = 62
+            item.length = NSStatusItem.squareLength
             item.button?.image = icon
             item.button?.imagePosition = .imageOnly
             item.button?.imageScaling = .scaleProportionallyDown
@@ -124,28 +124,46 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(statusMenuItem(id: "settings", title: "Open Settings...", action: #selector(openSettingsWindow), keyEquivalent: ","))
-        menu.addItem(statusMenuItem(id: "panel", title: "Show Panel", action: #selector(showPanelWindow), keyEquivalent: ""))
+        menu.addItem(statusMenuCaption(id: "caption", title: "QuakeKit 1.0.0"))
+        menu.addItem(statusMenuItem(id: "panel", title: "Show Panel", symbol: "display", action: #selector(showPanelWindow), keyEquivalent: "P"))
+        menu.addItem(statusMenuItem(id: "settings", title: "Open Settings...", symbol: "gearshape", action: #selector(openSettingsWindow), keyEquivalent: ","))
         menu.addItem(.separator())
-        menu.addItem(statusMenuItem(id: "microphone", title: "Request Microphone Access", action: #selector(requestMicrophoneAccess), keyEquivalent: ""))
-        menu.addItem(statusMenuItem(id: "record", title: "Record 30s Meeting Clip", action: #selector(recordMeetingClip), keyEquivalent: ""))
-        menu.addItem(statusMenuItem(id: "speak", title: "Speak Test Phrase", action: #selector(speakTestPhrase), keyEquivalent: ""))
+        menu.addItem(statusMenuCaption(id: "audioHeader", title: "AUDIO"))
+        menu.addItem(statusMenuItem(id: "microphone", title: "Microphone", symbol: "mic", action: #selector(requestMicrophoneAccess), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "record", title: "Record Meeting (30s)", symbol: "record.circle", action: #selector(recordMeetingClip), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "speak", title: "Test Speaker", symbol: "speaker.wave.2", action: #selector(speakTestPhrase), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(statusMenuItem(id: "quit", title: "Quit QuakeKit", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(statusMenuCaption(id: "activeHeader", title: "ACTIVE"))
+        menu.addItem(statusMenuItem(id: "activeMenu", title: "Menu", symbol: "rectangle.leftthird.inset.filled", action: #selector(openSettingsWindow), keyEquivalent: ""))
+        menu.addItem(statusMenuItem(id: "activeTheme", title: "Theme", symbol: "paintpalette", action: #selector(openSettingsWindow), keyEquivalent: ""))
+        menu.addItem(.separator())
+        menu.addItem(statusMenuItem(id: "quit", title: "Quit QuakeKit", symbol: "power", action: #selector(quit), keyEquivalent: "q"))
         item.menu = menu
         statusItem = item
     }
 
-    private func statusMenuItem(id: String, title: String, action: Selector, keyEquivalent: String) -> NSMenuItem {
+    private func statusMenuItem(id: String, title: String, symbol: String? = nil, action: Selector, keyEquivalent: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
         item.identifier = NSUserInterfaceItemIdentifier(id)
         item.target = self
+        if let symbol {
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        }
+        return item
+    }
+
+    private func statusMenuCaption(id: String, title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.identifier = NSUserInterfaceItemIdentifier(id)
+        item.isEnabled = false
         return item
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items {
             switch item.identifier?.rawValue {
+            case "caption":
+                item.title = "QuakeKit 1.0.0 · \(window?.isVisible == true ? "panel awake" : "panel hidden") · \(pluginPackages.count) plugins"
             case "settings":
                 item.title = settingsWindow?.isVisible == true ? "Open Settings... (Open)" : "Open Settings..."
                 item.state = settingsWindow?.isVisible == true ? .on : .off
@@ -156,9 +174,15 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case "microphone":
                 item.title = "Microphone: \(audioService.capturePermissionDescription)"
             case "record":
+                item.title = audioService.isRecording ? "Stop Recording" : "Record Meeting (30s)"
                 item.isEnabled = audioService.capturePermissionDescription != "denied"
             case "speak":
                 item.isEnabled = true
+            case "activeMenu":
+                item.title = "Menu: \(PanelMenuTemplate(menuID: QuakeSettingsStore.load().mainMenuViewID).displayName)"
+            case "activeTheme":
+                let activeID = ThemeConfigurationStore.load().activeThemeID
+                item.title = "Theme: \(themePackages.first(where: { $0.manifest.id == activeID })?.manifest.name ?? themePackages.first?.manifest.name ?? "Fallback")"
             default:
                 break
             }
@@ -197,6 +221,13 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func requestMicrophoneAccess() {
+        if audioService.capturePermissionDescription == "denied" || audioService.capturePermissionDescription == "restricted" {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+                NSWorkspace.shared.open(url)
+            }
+            panelView?.status = "Open Privacy & Security to allow microphone access"
+            return
+        }
         Task { @MainActor [weak self] in
             guard let self else { return }
             let granted = await audioService.requestCapturePermission()
@@ -207,6 +238,11 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func recordMeetingClip() {
+        if audioService.isRecording {
+            audioService.stopRecording()
+            panelView?.status = "Meeting recording stopped"
+            return
+        }
         do {
             let url = try audioService.startMeetingClip(duration: 30)
             log("audio recording started \(url.path)")
@@ -247,6 +283,10 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             themePackages: themePackages,
             settings: QuakeSettingsStore.load(),
             themeConfiguration: ThemeConfigurationStore.load(),
+            microphoneStatus: { [weak self] in self?.audioService.capturePermissionDescription ?? "unknown" },
+            onRequestMicrophoneAccess: { [weak self] in self?.requestMicrophoneAccess() },
+            onRecordMeetingClip: { [weak self] in self?.recordMeetingClip() },
+            onSpeakTest: { [weak self] in self?.speakTestPhrase() },
             onConfigurationChanged: { [weak self] in
                 self?.panelView?.reloadConfigurationsFromDisk()
             }

@@ -7,6 +7,7 @@ final class QuakeAudioService: NSObject, AVAudioRecorderDelegate {
     private let speechSynthesizer = AVSpeechSynthesizer()
     private var stopTimer: Timer?
     private(set) var lastRecordingURL: URL?
+    var isRecording: Bool { recorder?.isRecording == true }
 
     var capturePermissionDescription: String {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
