@@ -1672,11 +1672,13 @@ final class PanelView: NSView {
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
         let points = touchPointCandidates(logicalX: logicalX, logicalY: logicalY)
         if let pageIndex = points.lazy.compactMap({ self.menuChromeView.navigationIndex(at: $0) }).first {
+            log("touch route chrome raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
             openPage(pageIndex)
             return
         }
         if activeMenuTemplate == .classic,
            let pageIndex = points.lazy.compactMap({ point in self.pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) }).first {
+            log("touch route classic-tab raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
             openPage(pageIndex)
             return
         }
@@ -1684,34 +1686,41 @@ final class PanelView: NSView {
             for point in points where point.y > bounds.height - 92 && point.x >= 300 {
                 let pageIndex = Int((point.x - 300) / 140)
                 if pages.indices.contains(pageIndex) {
+                    log("touch route classic-page raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
                     openPage(pageIndex)
                     return
                 }
             }
         }
 
-        guard currentPage.kind == .grid else { return }
+        guard currentPage.kind == .grid else {
+            log("touch route ignored non-grid raw=\(Int(logicalX)),\(Int(logicalY)) page=\(currentPage.title)")
+            return
+        }
         for point in points {
             if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
+                log("touch route grid-previous raw=\(Int(logicalX)),\(Int(logicalY))")
                 _ = showPreviousGridSubpage()
                 return
             }
             if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
+                log("touch route grid-next raw=\(Int(logicalX)),\(Int(logicalY))")
                 _ = showNextGridSubpage()
                 return
             }
         }
         for point in points {
             if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
-                if selectedIndex == index {
-                    activateSelection()
-                } else {
-                    selectedIndex = index
-                    status = "Selected \(visibleTiles[index].title)"
-                }
+                // A physical panel tap is an explicit activation, not merely a
+                // focus move. Knob rotation remains the focus-selection path.
+                selectedIndex = index
+                log("touch route tile raw=\(Int(logicalX)),\(Int(logicalY)) candidate=\(Int(point.x)),\(Int(point.y)) tile=\(visibleTiles[index].title)")
+                activateSelection()
                 return
             }
         }
+        let candidateText = points.map { "\(Int($0.x)),\(Int($0.y))" }.joined(separator: " | ")
+        log("touch route miss raw=\(Int(logicalX)),\(Int(logicalY)) candidates=[\(candidateText)] page=\(currentPage.title) tiles=\(tileViews.count)")
     }
 
     /// DK touch coordinates use a top-origin panel space. Menu chrome is drawn
