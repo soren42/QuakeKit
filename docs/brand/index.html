@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuakeKit Brand Standards</title>
+  <style>
+    :root { color-scheme: dark; --ink:#04070d; --panel:#080d18; --raised:#101725; --line:#263348; --cyan:#39f5ff; --magenta:#ff5cdb; --text:#f4f9ff; --muted:#b8c4d5; --green:#a7ff57; --yellow:#ffe66d; --red:#ff6b5c; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--ink); color:var(--text); font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; }
+    main { width:min(1080px,calc(100% - 48px)); margin:auto; }
+    .cover { min-height:320px; display:grid; grid-template-columns:1fr auto; gap:40px; align-items:center; border-bottom:1px solid var(--line); }
+    .brand { width:290px; max-width:100%; }
+    .eyebrow { color:var(--cyan); font:700 12px/1.2 ui-monospace,"SF Mono",monospace; letter-spacing:.12em; text-transform:uppercase; }
+    h1,h2,h3 { margin:0; line-height:1.1; letter-spacing:0; } h1 { margin-top:12px; font-size:clamp(42px,7vw,72px); } h2 { font-size:28px; margin-bottom:16px; } h3 { font-size:16px; }
+    p { color:var(--muted); } section { padding:46px 0; border-bottom:1px solid var(--line); }
+    .lede { font-size:21px; max-width:680px; color:var(--text); }
+    .button { display:inline-block; padding:10px 14px; border:1px solid var(--cyan); border-radius:6px; color:var(--text); font-weight:700; text-decoration:none; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; } .card { padding:18px; background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+    .swatch { min-height:104px; display:flex; flex-direction:column; justify-content:flex-end; padding:14px; border-radius:7px; font:700 12px/1.2 ui-monospace,"SF Mono",monospace; }
+    .swatch small { font-weight:500; opacity:.82; margin-top:5px; } .table { width:100%; border-collapse:collapse; } .table th,.table td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } .table th { color:var(--cyan); font-size:12px; letter-spacing:.08em; text-transform:uppercase; } code { color:var(--cyan); font-family:ui-monospace,"SF Mono",monospace; }
+    .note { padding:16px 18px; background:#102033; border-left:3px solid var(--cyan); color:var(--muted); } .mono { font-family:ui-monospace,"SF Mono",monospace; } .themes { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .theme { min-height:92px; padding:14px; border:1px solid var(--line); border-radius:7px; background:var(--panel); font-weight:700; } .theme span { display:block; margin-top:8px; color:var(--muted); font-size:13px; font-weight:400; }
+    footer { padding:34px 0 60px; color:var(--muted); font-size:13px; } @media print { body { background:#fff; color:#101318; } p,.note,footer { color:#394250; } section { break-inside:avoid; } .card,.theme { border-color:#bcc5d0; background:#f7f9fb; } .eyebrow,code,.table th { color:#006d80; } .button { color:#101318; border-color:#006d80; } }
+    @media (max-width:700px) { main { width:min(100% - 32px,1080px); } .cover { grid-template-columns:1fr; padding:46px 0; } .grid,.themes { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="cover">
+    <div>
+      <div class="eyebrow">QuakeKit / Brand Standards / v1.0</div>
+      <h1>Instrument, not webpage.</h1>
+      <p class="lede">QuakeKit turns the DK ultrawide touch panel into a themeable command surface. This companion defines the implementation rules; the supplied PDF remains the visual and print authority.</p>
+      <a class="button" href="QuakeKit-Brand-Standards.pdf">Open Print Edition (PDF)</a>
+    </div>
+    <img class="brand" src="../../Sources/QuakePanelHost/Resources/Brand/quakekit-wordmark-ondark.svg" alt="QuakeKit">
+  </header>
+
+  <section>
+    <div class="eyebrow">01 / Voice</div>
+    <h2>Terse, technical, neutral</h2>
+    <div class="grid"><div class="card"><h3>Terse</h3><p>Dense and scannable. Prefer <code>48 min left</code> to explanatory prose.</p></div><div class="card"><h3>Technical</h3><p>Use real units and state names: <code>connected</code>, <code>pong 0.4s</code>, <code>exit 1</code>.</p></div><div class="card"><h3>Neutral</h3><p>Labels are nouns; actions are verbs. Use sentence case in UI and uppercase only for kickers.</p></div></div>
+    <div class="note">State the fact: <strong>Plugin action failed - exit 1</strong>. Avoid marketing language, cute system copy, emoji, and vague errors.</div>
+  </section>
+
+  <section>
+    <div class="eyebrow">02 / Mark and icons</div>
+    <h2>Use supplied assets unchanged</h2>
+    <table class="table"><thead><tr><th>Context</th><th>Asset</th><th>Rule</th></tr></thead><tbody>
+      <tr><td>Dark panel</td><td><code>seismic-q-ondark.svg</code></td><td>White ring, cyan seismic trace. Maintain clear space of half the mark height.</td></tr>
+      <tr><td>Light surface</td><td><code>seismic-q-onlight.svg</code></td><td>Ink ring, system-blue trace.</td></tr>
+      <tr><td>Menu bar</td><td><code>trayTemplate-18{,@2x}.png</code></td><td>Template image only. Keep black plus alpha and let macOS tint it.</td></tr>
+      <tr><td>App bundle</td><td><code>AppIcon.icns</code></td><td>Use the generated iconset output; do not crop or recreate it.</td></tr>
+    </tbody></table>
+    <p>Never rotate, stretch, recolor the ring, add effects, or crowd the mark. The wordmark is one camel-cased word: <strong>QuakeKit</strong>.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">03 / Core palette</div>
+    <h2>Black-first, cyan-led</h2>
+    <div class="grid">
+      <div class="swatch" style="background:#04070d;color:#f4f9ff">INK VOID<small>#04070d / base field</small></div><div class="swatch" style="background:#080d18;color:#f4f9ff">PANEL SURFACE<small>#080d18 / rows and controls</small></div><div class="swatch" style="background:#39f5ff;color:#04070d">CYAN<small>#39f5ff / primary accent and focus</small></div>
+      <div class="swatch" style="background:#ff5cdb;color:#04070d">MAGENTA<small>#ff5cdb / secondary highlight</small></div><div class="swatch" style="background:#a7ff57;color:#04070d">SUCCESS<small>#a7ff57 / nominal state</small></div><div class="swatch" style="background:#ff6b5c;color:#04070d">DANGER<small>#ff6b5c / fault state</small></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">04 / Type and iconography</div>
+    <h2>Dense hierarchy, no decoration</h2>
+    <table class="table"><thead><tr><th>Role</th><th>Face</th><th>Use</th></tr></thead><tbody>
+      <tr><td>Display</td><td>Barlow Semi Condensed</td><td>Titles, values, kickers, wordmark. 64px display; 40px section; 17px uppercase kicker.</td></tr>
+      <tr><td>Body</td><td>SF Pro Text / system</td><td>Labels and captions. Default body 14.5px.</td></tr>
+      <tr><td>Data</td><td>SF Mono</td><td>Metrics, IDs, states, commands. 12px medium.</td></tr>
+      <tr><td>Icons</td><td>Lucide</td><td>2px stroke, rounded caps and joins; 16-26px; one icon per action. No emoji or filled/duotone panel glyphs.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section>
+    <div class="eyebrow">05 / Theme and motion contract</div>
+    <h2>Nine themes, one behavioral system</h2>
+    <div class="themes"><div class="theme">Cyberpunk Neon<span>Default high contrast</span></div><div class="theme">Focus Dark<span>Restrained operational</span></div><div class="theme">Weather Glass<span>Ambient passive</span></div><div class="theme">Vantage Dark / Light<span>Professional technical grid</span></div><div class="theme">Aqua Glass Dark / Light<span>macOS vibrancy</span></div><div class="theme">BeOS Light / Dark<span>Beveled retro</span></div></div>
+    <p>Theme changes remap token values and surface treatment, not interaction geometry. The menu widget owns all on-panel chrome; the shared backpage remains stable beneath it.</p>
+    <div class="note"><strong>Motion:</strong> focus snaps and content may cross-fade around 160ms. Neon pulses, Aqua/Weather fade, Vantage/BeOS/Focus remain static. Honor reduced motion and never animate decoratively.</div>
+  </section>
+
+  <section>
+    <div class="eyebrow">06 / Panel rules</div>
+    <h2>Designed for 1920 x 480, knob and touch</h2>
+    <p>The DK panel is landscape and dark. Maintain a stable top-level menu shell, a clear navigation rail/tab/dock, and a shared content region. Focus follows a discrete knob ring; touch activates the same declared actions. Preserve contrast and avoid controls that depend on a mouse cursor.</p>
+    <p class="mono">Host: display/lifecycle/HID/data · Menu: chrome/navigation/Home · Shared library: standard pages/applet frame · Plugin: applet body</p>
+  </section>
+
+  <footer>Canonical visual source: <a href="QuakeKit-Brand-Standards.pdf">QuakeKit Brand Standards PDF</a>. Implementation assets: <code>Sources/QuakePanelHost/Resources/Brand</code>.</footer>
+</main>
+</body>
+</html>

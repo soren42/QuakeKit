@@ -203,6 +203,7 @@ See [docs/PLUGIN_ARCHITECTURE.md](docs/PLUGIN_ARCHITECTURE.md) for the plugin mo
 See [docs/FUNCTIONAL_PLUGIN_SPEC.md](docs/FUNCTIONAL_PLUGIN_SPEC.md) for the functional plugin contract.
 See [docs/THEME_PLUGIN_SPEC.md](docs/THEME_PLUGIN_SPEC.md) for the theme plugin contract.
 See [docs/manuals/index.html](docs/manuals/index.html) for the print-ready HTML manual set.
+See [docs/brand/index.html](docs/brand/index.html) and its [print edition](docs/brand/QuakeKit-Brand-Standards.pdf) for the QuakeKit visual identity and implementation rules.
 
 ## License
 
