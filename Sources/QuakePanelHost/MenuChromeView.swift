@@ -165,7 +165,7 @@ final class MenuChromeView: NSView {
     }
     private var radialStageWidth: CGFloat { min(max(245, bounds.width * 0.14), 290) }
     private func wordmark(named name: String) -> NSImage? {
-        guard let url = Bundle.module.url(forResource: name, withExtension: "svg", subdirectory: "Brand") else { return nil }
+        guard let url = QuakeHostResources.bundle.url(forResource: name, withExtension: "svg", subdirectory: "Brand") else { return nil }
         return NSImage(contentsOf: url)
     }
     private func drawWordmark(in rect: NSRect) {

@@ -30,7 +30,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$BINARY" "$MACOS_DIR/$APP_NAME"
 if [ -d "$RESOURCE_BUNDLE" ]; then
-  /usr/bin/ditto "$RESOURCE_BUNDLE" "$BUNDLE_DIR/QuakeKit_QuakePanelHost.bundle"
+  /usr/bin/ditto "$RESOURCE_BUNDLE" "$RESOURCES_DIR/QuakeKit_QuakePanelHost.bundle"
 fi
 /usr/bin/ditto "$REPO_DIR/Examples" "$RESOURCES_DIR/Examples"
 /bin/cp "$REPO_DIR/Sources/QuakePanelHost/Resources/Brand/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
@@ -74,8 +74,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </plist>
 PLIST
 
-if [ "${QUAKEKIT_CODESIGN:-0}" = "1" ] && command -v codesign >/dev/null 2>&1; then
-  codesign --force --deep --sign - "$BUNDLE_DIR" >/dev/null
-fi
+# Even local RC builds must be an ad-hoc signed application bundle. Without this
+# step macOS treats the copied executable as `quake-panel` rather than binding it
+# to this Info.plist, so TCC cannot retain Input Monitoring approval for QuakeKit.
+codesign --force --deep --sign - "$BUNDLE_DIR" >/dev/null
 
 echo "$BUNDLE_DIR"

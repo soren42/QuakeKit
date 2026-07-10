@@ -7,6 +7,18 @@ import QuakeRuntime
 
 private let quakeLogQueue = DispatchQueue(label: "com.soren42.quakekit.log")
 
+enum QuakeHostResources {
+    static let bundle: Bundle = {
+        let resourceBundle = Bundle.main.resourceURL?
+            .appendingPathComponent("QuakeKit_QuakePanelHost.bundle", isDirectory: true)
+        if let resourceBundle, let bundle = Bundle(url: resourceBundle) {
+            return bundle
+        }
+        // SwiftPM command-line builds retain their generated resource bundle.
+        return Bundle.module
+    }()
+}
+
 func log(_ message: String) {
     let line = "[quake-panel] \(ISO8601DateFormatter().string(from: Date())) \(message)\n"
     fputs(line, stderr)
@@ -224,7 +236,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func statusIconImage() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "StatusIcon", withExtension: "png"),
+        guard let url = QuakeHostResources.bundle.url(forResource: "StatusIcon", withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
