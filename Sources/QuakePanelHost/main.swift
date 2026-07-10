@@ -1631,7 +1631,9 @@ final class PanelView: NSView {
 
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
         let point = NSPoint(x: logicalX, y: logicalY)
-        if let pageIndex = menuChromeView.navigationIndex(at: point) {
+        let chromePoint = chromeTouchPoint(logicalX: logicalX, logicalY: logicalY)
+        if let pageIndex = menuChromeView.navigationIndex(at: chromePoint)
+            ?? menuChromeView.navigationIndex(at: point) {
             openPage(pageIndex)
             return
         }
@@ -1660,6 +1662,24 @@ final class PanelView: NSView {
             selectedIndex = index
             activateSelection()
         }
+    }
+
+    /// DK touch coordinates use a top-origin panel space. Menu chrome is drawn
+    /// in AppKit's bottom-origin space, so normalize and flip only at that seam.
+    private func chromeTouchPoint(logicalX: CGFloat, logicalY: CGFloat) -> NSPoint {
+        let x = normalizedTouchCoordinate(logicalX, panelExtent: 1920, viewExtent: bounds.width)
+        let topOriginY = normalizedTouchCoordinate(logicalY, panelExtent: 480, viewExtent: bounds.height)
+        return NSPoint(x: x, y: bounds.height - topOriginY)
+    }
+
+    private func normalizedTouchCoordinate(_ value: CGFloat, panelExtent: CGFloat, viewExtent: CGFloat) -> CGFloat {
+        guard panelExtent > 0, viewExtent > 0 else { return value }
+        if value > panelExtent * 1.1 {
+            // Some macOS HID collections expose a 12-bit axis instead of pixels.
+            let rawExtent: CGFloat = value <= 4095 ? 4095 : 65535
+            return min(max(0, value / rawExtent * viewExtent), viewExtent)
+        }
+        return min(max(0, value / panelExtent * viewExtent), viewExtent)
     }
 
     func nextPage() {
