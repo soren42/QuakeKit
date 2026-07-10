@@ -144,6 +144,7 @@
       <thead><tr><th>Field</th><th>Values</th><th>Purpose</th></tr></thead>
       <tbody>
         <tr><td><code>type</code></td><td><code>native</code>, <code>webCanvas</code>, <code>webDocument</code>, <code>text</code>, <code>dataDriven</code></td><td>Renderer hint.</td></tr>
+        <tr><td><code>icon</code></td><td>SF Symbol name</td><td>Native launcher/widget icon. Use a semantic outline symbol; the host has fallbacks for built-ins.</td></tr>
         <tr><td><code>presentation</code></td><td><code>page</code>, <code>widget</code>, <code>pageAndWidget</code>, <code>mainMenu</code></td><td>Where the host should place the view.</td></tr>
         <tr><td><code>layout</code></td><td><code>grid</code>, <code>fullScreen</code>, <code>halfLeading</code>, <code>halfTrailing</code>, <code>halfAndGrid</code>, <code>twoHalves</code>, <code>thirds</code>, <code>quarters</code></td><td>Page layout hint.</td></tr>
         <tr><td><code>columnSpan</code>, <code>rowSpan</code></td><td>integer</td><td>Widget grid sizing.</td></tr>
@@ -151,7 +152,7 @@
       </tbody>
     </table>
     <h3>Main Menu Widget</h3>
-    <p>The Home page is selectable from Global settings. A plugin can provide a replacement launcher by declaring a view with <code>presentation: "mainMenu"</code>. Menu items route to safe host actions such as pages, plugin views, plugin actions, carousel controls, plugin settings, or status messages.</p>
+    <p>The Home page is selectable from Global settings. A plugin can provide a replacement launcher by declaring a view with <code>presentation: "mainMenu"</code>. Menu items route to safe host actions such as pages, plugin views, plugin actions, carousel controls, plugin settings, or status messages. Widget-capable views are eligible for Home and Carousel; the host refreshes their stream and renders a concise value/detail/state subset before opening the full applet.</p>
     <pre><code class="language-json">{
   "id": "classic",
   "title": "Classic Launcher",

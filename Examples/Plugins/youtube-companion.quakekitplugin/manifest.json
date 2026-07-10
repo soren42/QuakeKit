@@ -4,31 +4,129 @@
   "name": "YouTube Companion",
   "version": "0.1.0",
   "apiVersion": "0.1",
-  "entry": { "transport": "shell", "command": "youtube-companion.sh", "arguments": [] },
-  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "entry": {
+    "transport": "shell",
+    "command": "youtube-companion.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "actionProvider"
+  ],
   "permissions": [
-    { "localProcess": {} }
+    {
+      "localProcess": {}
+    }
   ],
   "settings": [
-    { "id": "browser", "title": "Browser", "type": "choice", "defaultValue": "auto", "choices": ["auto", "Safari", "Google Chrome", "Arc", "Microsoft Edge"], "environment": "QUAKEKIT_YOUTUBE_BROWSER", "help": "Browser to inspect for an active YouTube tab.", "group": "Source", "order": 10, "uiControl": "popup" },
-    { "id": "fixture_title", "title": "Fixture Title", "type": "string", "defaultValue": "YouTube video", "environment": "QUAKEKIT_YOUTUBE_TITLE", "help": "Fallback title when browser automation is unavailable.", "group": "Source", "order": 20, "uiControl": "textField" },
-    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_YOUTUBE_DRY_RUN", "help": "Controls are surfaced as key plans, not synthetic input.", "group": "Safety", "order": 30, "uiControl": "toggle" }
+    {
+      "id": "browser",
+      "title": "Browser",
+      "type": "choice",
+      "defaultValue": "auto",
+      "choices": [
+        "auto",
+        "Safari",
+        "Google Chrome",
+        "Arc",
+        "Microsoft Edge"
+      ],
+      "environment": "QUAKEKIT_YOUTUBE_BROWSER",
+      "help": "Browser to inspect for an active YouTube tab.",
+      "group": "Source",
+      "order": 10,
+      "uiControl": "popup"
+    },
+    {
+      "id": "fixture_title",
+      "title": "Fixture Title",
+      "type": "string",
+      "defaultValue": "YouTube video",
+      "environment": "QUAKEKIT_YOUTUBE_TITLE",
+      "help": "Fallback title when browser automation is unavailable.",
+      "group": "Source",
+      "order": 20,
+      "uiControl": "textField"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_YOUTUBE_DRY_RUN",
+      "help": "Controls are surfaced as key plans, not synthetic input.",
+      "group": "Safety",
+      "order": 30,
+      "uiControl": "toggle"
+    }
   ],
   "actions": [
-    { "id": "youtube.refresh", "title": "Refresh Video", "argumentSchema": [] },
-    { "id": "youtube.playPause", "title": "Play/Pause", "argumentSchema": [] },
-    { "id": "youtube.seekBack", "title": "Back 10s", "argumentSchema": [] },
-    { "id": "youtube.seekForward", "title": "Forward 10s", "argumentSchema": [] },
-    { "id": "youtube.toggleCaptions", "title": "Captions", "argumentSchema": [] }
+    {
+      "id": "youtube.refresh",
+      "title": "Refresh Video",
+      "argumentSchema": []
+    },
+    {
+      "id": "youtube.playPause",
+      "title": "Play/Pause",
+      "argumentSchema": []
+    },
+    {
+      "id": "youtube.seekBack",
+      "title": "Back 10s",
+      "argumentSchema": []
+    },
+    {
+      "id": "youtube.seekForward",
+      "title": "Forward 10s",
+      "argumentSchema": []
+    },
+    {
+      "id": "youtube.toggleCaptions",
+      "title": "Captions",
+      "argumentSchema": []
+    }
   ],
   "dataStreams": [
-    { "id": "youtube.video", "title": "YouTube Video", "valueSchema": [
-      { "id": "title", "title": "Title", "type": "string", "required": false },
-      { "id": "url", "title": "URL", "type": "url", "required": false },
-      { "id": "browser", "title": "Browser", "type": "string", "required": false }
-    ] }
+    {
+      "id": "youtube.video",
+      "title": "YouTube Video",
+      "valueSchema": [
+        {
+          "id": "title",
+          "title": "Title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "url",
+          "title": "URL",
+          "type": "url",
+          "required": false
+        },
+        {
+          "id": "browser",
+          "title": "Browser",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
   ],
   "views": [
-    { "id": "youtube.panel", "title": "YouTube", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "youtube.video", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+    {
+      "id": "youtube.panel",
+      "title": "YouTube",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "youtube.video",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 640,
+      "preferredHeight": 240,
+      "icon": "play.rectangle"
+    }
   ]
 }

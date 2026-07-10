@@ -174,7 +174,8 @@
       "columnSpan": 3,
       "rowSpan": 2,
       "preferredWidth": 1920,
-      "preferredHeight": 480
+      "preferredHeight": 480,
+      "icon": "cloud.sun"
     }
   ]
 }

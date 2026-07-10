@@ -254,6 +254,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
 
     public var id: String
     public var title: String
+    public var icon: String?
     public var type: ViewType?
     public var presentation: Presentation?
     public var layout: Layout?
@@ -268,6 +269,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
     public init(
         id: String,
         title: String,
+        icon: String? = nil,
         type: ViewType? = nil,
         presentation: Presentation? = nil,
         layout: Layout? = nil,
@@ -281,6 +283,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
     ) {
         self.id = id
         self.title = title
+        self.icon = icon
         self.type = type
         self.presentation = presentation
         self.layout = layout
@@ -296,6 +299,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id
         case title
+        case icon
         case type
         case presentation
         case layout
@@ -312,6 +316,7 @@ public struct PluginView: Codable, Equatable, Identifiable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
         type = try container.decodeIfPresent(ViewType.self, forKey: .type)
         presentation = try container.decodeIfPresent(Presentation.self, forKey: .presentation)
         layout = try container.decodeIfPresent(Layout.self, forKey: .layout)

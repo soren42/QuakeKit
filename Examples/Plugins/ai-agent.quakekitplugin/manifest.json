@@ -229,7 +229,8 @@
       "columnSpan": 3,
       "rowSpan": 2,
       "preferredWidth": 1920,
-      "preferredHeight": 480
+      "preferredHeight": 480,
+      "icon": "sparkles"
     },
     {
       "id": "agent.session",
@@ -240,7 +241,8 @@
       "columnSpan": 3,
       "rowSpan": 1,
       "preferredWidth": 960,
-      "preferredHeight": 240
+      "preferredHeight": 240,
+      "icon": "sparkles"
     }
   ]
 }

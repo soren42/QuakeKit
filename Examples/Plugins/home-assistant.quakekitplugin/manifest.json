@@ -243,7 +243,8 @@
       "columnSpan": 2,
       "rowSpan": 2,
       "preferredWidth": 520,
-      "preferredHeight": 360
+      "preferredHeight": 360,
+      "icon": "house"
     }
   ]
 }

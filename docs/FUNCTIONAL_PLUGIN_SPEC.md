@@ -188,6 +188,7 @@ special main-menu widget used to render the Home page.
 | `id` | string | yes | Stable view id. |
 | `title` | string | yes | Human-readable view title. |
 | `type` | string | no | `native`, `webCanvas`, `webDocument`, `text`, or `dataDriven`. |
+| `icon` | string | no | SF Symbol name shown on native launcher and widget tiles. Supply an outline, semantic symbol; the host supplies a fallback for known built-ins. |
 | `presentation` | string | no | `page`, `widget`, `pageAndWidget`, or `mainMenu`. |
 | `layout` | string | no | Page layout hint: `grid`, `fullScreen`, `halfLeading`, `halfTrailing`, `halfAndGrid`, `twoHalves`, `thirds`, or `quarters`. |
 | `entryPath` | string | no | Local asset entrypoint such as `index.html`. |
@@ -201,6 +202,12 @@ special main-menu widget used to render the Home page.
 The host decides final layout. Plugins provide hints, not absolute control of
 the display. Widget views still use `columnSpan` and `rowSpan`; page views may
 use `layout` to request a non-grid shell such as split-screen, thirds, or quarters.
+
+Widget-capable views are also eligible for Home and Carousel. The host refreshes
+their declared data stream and renders a compact summary (primary value, detail,
+and state) before opening the full page. A widget must therefore return a concise
+top-level `rows[]` payload or a domain payload such as weather `locations[]` or
+music `track`; it must not rely on its full-page layout to communicate its state.
 
 ## Main Menu Widgets
 

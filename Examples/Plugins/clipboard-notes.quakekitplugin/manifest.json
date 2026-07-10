@@ -4,27 +4,99 @@
   "name": "Clipboard Notes",
   "version": "0.1.0",
   "apiVersion": "0.1",
-  "entry": { "transport": "shell", "command": "clipboard-notes.sh", "arguments": [] },
-  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "entry": {
+    "transport": "shell",
+    "command": "clipboard-notes.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "actionProvider"
+  ],
   "permissions": [
-    { "filesystem": { "paths": ["~/Documents", "~/Desktop"], "write": true } },
-    { "localProcess": {} }
+    {
+      "filesystem": {
+        "paths": [
+          "~/Documents",
+          "~/Desktop"
+        ],
+        "write": true
+      }
+    },
+    {
+      "localProcess": {}
+    }
   ],
   "settings": [
-    { "id": "notes_file", "title": "Notes File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_NOTES_FILE", "help": "Optional plain-text notes file shown on the panel.", "group": "Source", "order": 10, "uiControl": "filePicker" },
-    { "id": "show_clipboard", "title": "Show Clipboard", "type": "boolean", "defaultValue": false, "environment": "QUAKEKIT_SHOW_CLIPBOARD", "help": "When enabled, reads the current text pasteboard with pbpaste.", "group": "Privacy", "order": 20, "uiControl": "toggle" }
+    {
+      "id": "notes_file",
+      "title": "Notes File",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_NOTES_FILE",
+      "help": "Optional plain-text notes file shown on the panel.",
+      "group": "Source",
+      "order": 10,
+      "uiControl": "filePicker"
+    },
+    {
+      "id": "show_clipboard",
+      "title": "Show Clipboard",
+      "type": "boolean",
+      "defaultValue": false,
+      "environment": "QUAKEKIT_SHOW_CLIPBOARD",
+      "help": "When enabled, reads the current text pasteboard with pbpaste.",
+      "group": "Privacy",
+      "order": 20,
+      "uiControl": "toggle"
+    }
   ],
   "actions": [
-    { "id": "notes.refresh", "title": "Refresh Notes", "argumentSchema": [] },
-    { "id": "notes.pinClipboard", "title": "Pin Clipboard", "argumentSchema": [] }
+    {
+      "id": "notes.refresh",
+      "title": "Refresh Notes",
+      "argumentSchema": []
+    },
+    {
+      "id": "notes.pinClipboard",
+      "title": "Pin Clipboard",
+      "argumentSchema": []
+    }
   ],
   "dataStreams": [
-    { "id": "notes.scratchpad", "title": "Scratchpad", "valueSchema": [
-      { "id": "noteCount", "title": "Note Count", "type": "integer", "required": false },
-      { "id": "clipboardPreview", "title": "Clipboard Preview", "type": "string", "required": false }
-    ] }
+    {
+      "id": "notes.scratchpad",
+      "title": "Scratchpad",
+      "valueSchema": [
+        {
+          "id": "noteCount",
+          "title": "Note Count",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "id": "clipboardPreview",
+          "title": "Clipboard Preview",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
   ],
   "views": [
-    { "id": "notes.panel", "title": "Notes", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "notes.scratchpad", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+    {
+      "id": "notes.panel",
+      "title": "Notes",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "notes.scratchpad",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 640,
+      "preferredHeight": 240,
+      "icon": "doc.on.clipboard"
+    }
   ]
 }

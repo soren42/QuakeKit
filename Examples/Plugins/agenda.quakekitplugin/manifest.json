@@ -4,28 +4,115 @@
   "name": "Agenda",
   "version": "0.1.0",
   "apiVersion": "0.1",
-  "entry": { "transport": "shell", "command": "agenda.sh", "arguments": [] },
-  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "entry": {
+    "transport": "shell",
+    "command": "agenda.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "actionProvider"
+  ],
   "permissions": [
-    { "filesystem": { "paths": ["~/Documents", "~/Library/Calendars"], "write": false } }
+    {
+      "filesystem": {
+        "paths": [
+          "~/Documents",
+          "~/Library/Calendars"
+        ],
+        "write": false
+      }
+    }
   ],
   "settings": [
-    { "id": "agenda_file", "title": "Agenda File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_AGENDA_FILE", "help": "Optional pipe-delimited file: time|title|location|status per line.", "group": "Source", "order": 10, "uiControl": "filePicker" },
-    { "id": "calendar", "title": "Calendar", "type": "string", "defaultValue": "Today", "environment": "QUAKEKIT_AGENDA_CALENDAR", "help": "Calendar label shown in the fixture.", "group": "Source", "order": 20, "uiControl": "textField" },
-    { "id": "lookahead_hours", "title": "Lookahead", "type": "integer", "defaultValue": 12, "minimum": 1, "maximum": 72, "environment": "QUAKEKIT_AGENDA_LOOKAHEAD_HOURS", "help": "Preferred horizon for future live calendar bridges.", "group": "Display", "order": 30, "uiControl": "stepper" }
+    {
+      "id": "agenda_file",
+      "title": "Agenda File",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_AGENDA_FILE",
+      "help": "Optional pipe-delimited file: time|title|location|status per line.",
+      "group": "Source",
+      "order": 10,
+      "uiControl": "filePicker"
+    },
+    {
+      "id": "calendar",
+      "title": "Calendar",
+      "type": "string",
+      "defaultValue": "Today",
+      "environment": "QUAKEKIT_AGENDA_CALENDAR",
+      "help": "Calendar label shown in the fixture.",
+      "group": "Source",
+      "order": 20,
+      "uiControl": "textField"
+    },
+    {
+      "id": "lookahead_hours",
+      "title": "Lookahead",
+      "type": "integer",
+      "defaultValue": 12,
+      "minimum": 1,
+      "maximum": 72,
+      "environment": "QUAKEKIT_AGENDA_LOOKAHEAD_HOURS",
+      "help": "Preferred horizon for future live calendar bridges.",
+      "group": "Display",
+      "order": 30,
+      "uiControl": "stepper"
+    }
   ],
   "actions": [
-    { "id": "agenda.refresh", "title": "Refresh Agenda", "argumentSchema": [] },
-    { "id": "agenda.next", "title": "Next Event", "argumentSchema": [] }
+    {
+      "id": "agenda.refresh",
+      "title": "Refresh Agenda",
+      "argumentSchema": []
+    },
+    {
+      "id": "agenda.next",
+      "title": "Next Event",
+      "argumentSchema": []
+    }
   ],
   "dataStreams": [
-    { "id": "agenda.today", "title": "Agenda", "valueSchema": [
-      { "id": "calendar", "title": "Calendar", "type": "string", "required": false },
-      { "id": "nextTitle", "title": "Next Event", "type": "string", "required": false },
-      { "id": "eventCount", "title": "Event Count", "type": "integer", "required": false }
-    ] }
+    {
+      "id": "agenda.today",
+      "title": "Agenda",
+      "valueSchema": [
+        {
+          "id": "calendar",
+          "title": "Calendar",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "nextTitle",
+          "title": "Next Event",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "eventCount",
+          "title": "Event Count",
+          "type": "integer",
+          "required": false
+        }
+      ]
+    }
   ],
   "views": [
-    { "id": "agenda.panel", "title": "Agenda", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "agenda.today", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+    {
+      "id": "agenda.panel",
+      "title": "Agenda",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "agenda.today",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 640,
+      "preferredHeight": 240,
+      "icon": "calendar"
+    }
   ]
 }

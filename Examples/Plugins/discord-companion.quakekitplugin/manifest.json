@@ -250,7 +250,8 @@
       "columnSpan": 2,
       "rowSpan": 1,
       "preferredWidth": 480,
-      "preferredHeight": 220
+      "preferredHeight": 220,
+      "icon": "bubble.left.and.bubble.right"
     }
   ]
 }

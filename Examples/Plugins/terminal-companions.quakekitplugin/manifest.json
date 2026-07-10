@@ -4,31 +4,144 @@
   "name": "Terminal Companions",
   "version": "0.1.0",
   "apiVersion": "0.1",
-  "entry": { "transport": "shell", "command": "terminal-companions.sh", "arguments": [] },
-  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "entry": {
+    "transport": "shell",
+    "command": "terminal-companions.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "actionProvider"
+  ],
   "permissions": [
-    { "filesystem": { "paths": ["~/Code", "~/Documents"], "write": false } },
-    { "localProcess": {} }
+    {
+      "filesystem": {
+        "paths": [
+          "~/Code",
+          "~/Documents"
+        ],
+        "write": false
+      }
+    },
+    {
+      "localProcess": {}
+    }
   ],
   "settings": [
-    { "id": "terminal_app", "title": "Terminal App", "type": "choice", "defaultValue": "warp_ai", "choices": ["warp_ai", "terminus", "terminus_beta"], "environment": "QUAKEKIT_TERMINAL_APP", "help": "Terminal companion represented by the panel.", "group": "Context", "order": 10, "uiControl": "segmented" },
-    { "id": "workspace", "title": "Workspace", "type": "string", "defaultValue": "~/Code", "environment": "QUAKEKIT_TERMINAL_WORKSPACE", "help": "Workspace path displayed by the companion.", "group": "Context", "order": 20, "uiControl": "textField" },
-    { "id": "session_file", "title": "Session File", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_TERMINAL_SESSION_FILE", "help": "Optional local pipe-delimited file: tab|cwd|command|status.", "group": "Source", "order": 30, "uiControl": "filePicker" },
-    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_TERMINAL_DRY_RUN", "help": "When true, open/run actions return plans only.", "group": "Safety", "order": 40, "uiControl": "toggle" }
+    {
+      "id": "terminal_app",
+      "title": "Terminal App",
+      "type": "choice",
+      "defaultValue": "warp_ai",
+      "choices": [
+        "warp_ai",
+        "terminus",
+        "terminus_beta"
+      ],
+      "environment": "QUAKEKIT_TERMINAL_APP",
+      "help": "Terminal companion represented by the panel.",
+      "group": "Context",
+      "order": 10,
+      "uiControl": "segmented"
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace",
+      "type": "string",
+      "defaultValue": "~/Code",
+      "environment": "QUAKEKIT_TERMINAL_WORKSPACE",
+      "help": "Workspace path displayed by the companion.",
+      "group": "Context",
+      "order": 20,
+      "uiControl": "textField"
+    },
+    {
+      "id": "session_file",
+      "title": "Session File",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_TERMINAL_SESSION_FILE",
+      "help": "Optional local pipe-delimited file: tab|cwd|command|status.",
+      "group": "Source",
+      "order": 30,
+      "uiControl": "filePicker"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_TERMINAL_DRY_RUN",
+      "help": "When true, open/run actions return plans only.",
+      "group": "Safety",
+      "order": 40,
+      "uiControl": "toggle"
+    }
   ],
   "actions": [
-    { "id": "terminal.refresh", "title": "Refresh Terminal", "argumentSchema": [] },
-    { "id": "terminal.openWorkspace", "title": "Open Workspace", "argumentSchema": [] },
-    { "id": "terminal.runCommand", "title": "Run Command", "argumentSchema": [
-      { "id": "command", "title": "Command", "type": "string", "required": false }
-    ] }
+    {
+      "id": "terminal.refresh",
+      "title": "Refresh Terminal",
+      "argumentSchema": []
+    },
+    {
+      "id": "terminal.openWorkspace",
+      "title": "Open Workspace",
+      "argumentSchema": []
+    },
+    {
+      "id": "terminal.runCommand",
+      "title": "Run Command",
+      "argumentSchema": [
+        {
+          "id": "command",
+          "title": "Command",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
   ],
-  "dataStreams": [{ "id": "terminal.session", "title": "Terminal Session", "valueSchema": [
-    { "id": "app", "title": "App", "type": "string", "required": false },
-    { "id": "workspace", "title": "Workspace", "type": "string", "required": false },
-    { "id": "status", "title": "Status", "type": "string", "required": false }
-  ] }],
+  "dataStreams": [
+    {
+      "id": "terminal.session",
+      "title": "Terminal Session",
+      "valueSchema": [
+        {
+          "id": "app",
+          "title": "App",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "workspace",
+          "title": "Workspace",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "status",
+          "title": "Status",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
   "views": [
-    { "id": "terminal.panel", "title": "Terminal", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "terminal.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+    {
+      "id": "terminal.panel",
+      "title": "Terminal",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "terminal.session",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 640,
+      "preferredHeight": 240,
+      "icon": "terminal"
+    }
   ]
 }

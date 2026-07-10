@@ -223,7 +223,8 @@
       "columnSpan": 2,
       "rowSpan": 2,
       "preferredWidth": 560,
-      "preferredHeight": 360
+      "preferredHeight": 360,
+      "icon": "network"
     }
   ]
 }

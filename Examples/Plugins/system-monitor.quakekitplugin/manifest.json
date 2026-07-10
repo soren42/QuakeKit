@@ -176,7 +176,8 @@
       "columnSpan": 4,
       "rowSpan": 2,
       "preferredWidth": 1920,
-      "preferredHeight": 480
+      "preferredHeight": 480,
+      "icon": "gauge.with.dots.needle.67percent"
     }
   ]
 }

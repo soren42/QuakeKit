@@ -4,32 +4,141 @@
   "name": "Terminal Companion",
   "version": "0.1.0",
   "apiVersion": "0.1",
-  "entry": { "transport": "shell", "command": "terminal-companion.sh", "arguments": [] },
-  "capabilities": ["dataProvider", "settings", "viewProvider", "actionProvider"],
+  "entry": {
+    "transport": "shell",
+    "command": "terminal-companion.sh",
+    "arguments": []
+  },
+  "capabilities": [
+    "dataProvider",
+    "settings",
+    "viewProvider",
+    "actionProvider"
+  ],
   "permissions": [
-    { "localProcess": {} },
-    { "inputSynthesis": {} }
+    {
+      "localProcess": {}
+    },
+    {
+      "inputSynthesis": {}
+    }
   ],
   "settings": [
-    { "id": "terminal_app", "title": "Terminal App", "type": "choice", "defaultValue": "auto", "choices": ["auto", "Warp", "Terminus", "Terminus Beta", "Terminal", "iTerm2"], "environment": "QUAKEKIT_TERMINAL_APP", "help": "Terminal companion profile.", "group": "Context", "order": 10, "uiControl": "popup" },
-    { "id": "project_path", "title": "Project Path", "type": "string", "defaultValue": "", "environment": "QUAKEKIT_TERMINAL_PROJECT", "help": "Optional project path shown on the panel.", "group": "Context", "order": 20, "uiControl": "textField" },
-    { "id": "last_status", "title": "Last Status", "type": "integer", "defaultValue": 0, "minimum": 0, "maximum": 255, "environment": "QUAKEKIT_TERMINAL_LAST_STATUS", "help": "Optional last command exit code.", "group": "Status", "order": 30, "uiControl": "stepper" },
-    { "id": "dry_run", "title": "Dry Run", "type": "boolean", "defaultValue": true, "environment": "QUAKEKIT_TERMINAL_DRY_RUN", "help": "Hotkeys are rendered as plans by default.", "group": "Safety", "order": 40, "uiControl": "toggle" }
+    {
+      "id": "terminal_app",
+      "title": "Terminal App",
+      "type": "choice",
+      "defaultValue": "auto",
+      "choices": [
+        "auto",
+        "Warp",
+        "Terminus",
+        "Terminus Beta",
+        "Terminal",
+        "iTerm2"
+      ],
+      "environment": "QUAKEKIT_TERMINAL_APP",
+      "help": "Terminal companion profile.",
+      "group": "Context",
+      "order": 10,
+      "uiControl": "popup"
+    },
+    {
+      "id": "project_path",
+      "title": "Project Path",
+      "type": "string",
+      "defaultValue": "",
+      "environment": "QUAKEKIT_TERMINAL_PROJECT",
+      "help": "Optional project path shown on the panel.",
+      "group": "Context",
+      "order": 20,
+      "uiControl": "textField"
+    },
+    {
+      "id": "last_status",
+      "title": "Last Status",
+      "type": "integer",
+      "defaultValue": 0,
+      "minimum": 0,
+      "maximum": 255,
+      "environment": "QUAKEKIT_TERMINAL_LAST_STATUS",
+      "help": "Optional last command exit code.",
+      "group": "Status",
+      "order": 30,
+      "uiControl": "stepper"
+    },
+    {
+      "id": "dry_run",
+      "title": "Dry Run",
+      "type": "boolean",
+      "defaultValue": true,
+      "environment": "QUAKEKIT_TERMINAL_DRY_RUN",
+      "help": "Hotkeys are rendered as plans by default.",
+      "group": "Safety",
+      "order": 40,
+      "uiControl": "toggle"
+    }
   ],
   "actions": [
-    { "id": "terminal.refresh", "title": "Refresh Terminal", "argumentSchema": [] },
-    { "id": "terminal.newTab", "title": "New Tab", "argumentSchema": [] },
-    { "id": "terminal.splitPane", "title": "Split Pane", "argumentSchema": [] },
-    { "id": "terminal.interrupt", "title": "Interrupt", "argumentSchema": [] }
+    {
+      "id": "terminal.refresh",
+      "title": "Refresh Terminal",
+      "argumentSchema": []
+    },
+    {
+      "id": "terminal.newTab",
+      "title": "New Tab",
+      "argumentSchema": []
+    },
+    {
+      "id": "terminal.splitPane",
+      "title": "Split Pane",
+      "argumentSchema": []
+    },
+    {
+      "id": "terminal.interrupt",
+      "title": "Interrupt",
+      "argumentSchema": []
+    }
   ],
   "dataStreams": [
-    { "id": "terminal.session", "title": "Terminal Session", "valueSchema": [
-      { "id": "app", "title": "App", "type": "string", "required": false },
-      { "id": "project", "title": "Project", "type": "string", "required": false },
-      { "id": "lastStatus", "title": "Last Status", "type": "integer", "required": false }
-    ] }
+    {
+      "id": "terminal.session",
+      "title": "Terminal Session",
+      "valueSchema": [
+        {
+          "id": "app",
+          "title": "App",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "project",
+          "title": "Project",
+          "type": "string",
+          "required": false
+        },
+        {
+          "id": "lastStatus",
+          "title": "Last Status",
+          "type": "integer",
+          "required": false
+        }
+      ]
+    }
   ],
   "views": [
-    { "id": "terminal.panel", "title": "Terminal", "type": "dataDriven", "presentation": "pageAndWidget", "dataStreamID": "terminal.session", "columnSpan": 2, "rowSpan": 1, "preferredWidth": 640, "preferredHeight": 240 }
+    {
+      "id": "terminal.panel",
+      "title": "Terminal",
+      "type": "dataDriven",
+      "presentation": "pageAndWidget",
+      "dataStreamID": "terminal.session",
+      "columnSpan": 2,
+      "rowSpan": 1,
+      "preferredWidth": 640,
+      "preferredHeight": 240,
+      "icon": "terminal"
+    }
   ]
 }

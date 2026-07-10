@@ -136,7 +136,8 @@
       "columnSpan": 2,
       "rowSpan": 2,
       "preferredWidth": 480,
-      "preferredHeight": 360
+      "preferredHeight": 360,
+      "icon": "command"
     }
   ]
 }

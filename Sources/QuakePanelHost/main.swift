@@ -645,6 +645,58 @@ struct ShellTile: Equatable {
     var title: String
     var subtitle: String
     var action: ShellAction
+    var icon: String? = nil
+    var widget: WidgetPreviewRef? = nil
+}
+
+struct WidgetPreviewRef: Equatable {
+    var pluginID: String
+    var viewID: String
+    var streamID: String?
+}
+
+struct WidgetPreviewData: Equatable {
+    var value: String
+    var detail: String
+    var state: String?
+
+    static func from(_ value: JSONValue?) -> WidgetPreviewData? {
+        guard let object = value?.objectValue else { return nil }
+        if let locations = object["locations"]?.arrayValue,
+           let location = locations.first?.objectValue {
+            let temperature = location["temperature"]?.doubleValue.map { String(format: "%.0f°", $0) } ?? "-"
+            return WidgetPreviewData(value: temperature, detail: location["condition"]?.stringValue ?? location["name"]?.stringValue ?? "Weather", state: location["name"]?.stringValue)
+        }
+        if let track = object["track"]?.objectValue {
+            return WidgetPreviewData(value: track["title"]?.stringValue ?? "No track", detail: track["artist"]?.stringValue ?? object["provider"]?.stringValue ?? "Music", state: object["playing"]?.boolValue == true ? "Playing" : "Paused")
+        }
+        if let rows = object["rows"]?.arrayValue,
+           let row = rows.first?.objectValue {
+            return WidgetPreviewData(value: row["value"]?.stringValue ?? "-", detail: row["detail"]?.stringValue ?? row["title"]?.stringValue ?? "Ready", state: object["status"]?.stringValue)
+        }
+        let preferred = ["cpu", "status", "state", "value", "title"]
+        for key in preferred {
+            if let item = object[key] {
+                return WidgetPreviewData(value: WidgetPreviewData.display(item), detail: key.replacingOccurrences(of: "_", with: " ").capitalized, state: object["status"]?.stringValue)
+            }
+        }
+        if let key = object.keys.sorted().first, let item = object[key] {
+            return WidgetPreviewData(value: WidgetPreviewData.display(item), detail: key.replacingOccurrences(of: "_", with: " ").capitalized, state: nil)
+        }
+        return nil
+    }
+
+    private static func display(_ value: JSONValue) -> String {
+        switch value {
+        case .string(let value): return value
+        case .integer(let value): return "\(value)"
+        case .double(let value): return String(format: "%.1f", value)
+        case .bool(let value): return value ? "On" : "Off"
+        case .array(let values): return "\(values.count)"
+        case .object(let values): return "\(values.count)"
+        case .null: return "-"
+        }
+    }
 }
 
 enum ShellAction: Equatable {
@@ -792,11 +844,23 @@ enum QuakeSettingsStore {
             return QuakeSettingsConfiguration()
         }
         do {
-            return try JSONDecoder().decode(QuakeSettingsConfiguration.self, from: data)
+            var configuration = try JSONDecoder().decode(QuakeSettingsConfiguration.self, from: data)
+            migrateToRC1MenuDefault(&configuration)
+            return configuration
         } catch {
             log("settings config load failed: \(error)")
             return QuakeSettingsConfiguration()
         }
+    }
+
+    private static func migrateToRC1MenuDefault(_ configuration: inout QuakeSettingsConfiguration) {
+        let key = "migration.rc1.statusRail"
+        guard configuration.menuSettings[key]?.boolValue != true else { return }
+        if configuration.mainMenuViewID == MainMenuWidgetRef.builtInID || configuration.mainMenuViewID == "main_menu_classic:classic" {
+            configuration.mainMenuViewID = "builtin:status-rail"
+        }
+        configuration.menuSettings[key] = .bool(true)
+        save(configuration)
     }
 
     static func save(_ configuration: QuakeSettingsConfiguration) {
@@ -1044,13 +1108,18 @@ enum ShellCatalog {
             settingsConfiguration: settingsConfiguration
         )
         let languageTiles = pluginLanguageTiles()
-        let homeTiles = mainMenuTiles(
-            from: pluginPackages,
-            selectedMenuID: settingsConfiguration.mainMenuViewID,
-            widgetCount: widgetTiles.count,
-            appCount: appTiles.count + actionTiles.count,
-            themeCount: themePackages.count
-        )
+        let homeTiles: [ShellTile]
+        if PanelMenuTemplate(menuID: settingsConfiguration.mainMenuViewID) != .classic {
+            homeTiles = homeWidgetTiles(from: widgetTiles)
+        } else {
+            homeTiles = mainMenuTiles(
+                from: pluginPackages,
+                selectedMenuID: settingsConfiguration.mainMenuViewID,
+                widgetCount: widgetTiles.count,
+                appCount: appTiles.count + actionTiles.count,
+                themeCount: themePackages.count
+            )
+        }
 
         return [
             ShellPage(title: "Home", kind: .grid, layout: themeLayout == .grid ? .halfAndGrid : themeLayout, tiles: homeTiles),
@@ -1138,20 +1207,33 @@ enum ShellCatalog {
 
     private static func builtInMainMenuTiles(widgetCount: Int, appCount: Int, themeCount: Int) -> [ShellTile] {
         [
-            ShellTile(title: "Runtime", subtitle: "Live device and host state", action: .openPage(5)),
-            ShellTile(title: "Widgets", subtitle: "\(widgetCount) installed views", action: .openPage(1)),
-            ShellTile(title: "Apps", subtitle: "\(appCount) applets and actions", action: .openPage(2)),
-            ShellTile(title: "Themes", subtitle: "\(themeCount) installed themes", action: .openPage(3)),
-            ShellTile(title: "Settings", subtitle: "Panel, menu, and plugin configuration", action: .openPage(4)),
-            ShellTile(title: "Plugin APIs", subtitle: "Swift · HTML · PHP · shell", action: .openPage(6))
+            ShellTile(title: "Runtime", subtitle: "Live device and host state", action: .openPage(5), icon: "waveform.path.ecg"),
+            ShellTile(title: "Widgets", subtitle: "\(widgetCount) installed views", action: .openPage(1), icon: "square.grid.2x2"),
+            ShellTile(title: "Apps", subtitle: "\(appCount) applets and actions", action: .openPage(2), icon: "app.dashed"),
+            ShellTile(title: "Themes", subtitle: "\(themeCount) installed themes", action: .openPage(3), icon: "paintpalette"),
+            ShellTile(title: "Settings", subtitle: "Panel, menu, and plugin configuration", action: .openPage(4), icon: "gearshape"),
+            ShellTile(title: "Plugin APIs", subtitle: "Swift · HTML · PHP · shell", action: .openPage(6), icon: "chevron.left.forwardslash.chevron.right")
         ]
+    }
+
+    private static func homeWidgetTiles(from widgetTiles: [ShellTile]) -> [ShellTile] {
+        let preferred = ["weather", "system_monitor", "music_now_playing", "ai_agent", "native_status"]
+        let ordered = preferred.compactMap { id in
+            widgetTiles.first { $0.widget?.pluginID == id }
+        }
+        let remainder = widgetTiles.filter { tile in
+            !ordered.contains(where: { $0.widget == tile.widget })
+        }
+        let tiles = Array((ordered + remainder).prefix(6))
+        return tiles.isEmpty ? [ShellTile(title: "No Home Widgets", subtitle: "Install a widget-capable plugin", action: .openPage(1), icon: "square.grid.2x2")] : tiles
     }
 
     private static func menuTile(from item: PluginMenuItem, package: PluginPackage) -> ShellTile {
         ShellTile(
             title: item.title,
             subtitle: item.subtitle ?? package.manifest.name,
-            action: menuAction(from: item)
+            action: menuAction(from: item),
+            icon: item.icon
         )
     }
 
@@ -1231,10 +1313,10 @@ enum ShellCatalog {
 
     private static func pluginLanguageTiles() -> [ShellTile] {
         [
-            ShellTile(title: "Swift", subtitle: "nativeSwift bundles", action: .setStatus("Swift plugins target native host APIs and future in-process loading")),
-            ShellTile(title: "HTML", subtitle: "webView/webCanvas", action: .setStatus("HTML plugins render packaged documents or canvas applets")),
-            ShellTile(title: "PHP", subtitle: "stdio JSON over php", action: .setStatus("PHP plugins run as process adapters with settings in environment variables")),
-            ShellTile(title: "Bash", subtitle: "POSIX shell adapters", action: .setStatus("Shell plugins run local process adapters and return JSON payloads"))
+            ShellTile(title: "Swift", subtitle: "nativeSwift bundles", action: .setStatus("Swift plugins target native host APIs and future in-process loading"), icon: "swift"),
+            ShellTile(title: "HTML", subtitle: "webView/webCanvas", action: .setStatus("HTML plugins render packaged documents or canvas applets"), icon: "globe"),
+            ShellTile(title: "PHP", subtitle: "stdio JSON over php", action: .setStatus("PHP plugins run as process adapters with settings in environment variables"), icon: "terminal"),
+            ShellTile(title: "Bash", subtitle: "POSIX shell adapters", action: .setStatus("Shell plugins run local process adapters and return JSON payloads"), icon: "chevron.left.forwardslash.chevron.right")
         ]
     }
 
@@ -1253,7 +1335,11 @@ enum ShellCatalog {
                 return ShellTile(
                     title: view.title,
                     subtitle: "\(package.manifest.name) · \(type)",
-                    action: .openPluginView(pluginID: package.manifest.id, viewID: view.id)
+                    action: .openPluginView(pluginID: package.manifest.id, viewID: view.id),
+                    icon: view.icon ?? defaultIcon(for: package.manifest.id),
+                    widget: presentation == .widget || presentation == .pageAndWidget
+                        ? WidgetPreviewRef(pluginID: package.manifest.id, viewID: view.id, streamID: view.dataStreamID)
+                        : nil
                 )
             }
         }
@@ -1263,8 +1349,35 @@ enum ShellCatalog {
         }
 
         return [
-            ShellTile(title: emptyTitle, subtitle: emptySubtitle, action: .setStatus(emptySubtitle))
+            ShellTile(title: emptyTitle, subtitle: emptySubtitle, action: .setStatus(emptySubtitle), icon: "square.dashed")
         ]
+    }
+
+    private static func defaultIcon(for pluginID: String) -> String {
+        switch pluginID {
+        case "system_monitor": return "gauge.with.dots.needle.67percent"
+        case "weather": return "cloud.sun"
+        case "music_now_playing": return "music.note"
+        case "ai_agent": return "sparkles"
+        case "agenda": return "calendar"
+        case "timers": return "timer"
+        case "markets": return "chart.line.uptrend.xyaxis"
+        case "sports_scores": return "sportscourt"
+        case "home_assistant": return "house"
+        case "octoprint": return "cube.transparent"
+        case "security_cameras": return "video"
+        case "ubiquiti_network": return "network"
+        case "obs_controls": return "dot.radiowaves.left.and.right"
+        case "discord_companion": return "bubble.left.and.bubble.right"
+        case "hotkey_grid", "affinity_photo_hotkeys": return "command"
+        case "affinity_photo2": return "photo"
+        case "clipboard_notes": return "doc.on.clipboard"
+        case "meeting_notes": return "mic"
+        case "terminal_companion", "terminal_companions": return "terminal"
+        case "youtube_companion", "youtube_media_companion": return "play.rectangle"
+        case "app_context": return "rectangle.on.rectangle"
+        default: return "square.grid.2x2"
+        }
     }
 
     private static func pluginActionTiles(from packages: [PluginPackage]) -> [ShellTile] {
@@ -1690,8 +1803,9 @@ final class PanelView: NSView {
         switch currentPage.kind {
         case .grid:
             clampGridSubpage()
+            refreshWidgetPreviews(for: visibleTiles)
             tileViews = visibleTiles.map { tile in
-                let view = TileCellView(tile: tile, theme: activeTheme)
+                let view = TileCellView(tile: tile, preview: widgetPreview(for: tile), theme: activeTheme)
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 return view
@@ -2078,6 +2192,28 @@ final class PanelView: NSView {
         } else if let error = result.response.error {
             status = "\(package.manifest.id): \(error)"
         }
+    }
+
+    private func refreshWidgetPreviews(for tiles: [ShellTile]) {
+        var refreshed = Set<String>()
+        for tile in tiles {
+            guard let ref = tile.widget,
+                  let package = pluginPackages.first(where: { $0.manifest.id == ref.pluginID }),
+                  let view = package.manifest.views.first(where: { $0.id == ref.viewID }),
+                  view.dataStreamID != nil else { continue }
+            let key = "\(ref.pluginID):\(ref.viewID)"
+            guard refreshed.insert(key).inserted else { continue }
+            refreshData(for: view, package: package)
+        }
+    }
+
+    private func widgetPreview(for tile: ShellTile) -> WidgetPreviewData? {
+        guard let ref = tile.widget,
+              let streamID = ref.streamID,
+              let snapshot = pluginDataStore.snapshot(pluginID: ref.pluginID, streamID: streamID) else {
+            return nil
+        }
+        return WidgetPreviewData.from(snapshot.payload)
     }
 
     private func selectTheme(_ index: Int) {
@@ -3253,24 +3389,51 @@ final class TileCellView: NSView {
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let subtitleLabel = NSTextField(labelWithString: "")
+    private let valueLabel = NSTextField(labelWithString: "")
+    private let stateLabel = NSTextField(labelWithString: "")
+    private let iconView = NSImageView()
+    private let preview: WidgetPreviewData?
 
-    init(tile: ShellTile, theme: PanelTheme) {
+    init(tile: ShellTile, preview: WidgetPreviewData?, theme: PanelTheme) {
         self.theme = theme
+        self.preview = preview
         super.init(frame: .zero)
         wantsLayer = true
 
         titleLabel.stringValue = tile.title
-        titleLabel.font = NSFont.systemFont(ofSize: 25, weight: .semibold)
+        titleLabel.font = NSFont.systemFont(ofSize: 19, weight: .semibold)
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.backgroundColor = .clear
 
-        subtitleLabel.stringValue = tile.subtitle
-        subtitleLabel.font = NSFont.systemFont(ofSize: 16, weight: .regular)
+        subtitleLabel.stringValue = preview?.detail ?? tile.subtitle
+        subtitleLabel.font = NSFont.systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.backgroundColor = .clear
 
+        valueLabel.stringValue = preview?.value ?? ""
+        valueLabel.font = NSFont.systemFont(ofSize: preview == nil ? 0 : 27, weight: .black)
+        valueLabel.lineBreakMode = .byTruncatingTail
+        valueLabel.backgroundColor = .clear
+        valueLabel.isHidden = preview == nil
+
+        stateLabel.stringValue = preview?.state?.uppercased() ?? ""
+        stateLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
+        stateLabel.alignment = .right
+        stateLabel.lineBreakMode = .byTruncatingTail
+        stateLabel.backgroundColor = .clear
+        stateLabel.isHidden = preview?.state == nil
+
+        if let name = tile.icon, let image = NSImage(systemSymbolName: name, accessibilityDescription: tile.title) {
+            iconView.image = image
+            iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
+            iconView.imageScaling = .scaleProportionallyUpOrDown
+        }
+
+        addSubview(iconView)
         addSubview(titleLabel)
         addSubview(subtitleLabel)
+        addSubview(valueLabel)
+        addSubview(stateLabel)
         applyStyle()
     }
 
@@ -3280,8 +3443,15 @@ final class TileCellView: NSView {
 
     override func layout() {
         super.layout()
-        titleLabel.frame = NSRect(x: 14, y: bounds.height - 62, width: bounds.width - 28, height: 34)
-        subtitleLabel.frame = NSRect(x: 14, y: 18, width: bounds.width - 28, height: 24)
+        iconView.frame = NSRect(x: 14, y: bounds.height - 38, width: 20, height: 20)
+        titleLabel.frame = NSRect(x: 42, y: bounds.height - 43, width: bounds.width - 56, height: 24)
+        stateLabel.frame = NSRect(x: 14, y: bounds.height - 64, width: bounds.width - 28, height: 14)
+        if preview != nil {
+            valueLabel.frame = NSRect(x: 14, y: bounds.midY - 16, width: bounds.width - 28, height: 34)
+            subtitleLabel.frame = NSRect(x: 14, y: 16, width: bounds.width - 28, height: 22)
+        } else {
+            subtitleLabel.frame = NSRect(x: 14, y: 18, width: bounds.width - 28, height: 24)
+        }
     }
 
     private func applyStyle() {
@@ -3295,5 +3465,8 @@ final class TileCellView: NSView {
         layer?.borderWidth = isSelected ? max(3, theme.borderWidth) : theme.borderWidth
         titleLabel.textColor = theme.textPrimary
         subtitleLabel.textColor = theme.textSecondary
+        valueLabel.textColor = theme.accent
+        stateLabel.textColor = theme.success
+        iconView.contentTintColor = isSelected ? theme.accent : theme.textSecondary
     }
 }

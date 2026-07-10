@@ -122,7 +122,8 @@
       "columnSpan": 3,
       "rowSpan": 1,
       "preferredWidth": 960,
-      "preferredHeight": 240
+      "preferredHeight": 240,
+      "icon": "sportscourt"
     }
   ]
 }

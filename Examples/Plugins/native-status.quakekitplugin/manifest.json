@@ -70,7 +70,8 @@
       "columnSpan": 1,
       "rowSpan": 1,
       "preferredWidth": 240,
-      "preferredHeight": 200
+      "preferredHeight": 200,
+      "icon": "waveform.path.ecg"
     }
   ]
 }

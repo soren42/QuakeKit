@@ -120,7 +120,8 @@
           "target": "global",
           "order": 120
         }
-      ]
+      ],
+      "icon": "square.grid.2x2"
     }
   ]
 }

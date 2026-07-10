@@ -87,6 +87,7 @@ Each `PluginView` declares:
 
 - `type`: native, web canvas, web document, text, or data-driven
 - `presentation`: page, widget, both, or mainMenu
+- `icon`: SF Symbol name for native launcher and compact widget surfaces
 - `entryPath`: local web/native asset entrypoint when needed
 - `dataStreamID`: stream backing the view
 - `columnSpan` and `rowSpan`: widget grid hints
