@@ -60,11 +60,7 @@ final class MenuChromeView: NSView {
             let index = Int((top - point.y) / rowHeight)
             return pages.indices.contains(index) ? index : nil
         case .radialOrbit:
-            let stageWidth = radialStageWidth
-            guard point.y > bounds.height - 72, point.x >= stageWidth else { return nil }
-            let width = max(1, (bounds.width - stageWidth - 18) / CGFloat(max(1, pages.count)))
-            let index = Int((point.x - stageWidth) / width)
-            return pages.indices.contains(index) ? index : nil
+            return nil
         case .ambientMarquee:
             let dockWidth = min(bounds.width - 80, CGFloat(max(1, pages.count)) * 116)
             let dockX = bounds.midX - dockWidth / 2
@@ -85,7 +81,7 @@ final class MenuChromeView: NSView {
             return NSRect(x: 238, y: 34, width: max(1, bounds.width - 254), height: max(1, bounds.height - 48))
         case .radialOrbit:
             let stageWidth = radialStageWidth
-            return NSRect(x: stageWidth, y: 20, width: max(1, bounds.width - stageWidth - 18), height: max(1, bounds.height - 100))
+            return NSRect(x: stageWidth, y: 20, width: max(1, bounds.width - stageWidth - 28), height: max(1, bounds.height - 40))
         case .ambientMarquee:
             // The marquee is a composed stage: left hero, right chip field,
             // and a bottom dock. Plugin tiles are confined to the field.
@@ -114,29 +110,18 @@ final class MenuChromeView: NSView {
 
     private func drawRadialOrbit() {
         fill(bounds, color: theme.background)
-        let hubDiameter = min(230, max(170, bounds.height - 150))
-        let hub = NSRect(x: 28, y: max(46, (bounds.height - 72 - hubDiameter) / 2), width: hubDiameter, height: hubDiameter)
+        let hubDiameter = min(360, max(250, bounds.height - 40))
+        // The physical knob is echoed as a deliberately clipped circle: only
+        // its right half enters the panel, leaving room for the orbit wheel.
+        let hub = NSRect(x: -hubDiameter * 0.52, y: (bounds.height - hubDiameter) / 2, width: hubDiameter, height: hubDiameter)
         let ring = NSBezierPath(ovalIn: hub)
         theme.surfaceRaised.setFill(); ring.fill()
         theme.accent.setStroke(); ring.lineWidth = 2; ring.stroke()
         let projected = menuSettings["radialOrbit.headlineProjection"]?.boolValue ?? true
         let hubTitle = projected && pages.indices.contains(selectedPageIndex) ? pages[selectedPageIndex].title.uppercased() : "ORBIT"
-        drawText(hubTitle, in: NSRect(x: hub.minX + 12, y: hub.midY - 10, width: hub.width - 24, height: 20), size: 14, weight: .black, color: theme.textPrimary, alignment: .center)
-        drawText("ORBIT", in: NSRect(x: hub.minX + 12, y: hub.midY - 31, width: hub.width - 24, height: 14), size: 10, weight: .bold, color: theme.accent, alignment: .center)
-        for index in 0..<4 {
-            let angle = CGFloat(index) * .pi / 2 + .pi / 4
-            let center = NSPoint(x: hub.midX + cos(angle) * hubDiameter * 0.64, y: hub.midY + sin(angle) * hubDiameter * 0.64)
-            fillRounded(NSRect(x: center.x - 15, y: center.y - 15, width: 30, height: 30), color: index == 0 ? theme.accent : theme.surfaceRaised, radius: 15)
-        }
-        strokeLine(from: NSPoint(x: 0, y: bounds.height - 72), to: NSPoint(x: bounds.width, y: bounds.height - 72), color: theme.border)
-        let stageWidth = radialStageWidth
-        let width = max(1, (bounds.width - stageWidth - 18) / CGFloat(max(1, pages.count)))
-        for (index, page) in pages.enumerated() {
-            let rect = NSRect(x: stageWidth + CGFloat(index) * width, y: bounds.height - 58, width: width - 8, height: 28)
-            if index == selectedPageIndex { fillRounded(rect, color: theme.accent.withAlphaComponent(0.18), radius: 6) }
-            drawText(page.title, in: rect, size: 12, weight: .bold, color: index == selectedPageIndex ? theme.textPrimary : theme.textSecondary, alignment: .center)
-        }
-        drawText("QuakeKit / \(clockString())", in: NSRect(x: 18, y: bounds.height - 28, width: radialStageWidth - 28, height: 16), size: 11, weight: .medium, color: theme.textSecondary)
+        drawText(hubTitle, in: NSRect(x: 12, y: hub.midY - 10, width: radialStageWidth - 28, height: 20), size: 13, weight: .black, color: theme.textPrimary, alignment: .center)
+        drawText("ORBIT · \(clockString())", in: NSRect(x: 12, y: hub.midY - 30, width: radialStageWidth - 28, height: 14), size: 10, weight: .bold, color: theme.accent, alignment: .center)
+        strokeLine(from: NSPoint(x: radialStageWidth - 18, y: 28), to: NSPoint(x: radialStageWidth - 18, y: bounds.height - 28), color: theme.border.withAlphaComponent(0.6))
     }
 
     private func drawAmbientMarquee() {
@@ -178,7 +163,7 @@ final class MenuChromeView: NSView {
         theme.danger.withAlphaComponent(0.06).setFill()
         NSBezierPath(ovalIn: NSRect(x: bounds.width * 0.54, y: -bounds.height * 0.32, width: bounds.width * 0.72, height: bounds.height * 0.9)).fill()
     }
-    private var radialStageWidth: CGFloat { min(max(300, bounds.width * 0.18), 350) }
+    private var radialStageWidth: CGFloat { min(max(245, bounds.width * 0.14), 290) }
     private func wordmark(named name: String) -> NSImage? {
         guard let url = Bundle.module.url(forResource: name, withExtension: "svg", subdirectory: "Brand") else { return nil }
         return NSImage(contentsOf: url)

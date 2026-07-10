@@ -1490,7 +1490,7 @@ enum ShellCatalog {
 
 final class PanelView: NSView {
     var selectedIndex: Int = 0 {
-        didSet { updateSelection() }
+        didSet { updateSelection(); needsLayout = true }
     }
     var status: String = "Starting" {
         didSet { updateStatus() }
@@ -1630,46 +1630,65 @@ final class PanelView: NSView {
     }
 
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
-        let point = NSPoint(x: logicalX, y: logicalY)
-        let chromePoint = chromeTouchPoint(logicalX: logicalX, logicalY: logicalY)
-        if let pageIndex = menuChromeView.navigationIndex(at: chromePoint)
-            ?? menuChromeView.navigationIndex(at: point) {
+        let points = touchPointCandidates(logicalX: logicalX, logicalY: logicalY)
+        if let pageIndex = points.lazy.compactMap({ self.menuChromeView.navigationIndex(at: $0) }).first {
             openPage(pageIndex)
             return
         }
-        if let pageIndex = pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) {
+        if activeMenuTemplate == .classic,
+           let pageIndex = points.lazy.compactMap({ point in self.pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) }).first {
             openPage(pageIndex)
             return
         }
-        if logicalY > bounds.height - 92, logicalX >= 300 {
-            let pageIndex = Int((logicalX - 300) / 140)
-            if pages.indices.contains(pageIndex) {
-                openPage(pageIndex)
-                return
+        if activeMenuTemplate == .classic {
+            for point in points where point.y > bounds.height - 92 && point.x >= 300 {
+                let pageIndex = Int((point.x - 300) / 140)
+                if pages.indices.contains(pageIndex) {
+                    openPage(pageIndex)
+                    return
+                }
             }
         }
 
         guard currentPage.kind == .grid else { return }
-        if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
-            _ = showPreviousGridSubpage()
-            return
+        for point in points {
+            if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
+                _ = showPreviousGridSubpage()
+                return
+            }
+            if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
+                _ = showNextGridSubpage()
+                return
+            }
         }
-        if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
-            _ = showNextGridSubpage()
-            return
-        }
-        if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
-            selectedIndex = index
-            activateSelection()
+        for point in points {
+            if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
+                if selectedIndex == index {
+                    activateSelection()
+                } else {
+                    selectedIndex = index
+                    status = "Selected \(visibleTiles[index].title)"
+                }
+                return
+            }
         }
     }
 
     /// DK touch coordinates use a top-origin panel space. Menu chrome is drawn
     /// in AppKit's bottom-origin space, so normalize and flip only at that seam.
-    private func chromeTouchPoint(logicalX: CGFloat, logicalY: CGFloat) -> NSPoint {
+    private func touchPointCandidates(logicalX: CGFloat, logicalY: CGFloat) -> [NSPoint] {
         let x = normalizedTouchCoordinate(logicalX, panelExtent: 1920, viewExtent: bounds.width)
         let topOriginY = normalizedTouchCoordinate(logicalY, panelExtent: 480, viewExtent: bounds.height)
-        return NSPoint(x: x, y: bounds.height - topOriginY)
+        let points = [
+            NSPoint(x: x, y: bounds.height - topOriginY),
+            NSPoint(x: x, y: topOriginY),
+            NSPoint(x: logicalX, y: logicalY)
+        ]
+        return points.reduce(into: []) { result, point in
+            if !result.contains(where: { abs($0.x - point.x) < 0.5 && abs($0.y - point.y) < 0.5 }) {
+                result.append(point)
+            }
+        }
     }
 
     private func normalizedTouchCoordinate(_ value: CGFloat, panelExtent: CGFloat, viewExtent: CGFloat) -> CGFloat {
@@ -1825,7 +1844,12 @@ final class PanelView: NSView {
             clampGridSubpage()
             refreshWidgetPreviews(for: visibleTiles)
             tileViews = visibleTiles.map { tile in
-                let view = TileCellView(tile: tile, preview: widgetPreview(for: tile), theme: activeTheme)
+                let view = TileCellView(
+                    tile: tile,
+                    preview: widgetPreview(for: tile),
+                    orbitMode: activeMenuTemplate == .radialOrbit,
+                    theme: activeTheme
+                )
                 view.translatesAutoresizingMaskIntoConstraints = true
                 addSubview(view)
                 return view
@@ -1913,6 +1937,10 @@ final class PanelView: NSView {
     }
 
     private func layoutTiles(in rect: NSRect) {
+        if activeMenuTemplate == .radialOrbit {
+            layoutOrbitTiles(in: rect)
+            return
+        }
         if activeMenuTemplate == .ambientMarquee && currentPage.title == "Home" {
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 3)
             return
@@ -1932,6 +1960,24 @@ final class PanelView: NSView {
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 3, rows: 1)
         case .quarters:
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 2)
+        }
+    }
+
+    private func layoutOrbitTiles(in rect: NSRect) {
+        let pitch: CGFloat = 74
+        let centerY = rect.midY
+        for index in tileViews.indices {
+            let distance = index - selectedIndex
+            guard abs(distance) <= 3 else {
+                tileViews[index].frame = .zero
+                continue
+            }
+            let scale = max(0.68, 1 - CGFloat(abs(distance)) * 0.12)
+            let height: CGFloat = 60 * scale
+            let width: CGFloat = min(rect.width - 12, 520 * scale)
+            let x = rect.minX + CGFloat(abs(distance)) * 30
+            let y = centerY - height / 2 - CGFloat(distance) * pitch
+            tileViews[index].frame = NSRect(x: x, y: y, width: width, height: height)
         }
     }
 
@@ -1995,6 +2041,10 @@ final class PanelView: NSView {
     }
 
     private func updateChrome() {
+        let usesTemplateChrome = activeMenuTemplate != .classic
+        titleLabel.isHidden = usesTemplateChrome
+        statusLabel.isHidden = usesTemplateChrome
+        pageLabels.forEach { $0.isHidden = usesTemplateChrome }
         titleLabel.stringValue = "QuakeKit"
         titleLabel.textColor = activeTheme.textPrimary
         layer?.backgroundColor = activeTheme.background.cgColor
@@ -3417,10 +3467,12 @@ final class TileCellView: NSView {
     private let stateLabel = NSTextField(labelWithString: "")
     private let iconView = NSImageView()
     private let preview: WidgetPreviewData?
+    private let orbitMode: Bool
 
-    init(tile: ShellTile, preview: WidgetPreviewData?, theme: PanelTheme) {
+    init(tile: ShellTile, preview: WidgetPreviewData?, orbitMode: Bool = false, theme: PanelTheme) {
         self.theme = theme
         self.preview = preview
+        self.orbitMode = orbitMode
         super.init(frame: .zero)
         wantsLayer = true
 
@@ -3429,7 +3481,9 @@ final class TileCellView: NSView {
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.backgroundColor = .clear
 
-        subtitleLabel.stringValue = preview?.detail ?? tile.subtitle
+        subtitleLabel.stringValue = orbitMode && preview != nil
+            ? "\(preview?.value ?? "")  ·  \(preview?.detail ?? "")"
+            : preview?.detail ?? tile.subtitle
         subtitleLabel.font = NSFont.systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.lineBreakMode = .byTruncatingTail
         subtitleLabel.backgroundColor = .clear
@@ -3438,7 +3492,7 @@ final class TileCellView: NSView {
         valueLabel.font = NSFont.systemFont(ofSize: preview == nil ? 0 : 27, weight: .black)
         valueLabel.lineBreakMode = .byTruncatingTail
         valueLabel.backgroundColor = .clear
-        valueLabel.isHidden = preview == nil
+        valueLabel.isHidden = preview == nil || orbitMode
 
         stateLabel.stringValue = preview?.state?.uppercased() ?? ""
         stateLabel.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .bold)
@@ -3452,6 +3506,7 @@ final class TileCellView: NSView {
             iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
             iconView.imageScaling = .scaleProportionallyUpOrDown
         }
+        iconView.wantsLayer = true
 
         addSubview(iconView)
         addSubview(titleLabel)
@@ -3467,6 +3522,15 @@ final class TileCellView: NSView {
 
     override func layout() {
         super.layout()
+        if orbitMode {
+            let disc = min(bounds.height, 52)
+            iconView.frame = NSRect(x: 0, y: bounds.midY - disc / 2, width: disc, height: disc)
+            iconView.layer?.cornerRadius = disc / 2
+            titleLabel.frame = NSRect(x: disc + 14, y: bounds.midY + 2, width: bounds.width - disc - 18, height: 20)
+            subtitleLabel.frame = NSRect(x: disc + 14, y: bounds.midY - 20, width: bounds.width - disc - 18, height: 18)
+            stateLabel.frame = .zero
+            return
+        }
         iconView.frame = NSRect(x: 14, y: bounds.height - 38, width: 20, height: 20)
         titleLabel.frame = NSRect(x: 42, y: bounds.height - 43, width: bounds.width - 56, height: 24)
         stateLabel.frame = NSRect(x: 14, y: bounds.height - 64, width: bounds.width - 28, height: 14)
@@ -3479,6 +3543,20 @@ final class TileCellView: NSView {
     }
 
     private func applyStyle() {
+        if orbitMode {
+            layer?.backgroundColor = NSColor.clear.cgColor
+            layer?.borderWidth = 0
+            iconView.layer?.cornerRadius = iconView.bounds.width / 2
+            iconView.layer?.backgroundColor = (isSelected ? theme.accent.withAlphaComponent(0.18) : theme.surfaceRaised).cgColor
+            iconView.layer?.borderWidth = max(1, theme.borderWidth)
+            iconView.layer?.borderColor = (isSelected ? theme.accent : theme.border).cgColor
+            titleLabel.textColor = isSelected ? theme.accent : theme.textPrimary
+            subtitleLabel.textColor = theme.textSecondary
+            valueLabel.textColor = theme.accent
+            stateLabel.isHidden = true
+            iconView.contentTintColor = isSelected ? theme.accent : theme.textSecondary
+            return
+        }
         layer?.cornerRadius = theme.cornerRadius
         layer?.backgroundColor = (isSelected
             ? theme.surfaceRaised
