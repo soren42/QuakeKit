@@ -104,6 +104,7 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log("applicationDidFinishLaunching debugWindow=\(launchOptions.debugWindow) displayTest=\(launchOptions.displayTest) mainScreen=\(launchOptions.mainScreen) noHID=\(launchOptions.noHID) hidOpenMode=\(launchOptions.hidOpenMode) sharedHID=\(launchOptions.sharedHID) strictHIDSeize=\(launchOptions.strictHIDSeize) simpleFullscreen=\(launchOptions.simpleFullscreen) foreground=\(launchOptions.foregroundApp) startup=\(launchOptions.startupProfile.rawValue) keepAlive=\(launchOptions.keepAliveProfile.rawValue)")
+        requestInputMonitoringAccessIfNeeded()
         configureStatusItem()
         if launchOptions.foregroundApp || launchOptions.debugWindow {
             NSApp.activate(ignoringOtherApps: true)
@@ -118,6 +119,19 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             startDevice()
         }
+    }
+
+    /// The DK touch collection advertises `RequiresTCCAuthorization`. A Finder
+    /// launch is a distinct TCC identity from Codex or Terminal, so ask under
+    /// the shipped app bundle before opening the HID managers.
+    private func requestInputMonitoringAccessIfNeeded() {
+        guard #available(macOS 10.15, *) else { return }
+        if CGPreflightListenEventAccess() {
+            log("Input Monitoring access already authorized")
+            return
+        }
+        let granted = CGRequestListenEventAccess()
+        log("Input Monitoring access requested immediateGrant=\(granted)")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
