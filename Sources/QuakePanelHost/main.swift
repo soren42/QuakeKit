@@ -1913,6 +1913,10 @@ final class PanelView: NSView {
     }
 
     private func layoutTiles(in rect: NSRect) {
+        if activeMenuTemplate == .ambientMarquee && currentPage.title == "Home" {
+            layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: 2, rows: 3)
+            return
+        }
         switch currentPage.layout {
         case .grid:
             layoutTileGrid(indices: Array(tileViews.indices), in: rect, columns: columns, rows: rows)
