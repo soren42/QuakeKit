@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import IOKit.hid
 import IOKit.pwr_mgt
 import QuakeHID
 import QuakePluginAPI
@@ -84,9 +85,9 @@ struct PanelLaunchOptions {
 
     private static func parseKeepAliveProfile(from arguments: [String]) -> QuakeDevice.KeepAliveProfile {
         guard let index = arguments.firstIndex(of: "--keepalive"), arguments.indices.contains(index + 1) else {
-            return .vendor
+            return .screenOn
         }
-        return QuakeDevice.KeepAliveProfile(rawValue: arguments[index + 1]) ?? .vendor
+        return QuakeDevice.KeepAliveProfile(rawValue: arguments[index + 1]) ?? .screenOn
     }
 
     private static func parseStartupProfile(from arguments: [String]) -> QuakeDevice.StartupProfile {
@@ -133,31 +134,18 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// The DK touch collection advertises `RequiresTCCAuthorization`. A Finder
-    /// launch is a distinct TCC identity from Codex or Terminal, so ask under
-    /// the shipped app bundle before opening the HID managers.
+    /// The DK touch collection advertises `RequiresTCCAuthorization`. Request
+    /// the IOHID listening entitlement directly; Core Graphics event-tap access
+    /// is not the authorization consumed by IOHIDManager/IOHIDDevice.
     private func requestInputMonitoringAccessIfNeeded() {
         guard #available(macOS 10.15, *) else { return }
-        if CGPreflightListenEventAccess() {
-            log("Input Monitoring access already authorized")
+        let access = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent)
+        if access == kIOHIDAccessTypeGranted {
+            log("IOHID listen access already authorized")
             return
         }
-        let granted = CGRequestListenEventAccess()
-        log("Input Monitoring access requested immediateGrant=\(granted)")
-        guard !granted else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard self != nil else { return }
-            let alert = NSAlert()
-            alert.messageText = "QuakeKit Needs Input Monitoring"
-            alert.informativeText = "macOS must allow QuakeKit to read the DK-QUAKE touchscreen. Enable QuakeKit in Privacy & Security > Input Monitoring, then quit and reopen QuakeKit."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "Open Input Monitoring")
-            alert.addButton(withTitle: "Continue Without Touch")
-            if alert.runModal() == .alertFirstButtonReturn,
-               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-                NSWorkspace.shared.open(url)
-            }
-        }
+        let granted = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+        log("IOHID listen access requested prior=\(access.rawValue) immediateGrant=\(granted)")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
