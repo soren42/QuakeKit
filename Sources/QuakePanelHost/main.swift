@@ -1613,6 +1613,8 @@ final class PanelView: NSView {
     private var runtime = RuntimeSnapshot()
     private var carouselTimer: Timer?
     private var carouselIndex = 0
+    private var lastTouchPoint: NSPoint?
+    private var lastTouchAt: Date?
     private var tileViews: [TileCellView] = []
     private var runtimeRows: [StatusRowView] = []
     private var systemDashboardView: SystemMonitorDashboardView?
@@ -1730,20 +1732,28 @@ final class PanelView: NSView {
     }
 
     func touch(logicalX: CGFloat, logicalY: CGFloat) {
-        let points = touchPointCandidates(logicalX: logicalX, logicalY: logicalY)
-        if let pageIndex = points.lazy.compactMap({ self.menuChromeView.navigationIndex(at: $0) }).first {
+        let point = touchPoint(logicalX: logicalX, logicalY: logicalY)
+        if let lastTouchPoint, let lastTouchAt,
+           Date().timeIntervalSince(lastTouchAt) < 0.18,
+           hypot(point.x - lastTouchPoint.x, point.y - lastTouchPoint.y) < 8 {
+            return
+        }
+        lastTouchPoint = point
+        lastTouchAt = Date()
+
+        if let pageIndex = menuChromeView.navigationIndex(at: point) {
             log("touch route chrome raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
             openPage(pageIndex)
             return
         }
         if activeMenuTemplate == .classic,
-           let pageIndex = points.lazy.compactMap({ point in self.pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) }).first {
+           let pageIndex = pageLabels.firstIndex(where: { $0.frame.insetBy(dx: -18, dy: -14).contains(point) }) {
             log("touch route classic-tab raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
             openPage(pageIndex)
             return
         }
         if activeMenuTemplate == .classic {
-            for point in points where point.y > bounds.height - 92 && point.x >= 300 {
+            if point.y > bounds.height - 92 && point.x >= 300 {
                 let pageIndex = Int((point.x - 300) / 140)
                 if pages.indices.contains(pageIndex) {
                     log("touch route classic-page raw=\(Int(logicalX)),\(Int(logicalY)) page=\(pageIndex)")
@@ -1757,47 +1767,34 @@ final class PanelView: NSView {
             log("touch route ignored non-grid raw=\(Int(logicalX)),\(Int(logicalY)) page=\(currentPage.title)")
             return
         }
-        for point in points {
-            if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
-                log("touch route grid-previous raw=\(Int(logicalX)),\(Int(logicalY))")
-                _ = showPreviousGridSubpage()
-                return
-            }
-            if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
-                log("touch route grid-next raw=\(Int(logicalX)),\(Int(logicalY))")
-                _ = showNextGridSubpage()
-                return
-            }
+        if !previousGridPad.isHidden && previousGridPad.frame.contains(point) {
+            log("touch route grid-previous raw=\(Int(logicalX)),\(Int(logicalY))")
+            _ = showPreviousGridSubpage()
+            return
         }
-        for point in points {
-            if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
-                // A physical panel tap is an explicit activation, not merely a
-                // focus move. Knob rotation remains the focus-selection path.
-                selectedIndex = index
-                log("touch route tile raw=\(Int(logicalX)),\(Int(logicalY)) candidate=\(Int(point.x)),\(Int(point.y)) tile=\(visibleTiles[index].title)")
-                activateSelection()
-                return
-            }
+        if !nextGridPad.isHidden && nextGridPad.frame.contains(point) {
+            log("touch route grid-next raw=\(Int(logicalX)),\(Int(logicalY))")
+            _ = showNextGridSubpage()
+            return
         }
-        let candidateText = points.map { "\(Int($0.x)),\(Int($0.y))" }.joined(separator: " | ")
-        log("touch route miss raw=\(Int(logicalX)),\(Int(logicalY)) candidates=[\(candidateText)] page=\(currentPage.title) tiles=\(tileViews.count)")
+        if let index = tileViews.firstIndex(where: { $0.frame.contains(point) }), visibleTiles.indices.contains(index) {
+            // A physical panel tap is an explicit activation, not merely a
+            // focus move. Knob rotation remains the focus-selection path.
+            selectedIndex = index
+            log("touch route tile raw=\(Int(logicalX)),\(Int(logicalY)) point=\(Int(point.x)),\(Int(point.y)) tile=\(visibleTiles[index].title)")
+            activateSelection()
+            return
+        }
+        log("touch route miss raw=\(Int(logicalX)),\(Int(logicalY)) point=\(Int(point.x)),\(Int(point.y)) page=\(currentPage.title) tiles=\(tileViews.count)")
     }
 
-    /// DK touch coordinates use a top-origin panel space. Menu chrome is drawn
-    /// in AppKit's bottom-origin space, so normalize and flip only at that seam.
-    private func touchPointCandidates(logicalX: CGFloat, logicalY: CGFloat) -> [NSPoint] {
+    /// The DK touchscreen's HID collection is already rotated into the panel's
+    /// landscape coordinate space by macOS. Its origin matches this AppKit view;
+    /// applying a second vertical flip reverses Status Rail and tile hit testing.
+    private func touchPoint(logicalX: CGFloat, logicalY: CGFloat) -> NSPoint {
         let x = normalizedTouchCoordinate(logicalX, panelExtent: 1920, viewExtent: bounds.width)
-        let topOriginY = normalizedTouchCoordinate(logicalY, panelExtent: 480, viewExtent: bounds.height)
-        let points = [
-            NSPoint(x: x, y: bounds.height - topOriginY),
-            NSPoint(x: x, y: topOriginY),
-            NSPoint(x: logicalX, y: logicalY)
-        ]
-        return points.reduce(into: []) { result, point in
-            if !result.contains(where: { abs($0.x - point.x) < 0.5 && abs($0.y - point.y) < 0.5 }) {
-                result.append(point)
-            }
-        }
+        let y = normalizedTouchCoordinate(logicalY, panelExtent: 480, viewExtent: bounds.height)
+        return NSPoint(x: x, y: y)
     }
 
     private func normalizedTouchCoordinate(_ value: CGFloat, panelExtent: CGFloat, viewExtent: CGFloat) -> CGFloat {
