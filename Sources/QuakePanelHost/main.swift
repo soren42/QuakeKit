@@ -144,6 +144,20 @@ final class PanelAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         let granted = CGRequestListenEventAccess()
         log("Input Monitoring access requested immediateGrant=\(granted)")
+        guard !granted else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard self != nil else { return }
+            let alert = NSAlert()
+            alert.messageText = "QuakeKit Needs Input Monitoring"
+            alert.informativeText = "macOS must allow QuakeKit to read the DK-QUAKE touchscreen. Enable QuakeKit in Privacy & Security > Input Monitoring, then quit and reopen QuakeKit."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Input Monitoring")
+            alert.addButton(withTitle: "Continue Without Touch")
+            if alert.runModal() == .alertFirstButtonReturn,
+               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
