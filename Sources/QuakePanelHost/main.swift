@@ -5,8 +5,28 @@ import QuakeHID
 import QuakePluginAPI
 import QuakeRuntime
 
+private let quakeLogQueue = DispatchQueue(label: "com.soren42.quakekit.log")
+
 func log(_ message: String) {
-    fputs("[quake-panel] \(message)\n", stderr)
+    let line = "[quake-panel] \(ISO8601DateFormatter().string(from: Date())) \(message)\n"
+    fputs(line, stderr)
+    quakeLogQueue.async {
+        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        let directory = support.appendingPathComponent("QuakeKit/Logs", isDirectory: true)
+        let url = directory.appendingPathComponent("quake-panel.log")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            if !FileManager.default.fileExists(atPath: url.path) {
+                FileManager.default.createFile(atPath: url.path, contents: nil)
+            }
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.seekToEnd()
+            try handle.write(contentsOf: Data(line.utf8))
+            try handle.close()
+        } catch {
+            // stderr remains available for command-line launches.
+        }
+    }
 }
 
 let launchOptions = PanelLaunchOptions(arguments: CommandLine.arguments.dropFirst())
@@ -47,7 +67,7 @@ struct PanelLaunchOptions {
     var hidOpenMode: QuakeDevice.OpenMode {
         if sharedHID { return .shared }
         if strictHIDSeize { return .seizeRequired }
-        return .shared
+        return .seizePreferred
     }
 
     private static func parseKeepAliveProfile(from arguments: [String]) -> QuakeDevice.KeepAliveProfile {

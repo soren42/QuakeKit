@@ -36,6 +36,7 @@ public final class QuakeDevice: @unchecked Sendable {
     private var keepAliveTimer: Timer?
     private var keepAliveTick = 0
     private var rawControlReportCount = 0
+    private var rawTouchReportCount = 0
 
     public init(
         openMode: OpenMode = .seizePreferred,
@@ -426,7 +427,12 @@ public final class QuakeDevice: @unchecked Sendable {
     }
 
     fileprivate func handleTouch(bytes: [UInt8]) {
-        for event in QuakeProtocol.decodeTouchReport(bytes) {
+        rawTouchReportCount += 1
+        let events = QuakeProtocol.decodeTouchReport(bytes)
+        if rawTouchReportCount <= 30 || events.isEmpty {
+            emitDiagnostic("touch raw[\(rawTouchReportCount)] \(hexBytes(bytes)) decoded=\(events.count)")
+        }
+        for event in events {
             eventHandler(RuntimeEvent(source: "dk-quake", event: event))
         }
     }
