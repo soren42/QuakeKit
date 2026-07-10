@@ -8,6 +8,14 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 CONFIGURATION="${CONFIGURATION:-release}"
 APP_NAME="${APP_NAME:-QuakeKit}"
 SIGNING_IDENTITY="${QUAKEKIT_CODESIGN_IDENTITY:--}"
+
+# RC development builds on this workstation must retain a stable designated
+# requirement so a granted HID privacy record survives a rebuild. A caller can
+# always override this with QUAKEKIT_CODESIGN_IDENTITY; other machines retain
+# the portable ad-hoc fallback when this local identity is unavailable.
+if [ "$SIGNING_IDENTITY" = "-" ] && /usr/bin/security find-identity -v -p codesigning 2>/dev/null | /usr/bin/grep -Fq '"Akoria CA"'; then
+  SIGNING_IDENTITY="Akoria CA"
+fi
 BUILD_DIR="$REPO_DIR/.build"
 BUNDLE_DIR="$BUILD_DIR/$APP_NAME.app"
 CONTENTS_DIR="$BUNDLE_DIR/Contents"

@@ -12,4 +12,5 @@ if [ ! -d "$DEVELOPER_DIR" ]; then
   exit 1
 fi
 
-exec /usr/bin/swift run quake-panel "$@"
+"$REPO_DIR/scripts/build-app-bundle.sh" >/dev/null
+exec /usr/bin/open -n "$REPO_DIR/.build/QuakeKit.app" --args "$@"
